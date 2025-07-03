@@ -42,7 +42,8 @@ function Sidebar() {
 
         {/* UCSC Text */}
         <div className="hidden md:block text-center mb-12 text-lg font-semibold text-blue-900 select-none">
-          UCSC-UGS
+          UCSC-
+          <br/>Univeristy Gateway Solutions
         </div>
 
         {/* Navigation Links */}
