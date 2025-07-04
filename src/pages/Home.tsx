@@ -21,6 +21,7 @@ const registeredExams = [
     questions: 50,
     duration: "2 hours",
     paymentStatus: "Paid",
+    image: "../src/assets/ucsc_logo.png",
   },
   { 
     testName: "GCAT",
@@ -31,6 +32,7 @@ const registeredExams = [
     questions: 80,
     duration: "2.5 hours",
     paymentStatus: "Pending",
+    image: "../src/assets/ucsc_logo.png",
   },
   { 
     testName: "BIT Aptitude Test", 
@@ -41,6 +43,7 @@ const registeredExams = [
     questions: 40,
     duration: "2 hours",
     paymentStatus: "Paid",
+    image: "../src/assets/ucsc_logo.png",
   },
 ];
 
@@ -55,6 +58,7 @@ const completedExams = [
     score: 95,
     total: 100,
     resultsOut: true,
+    image: "../src/assets/rajarata_uni.png",
   },
   { 
     testName: "MOFIT", 
@@ -66,6 +70,7 @@ const completedExams = [
     score: 88,
     total: 100,
     resultsOut: true,
+    image: "../src/assets/mora_uni.png",
   },
   { 
     testName: "SLCAT", 
@@ -73,6 +78,7 @@ const completedExams = [
     university: "University of Kelaniya",
     examDate: "2025-07-05",
     resultsOut: false,
+    image: "../src/assets/ucsc_logo.png",
   },
 ];
 
@@ -120,39 +126,44 @@ const Home = () => {
             >
               <Card className="hover:scale-[1.02] transition-all duration-200 shadow-sm border-0 bg-card">
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg text-foreground leading-tight">
+                  <div className="flex gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-lg text-foreground leading-tight mb-2">
                         {exam.testName}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mb-2">
                         {exam.fullName}
                       </p>
+                      
+                      <div className="mb-2">
+                        <p className="text-sm text-muted-foreground font-medium">
+                          {exam.university}
+                        </p>
+                      </div>
+                      
+                      <div className="mb-2">
+                        <p className="text-sm text-foreground">
+                          {exam.date} • {exam.time}
+                        </p>
+                      </div>
+                      
+                      <div className="mb-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          exam.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 
+                          exam.paymentStatus === 'Pending' ? 'bg-orange-100 text-orange-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {exam.paymentStatus}
+                        </span>
+                      </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ml-2 ${
-                      exam.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 
-                      exam.paymentStatus === 'Pending' ? 'bg-orange-100 text-orange-800' : 
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {exam.paymentStatus}
-                    </span>
+                    
+                    <img 
+                      src={exam.image} 
+                      alt={`${exam.university} logo`}
+                      className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
+                    />
                   </div>
-                  
-                  <div className="mb-3">
-                    <p className="text-sm text-muted-foreground font-medium">
-                      {exam.university}
-                    </p>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <p className="text-sm text-foreground">
-                      {exam.date} • {exam.time}
-                    </p>
-                  </div>
-                  
-                  <button className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm">
-                    Register Now
-                  </button>
                 </CardContent>
               </Card>
             </motion.div>
@@ -179,36 +190,46 @@ const Home = () => {
             >
               <Card className="hover:scale-[1.02] transition-all duration-200 shadow-sm border-0 bg-card">
                 <CardContent className="p-4">
-                  <h3 className="font-bold text-lg text-foreground mb-2">
-                    {exam.testName}
-                  </h3>
-                  
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {exam.fullName}
-                  </p>
-                  
-                  <p className="text-sm text-muted-foreground font-medium mb-3">
-                    {exam.university}
-                  </p>
-                  
-                  <div className="mb-4">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      exam.resultsOut ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {exam.resultsOut ? 'Results Out' : 'Results Pending'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    {exam.resultsOut ? (
-                      <button className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm">
-                        Check Results
-                      </button>
-                    ) : (
-                      <button className="w-full bg-gray-400 text-white py-2 px-4 rounded-lg font-medium cursor-not-allowed text-sm" disabled>
-                        Results Not Available
-                      </button>
-                    )}
+                  <div className="flex gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-lg text-foreground mb-2">
+                        {exam.testName}
+                      </h3>
+                      
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {exam.fullName}
+                      </p>
+                      
+                      <p className="text-sm text-muted-foreground font-medium mb-3">
+                        {exam.university}
+                      </p>
+                      
+                      <div className="mb-4">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          exam.resultsOut ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {exam.resultsOut ? 'Results Out' : 'Results Pending'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {exam.resultsOut ? (
+                          <button className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm">
+                            Check Results
+                          </button>
+                        ) : (
+                          <button className="w-full bg-gray-400 text-white py-2 px-4 rounded-lg font-medium cursor-not-allowed text-sm" disabled>
+                            Results Not Available
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <img 
+                      src={exam.image} 
+                      alt={`${exam.university} logo`}
+                      className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
+                    />
                   </div>
                 </CardContent>
               </Card>
