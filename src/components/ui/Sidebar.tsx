@@ -12,14 +12,14 @@ import ucscLogo from "@/assets/ucsc_logo.png";
 
 function Sidebar() {
   const mainLinks = [
-    { name: "Home", path: "/", icon: Home },
-    { name: "Register", path: "/register", icon: UserPlus },
-    { name: "My Exams", path: "/my-exams", icon: BookOpen },
-    { name: "My Results", path: "/my-results", icon: Award },
-    { name: "Notifications", path: "/notifications", icon: Bell },
+    { name: "Home", path: "/portal", icon: Home },
+    { name: "Register", path: "/portal/register", icon: UserPlus },
+    { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
+    { name: "My Results", path: "/portal/my-results", icon: Award },
+    { name: "Notifications", path: "/portal/notifications", icon: Bell },
   ];
 
-  const logoutLink = { name: "Log out", path: "/logout", icon: LogOut };
+  const logoutLink = { name: "Log out", path: "/portal/logout", icon: LogOut };
 
   return (
     <div
@@ -42,7 +42,8 @@ function Sidebar() {
 
         {/* UCSC Text */}
         <div className="hidden md:block text-center mb-12 text-lg font-semibold text-blue-900 select-none">
-          UCSC-UGS
+          UCSC-
+          <br/>University Gateway Solutions
         </div>
 
         {/* Navigation Links */}
@@ -51,6 +52,7 @@ function Sidebar() {
             <NavLink
               key={name}
               to={path}
+              end={name === "Home"} // Add end prop only for Home link
               className={({ isActive }) =>
                 `group flex items-center gap-4 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                   ? "bg-blue-100 text-blue-900 font-bold border-l-4 border-blue-700 scale-105"
@@ -78,7 +80,7 @@ function Sidebar() {
             }`
           }
         >
-          <logoutLink.icon className="h-5 w-5 text-red-600" />
+          <LogOut className="h-5 w-5 text-red-600" />
           <span className="hidden md:inline transition-all duration-300">
             {logoutLink.name}
           </span>

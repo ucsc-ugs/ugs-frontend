@@ -6,26 +6,32 @@ import MyExams from "@/pages/MyExams";
 import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
 import Logout from "@/pages/Logout";
+import LandingPage from "@/pages/LandingPage";
 
 function App() {
   return (
     <Router>
-      <div className="flex min-h-svh min-w-[550px]">
-        <div >
-          <Sidebar />
-        </div>
-
-        <div className="flex-1 p-8">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/my-exams" element={<MyExams />} />
-            <Route path="/my-results" element={<MyResults />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/logout" element={<Logout />} />
-          </Routes>
-        </div>
-      </div>
+      <Routes>
+        {/* Landing page route - this will be the default */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Main app routes with sidebar */}
+        <Route path="/portal/*" element={
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <div className="flex-1 p-6">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/my-exams" element={<MyExams />} />
+                <Route path="/my-results" element={<MyResults />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/logout" element={<Logout />} />
+              </Routes>
+            </div>
+          </div>
+        } />
+      </Routes>
     </Router>
   );
 }
