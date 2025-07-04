@@ -6,7 +6,7 @@ import profileSample from "@/assets/profile_sample.png";
 
 
 const mockUser = {
-  name: "Mandinu Maneth",
+  name: "User One",
   regNumber: "2025/IS/011",
   avatar: profileSample,
 };
@@ -26,7 +26,7 @@ const results = [
 
 const Home = () => {
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn min-h-svh min-w-[320px]">
+    <div className="flex flex-col gap-6 animate-fadeIn min-w-[320px]">
 
       {/* Top Bar */}
       <div className="flex justify-between items-center flex-wrap gap-4">

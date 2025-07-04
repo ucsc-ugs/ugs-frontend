@@ -24,7 +24,7 @@ function Sidebar() {
   return (
     <div
       className={`
-    h-screen bg-white p-4
+    h-screen bg-white p-4 
     w-20 md:w-64
     flex flex-col justify-between
     transition-all duration-300 ease-in-out
