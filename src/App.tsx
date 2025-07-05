@@ -7,6 +7,7 @@ import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
+import Sidebar from "@/components/ui/Sidebar";
 
 function App() {
   return (
