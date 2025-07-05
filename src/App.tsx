@@ -1,43 +1,42 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
-import ExamResult from "./components/ExamResult";
-import ExamDetailsBox from "./components/ExamDetailsBox";
-import ContactUsForm from "./components/ContactUsForm";
-import RegistrationForm from "./components/RegistrationForm";
-import { Button } from "./components/ui/button";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import PortalLayout from "@/layout/PortalLayout";
+import Home from "@/pages/Home";
+import Register from "@/pages/Register";
+import MyExams from "@/pages/MyExams";
+import MyResults from "@/pages/MyResults";
+import Notifications from "@/pages/Notifications";
+import Logout from "@/pages/Logout";
+import LandingPage from "@/pages/LandingPage";
 
-const dummyExam = {
-  name: "GCAT - Master of Philosophy at UCSC",
-  date: "2025-08-01",
-  venue: "S204",
-  fee: "$100",
-  deadline: "2025-07-20",
-  imageUrl: "/ucsclogo.png"
-};
-
-function Home() {
-  const navigate = useNavigate();
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 bg-[#f1f5f9]">
-      <ExamResult />
-      <div className="flex gap-4 mt-8">
-        <Button variant="outline" onClick={() => navigate("/exam-details")}>View Exam Details</Button>
-        <Button variant="outline" onClick={() => navigate("/contact-us")}>Contact Us</Button>
-        <Button variant="outline" onClick={() => navigate("/register")}>Register</Button>
-      </div>
-    </div>
-  );
-}
-
-export default function App() {
+function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/exam-details" element={<ExamDetailsBox exam={dummyExam} />} />
-        <Route path="/contact-us" element={<ContactUsForm />} />
-        <Route path="/register" element={<RegistrationForm />} />
+        {/* Landing page */}
+        <Route path="/" element={<LandingPage />} />
+
+        
+        {/* Main app routes with sidebar */}
+        <Route path="/portal/*" element={
+          <div className="min-h-screen">
+            <Sidebar />
+            {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
+            <div className="ml-20 md:ml-64 p-6">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/my-exams" element={<MyExams />} />
+                <Route path="/my-results" element={<MyResults />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/logout" element={<Logout />} />
+              </Routes>
+            </div>
+          </div>
+        } />
+
       </Routes>
     </Router>
   );
 }
+
+export default App;
