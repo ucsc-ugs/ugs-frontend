@@ -57,3 +57,5 @@ function Button({
 }
 
 export { Button, buttonVariants }
+
+// No changes needed, the Button component is already implemented using shadcn/ui style.
