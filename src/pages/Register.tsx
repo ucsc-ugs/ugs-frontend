@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -122,11 +122,11 @@ const RegisterPage = () => {
   // Filter exams based on search and university filter
   const filteredExams = availableExams.filter(exam => {
     const matchesSearch = exam.testName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.university.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      exam.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exam.university.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesUniversity = selectedUniversity === 'all' || exam.university === selectedUniversity;
-    
+
     return matchesSearch && matchesUniversity;
   });
 
@@ -149,7 +149,7 @@ const RegisterPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div className="flex items-center gap-2 w-full md:w-auto">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
@@ -193,33 +193,33 @@ const RegisterPage = () => {
                       <p className="text-sm text-muted-foreground mb-2">
                         {exam.fullName}
                       </p>
-                      
+
                       <div className="mb-3">
                         <p className="text-sm text-muted-foreground font-medium">
                           {exam.university}
                         </p>
                       </div>
-                      
+
                       <div className="mb-3">
                         <p className="text-sm text-foreground">
                           {exam.date} • {exam.time}
                         </p>
                       </div>
-                      
+
                       <div className="mb-3">
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                           {exam.fee}
                         </span>
                       </div>
                     </div>
-                    
+
                     <button className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm mt-auto">
                       View Details
                     </button>
                   </div>
-                  
-                  <img 
-                    src={exam.image} 
+
+                  <img
+                    src={exam.image}
                     alt={`${exam.university} logo`}
                     className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
                   />

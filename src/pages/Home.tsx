@@ -1,15 +1,6 @@
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-import profileSample from "@/assets/profile_sample.png";
-import type test from "node:test";
 
-const mockUser = {
-  name: "Mandinu Maneth",
-  regNumber: "2025/IS/011",
-  avatar: profileSample,
-};
 
 const registeredExams = [
   { 
@@ -84,28 +75,8 @@ const completedExams = [
 
 const Home = () => {
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn min-h-svh min-w-[320px]">
-      {/* Top Bar */}
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <Input
-          placeholder="Search exams or results..."
-          className="w-full max-w-lg rounded-xl shadow-md"
-        />
-
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-end text-right leading-tight">
-            <div className="text-sm font-semibold text-muted-foreground">
-              {mockUser.name}
-            </div>
-            <div className="text-xs text-gray-500">Reg-No: {mockUser.regNumber}</div>
-          </div>
-
-          <Avatar className="h-9 w-9 ring-2 ring-primary/20 transition-transform duration-200 hover:scale-105">
-            <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-            <AvatarFallback>MM</AvatarFallback>
-          </Avatar>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6 animate-fadeIn min-h-svh min-w-[320px] p-4">
+      
 
       {/* Registered Exams Section */}
       <div>
@@ -115,7 +86,7 @@ const Home = () => {
             View All Registered Exams
           </button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {registeredExams.map((exam, index) => (
             <motion.div
@@ -179,7 +150,7 @@ const Home = () => {
             View All Results
           </button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {completedExams.map((exam, index) => (
             <motion.div

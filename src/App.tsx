@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Sidebar from "@/components/ui/Sidebar";
+import PortalLayout from "@/layout/PortalLayout";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -12,8 +12,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Landing page route - this will be the default */}
+        {/* Landing page */}
         <Route path="/" element={<LandingPage />} />
+
         
         {/* Main app routes with sidebar */}
         <Route path="/portal/*" element={
@@ -32,6 +33,7 @@ function App() {
             </div>
           </div>
         } />
+
       </Routes>
     </Router>
   );
