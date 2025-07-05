@@ -17,9 +17,10 @@ function App() {
         
         {/* Main app routes with sidebar */}
         <Route path="/portal/*" element={
-          <div className="flex min-h-screen">
+          <div className="min-h-screen">
             <Sidebar />
-            <div className="flex-1 p-6">
+            {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
+            <div className="ml-20 md:ml-64 p-6">
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/register" element={<Register />} />

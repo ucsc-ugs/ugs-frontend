@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import ucscLogo from "@/assets/ucsc_logo.png";
+import "@/index.css";
 
 function Sidebar() {
   const mainLinks = [
@@ -24,6 +25,7 @@ function Sidebar() {
   return (
     <div
       className={`
+    fixed top-0 left-0 z-40
     h-screen bg-white p-4
     w-20 md:w-64
     flex flex-col justify-between
