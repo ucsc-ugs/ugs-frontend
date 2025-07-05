@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import ucscLogo from "@/assets/ucsc_logo.png";
+
 import profileSample from "@/assets/profile_sample.png";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 
@@ -17,6 +18,7 @@ const mockUser = {
   regNumber: "2025/IS/011",
   avatar: profileSample,
 };
+
 
 function Sidebar() {
   const mainLinks = [
@@ -37,13 +39,16 @@ function Sidebar() {
   return (
     <div
       className={`
-        h-screen bg-white p-4 
-        w-20 md:w-64
-        flex flex-col justify-between
-        transition-all duration-300 ease-in-out
-        shadow-lg shadow-blue-200
-        rounded-tr-2xl rounded-br-2xl
-      `}
+
+    fixed top-0 left-0 z-40
+    h-screen bg-white p-4
+    w-20 md:w-64
+    flex flex-col justify-between
+    transition-all duration-300 ease-in-out
+    shadow-lg shadow-blue-200
+    rounded-tr-2xl rounded-br-2xl
+  `}
+
     >
       {/* Top Section */}
       <div>

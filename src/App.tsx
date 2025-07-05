@@ -15,15 +15,25 @@ function App() {
         {/* Landing page */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* Protected portal pages */}
-        <Route path="/portal" element={<PortalLayout />}>
-          <Route index element={<Home />} />
-          <Route path="register" element={<Register />} />
-          <Route path="my-exams" element={<MyExams />} />
-          <Route path="my-results" element={<MyResults />} />
-          <Route path="notifications" element={<Notifications />} />
-          <Route path="logout" element={<Logout />} />
-        </Route>
+        
+        {/* Main app routes with sidebar */}
+        <Route path="/portal/*" element={
+          <div className="min-h-screen">
+            <Sidebar />
+            {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
+            <div className="ml-20 md:ml-64 p-6">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/my-exams" element={<MyExams />} />
+                <Route path="/my-results" element={<MyResults />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/logout" element={<Logout />} />
+              </Routes>
+            </div>
+          </div>
+        } />
+
       </Routes>
     </Router>
   );
