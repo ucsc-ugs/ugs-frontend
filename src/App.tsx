@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Sidebar from "@/components/ui/Sidebar";
+import PortalLayout from "@/layout/PortalLayout";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -12,25 +12,18 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Landing page route - this will be the default */}
+        {/* Landing page */}
         <Route path="/" element={<LandingPage />} />
-        
-        {/* Main app routes with sidebar */}
-        <Route path="/portal/*" element={
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 p-6">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/my-exams" element={<MyExams />} />
-                <Route path="/my-results" element={<MyResults />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/logout" element={<Logout />} />
-              </Routes>
-            </div>
-          </div>
-        } />
+
+        {/* Protected portal pages */}
+        <Route path="/portal" element={<PortalLayout />}>
+          <Route index element={<Home />} />
+          <Route path="register" element={<Register />} />
+          <Route path="my-exams" element={<MyExams />} />
+          <Route path="my-results" element={<MyResults />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="logout" element={<Logout />} />
+        </Route>
       </Routes>
     </Router>
   );
