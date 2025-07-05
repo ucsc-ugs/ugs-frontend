@@ -1,80 +1,123 @@
-import { cn } from "../../lib/utils";
-import { Home, UserPlus, FileText, BarChart2, LogOut, ChevronLeft, User, Search, CreditCard, LogIn } from "lucide-react";
-import { Link } from "react-router-dom";
-import React from "react";
+// src/components/ui/Sidebar.tsx
+import {
+  Home,
+  UserPlus,
+  BookOpen,
+  Award,
+  Bell,
+  LogOut,
+} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import ucscLogo from "@/assets/ucsc_logo.png";
 
-export function Sidebar({ className, onCollapse, ...props }: React.HTMLAttributes<HTMLDivElement> & { onCollapse?: () => void }) {
+import profileSample from "@/assets/profile_sample.png";
+import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+
+const mockUser = {
+  name: "User One",
+  regNumber: "2025/IS/011",
+  avatar: profileSample,
+};
+
+
+function Sidebar() {
+  const mainLinks = [
+    { name: "Home", path: "/portal", icon: Home },
+    { name: "Register", path: "/portal/register", icon: UserPlus },
+    { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
+    { name: "My Results", path: "/portal/my-results", icon: Award },
+    {
+      name: "Notifications",
+      path: "/portal/notifications",
+      icon: Bell,
+      hasBell: true, // use this to render badge
+    },
+  ];
+
+  const logoutLink = { name: "Log out", path: "/portal/logout", icon: LogOut };
+
   return (
-    <aside
-      className={cn(
-        "h-screen w-72 bg-[#1e293b] text-white shadow-xl flex flex-col p-6 border-r border-[#334155] rounded-l-3xl relative transition-all duration-300 font-lato",
-        className
-      )}
-      {...props}
+    <div
+      className={`
+
+    fixed top-0 left-0 z-40
+    h-screen bg-white p-4
+    w-20 md:w-64
+    flex flex-col justify-between
+    transition-all duration-300 ease-in-out
+    shadow-lg shadow-blue-200
+    rounded-tr-2xl rounded-br-2xl
+  `}
+
     >
-      {/* Collapse button */}
-      <button
-        className="absolute top-6 right-[-18px] bg-white shadow-md rounded-full w-9 h-9 flex items-center justify-center border border-[#334155] hover:bg-[#334155] transition"
-        onClick={onCollapse}
-        aria-label="Hide Sidebar"
-      >
-        <ChevronLeft className="w-5 h-5 text-[#334155]" />
-      </button>
-      <div className="mb-10 flex flex-col items-center">
-        <div className="bg-white rounded-2xl shadow p-2 mb-2">
-          <img src="/ucsclogo.png" alt="UCSC Logo" className="w-14 h-14" />
+      {/* Top Section */}
+      <div>
+        <div className="hidden md:flex items-center justify-center mb-4">
+          <img src={ucscLogo} alt="UCSC Logo" className="h-16" draggable={false} />
         </div>
-        <h1 className="text-2xl font-extrabold text-white tracking-wide">UCSC</h1>
-        <span className="text-xs text-slate-300 font-medium mt-1">Graduate Portal</span>
+
+        <div className="hidden md:block text-center mb-12 text-lg font-semibold text-blue-800 select-none">
+          UCSC<br />University Gateway Solutions
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex flex-col space-y-5">
+          {mainLinks.map(({ name, path, icon: Icon, hasBell }) => (
+            <NavLink
+              key={name}
+              to={path}
+              end={name === "Home"}
+              className={({ isActive }) =>
+                `group flex items-center gap-4 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                  ? "bg-blue-100 text-blue-800 font-bold border-l-4 border-blue-700 scale-105"
+                  : "text-blue-800 hover:bg-blue-50 hover:scale-105"
+                }`
+              }
+            >
+              <div className="relative">
+                <Icon className="h-5 w-5" />
+                {hasBell && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
+                )}
+              </div>
+              <span className="hidden md:inline transition-all duration-300">{name}</span>
+            </NavLink>
+          ))}
+        </div>
       </div>
-      <nav className="flex flex-col gap-4 flex-1">
-        <SidebarLink icon={<Home className="w-5 h-5" />} label="Dashboard" href="/dashboard" />
-        <SidebarLink icon={<Search className="w-5 h-5" />} label="Find Exams" href="/find-exams" />
-        <SidebarLink icon={<FileText className="w-5 h-5" />} label="My Exams" href="/my-exams" />
-        <SidebarLink icon={<BarChart2 className="w-5 h-5" />} label="Results" href="/results" />
-        <SidebarLink icon={<User className="w-5 h-5" />} label="Profile" href="/profile" />
-        <SidebarLink icon={<CreditCard className="w-5 h-5" />} label="Payment" href="/payment" />
-        <SidebarLink icon={<LogIn className="w-5 h-5" />} label="Sign In" href="/login" />
-        <SidebarLink icon={<UserPlus className="w-5 h-5" />} label="Sign Up" href="/signup" />
-      </nav>
-      <div className="mt-auto pt-8">
-        <SidebarLink icon={<LogOut className="w-5 h-5 text-red-400" />} label="Log out" className="text-red-400 font-semibold hover:bg-[#334155]" href="/" />
+
+      {/* 👤 User Info + Logout */}
+      <div className="mt-6 space-y-6 pb-12">
+        {/* User Info */}
+        <div className="flex flex-col items-center justify-center gap-3 px-4">
+          <Avatar className="h-10 w-10 ring-2 ring-blue-200">
+            <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
+            <AvatarFallback>U</AvatarFallback>
+          </Avatar>
+          <div className="hidden md:flex flex-col text-sm text-center leading-tight">
+            <span className="font-medium text-blue-800">{mockUser.name}</span>
+            <span className="text-gray-500">{mockUser.regNumber}</span>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <NavLink
+          to={logoutLink.path}
+          className={({ isActive }) =>
+            `group flex items-center justify-center gap-3 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+              ? "bg-red-100 text-red-600 font-bold border-l-4 border-red-600 scale-105"
+              : "text-red-600 hover:bg-red-50 hover:scale-105"
+            }`
+          }
+        >
+          <LogOut className="h-5 w-5 text-red-600" />
+          <span className="hidden md:inline transition-all duration-300">
+            {logoutLink.name}
+          </span>
+        </NavLink>
       </div>
-    </aside>
+    </div>
   );
 }
 
-function SidebarLink({ icon, label, className = "", active = false, href }: { icon: React.ReactNode; label: string; className?: string; active?: boolean; href?: string }) {
-  if (href) {
-    return (
-      <Link
-        to={href}
-        className={cn(
-          "flex items-center gap-3 text-lg px-4 py-2 rounded-xl transition-colors group",
-          active
-            ? "bg-white shadow text-indigo-700 font-bold"
-            : "text-gray-700 hover:bg-white/70 hover:text-indigo-700",
-          className
-        )}
-      >
-        <span className={cn("transition", active ? "text-indigo-700" : "text-gray-400 group-hover:text-indigo-700")}>{icon}</span>
-        <span>{label}</span>
-      </Link>
-    );
-  }
-  return (
-    <a
-      href="#"
-      className={cn(
-        "flex items-center gap-3 text-lg px-4 py-2 rounded-xl transition-colors group",
-        active
-          ? "bg-white shadow text-indigo-700 font-bold"
-          : "text-gray-700 hover:bg-white/70 hover:text-indigo-700",
-        className
-      )}
-    >
-      <span className={cn("transition", active ? "text-indigo-700" : "text-gray-400 group-hover:text-indigo-700")}>{icon}</span>
-      <span>{label}</span>
-    </a>
-  );
-}
+export default Sidebar;
