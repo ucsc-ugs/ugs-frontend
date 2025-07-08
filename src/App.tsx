@@ -8,25 +8,30 @@ import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
 import SignInPage from "@/pages/SignInPage";
 import Sidebar from "@/components/ui/Sidebar";
+import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
 import ContactUsForm from "./components/ui/ContactUsForm";
+import AdminDashboard from "@/pages/OrgAdminHome";
+// import AdminExams from "@/pages/admin/Exams";
+// import AdminCreateExam from "@/pages/admin/CreateExam";
+// import AdminUsers from "@/pages/admin/Users";
+// import AdminUniversity from "@/pages/admin/University";
+// import AdminSettings from "@/pages/admin/Settings";
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Landing page */}
+        {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/contact" element={<ContactUsForm />} />
 
-        
-        {/* Main app routes with sidebar */}
+        {/* Student portal routes with sidebar */}
         <Route path="/portal/*" element={
           <div className="min-h-screen">
             <Sidebar />
-            {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
             <div className="ml-20 md:ml-64 p-6">
               <Routes>
                 <Route path="/" element={<Home />} />
@@ -35,8 +40,25 @@ function App() {
                 <Route path="/my-results" element={<MyResults />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/logout" element={<Logout />} />
-                
-        
+              </Routes>
+            </div>
+          </div>
+        } />
+
+        {/* Admin portal routes with admin sidebar */}
+        <Route path="/admin/*" element={
+          <div className="min-h-screen">
+            <OrgAdminSidebar />
+            <div className="ml-20 md:ml-64 p-6">
+              <Routes>
+                <Route path="/" element={<AdminDashboard />} />
+                {/* <Route path="/exams" element={<AdminExams />} />
+                <Route path="/create-exam" element={<AdminCreateExam />} />
+                <Route path="/users" element={<AdminUsers />} />
+                <Route path="/university" element={<AdminUniversity />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/settings" element={<AdminSettings />} />
+                <Route path="/logout" element={<Logout />} /> */}
               </Routes>
             </div>
           </div>

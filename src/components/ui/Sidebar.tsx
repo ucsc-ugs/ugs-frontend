@@ -1,4 +1,3 @@
-// src/components/ui/Sidebar.tsx
 import {
   Home,
   UserPlus,
