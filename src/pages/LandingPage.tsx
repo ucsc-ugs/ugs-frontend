@@ -6,28 +6,13 @@ import { useNavigate } from "react-router-dom"
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const handleSignIn = () => {
-    navigate("/signin"); // Navigate to sign-in page
-  };
-  const handleSignUp = () => {
-    navigate("/signup"); // Navigate to sign-up page
-  };
 
-  const handleAccessPortal = () => {
-    navigate("/portal"); // Navigate to home page with sidebar
-  };
-
-  const handleStudentPortal = () => {
-    navigate("/portal"); // Navigate to home page with sidebar
-  };
-
-  const handleRegister = () => {
-    navigate("/portal/register"); // Navigate to register page with sidebar
-  };
-
-  const handleInitiateRegistration = () => {
-    navigate("/portal/register"); // Navigate to register page with sidebar
-  };
+  const handleSignIn = () => navigate("/signin");
+  const handleSignUp = () => navigate("/signup");
+  const handleAccessPortal = () => navigate("/portal");
+  const handleStudentPortal = () => navigate("/portal");
+  const handleInitiateRegistration = () => navigate("/portal/register");
+  const handleContactUs = () => navigate("/contact"); 
 
   return (
     <div className="min-h-screen bg-white">
@@ -51,9 +36,9 @@ export default function LandingPage() {
             </Button>
             <Button 
               className="bg-gray-800 hover:bg-gray-900 text-white"
-              onClick={handleRegister}
+              onClick={handleContactUs}
             >
-              Register
+              Contact Us
             </Button>
             <Button 
               className="bg-gray-800 hover:bg-gray-900 text-white"
