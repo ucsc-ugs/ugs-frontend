@@ -9,6 +9,7 @@ import LandingPage from "@/pages/LandingPage";
 import SignInPage from "@/pages/SignInPage";
 import Sidebar from "@/components/ui/Sidebar";
 import SignUpPage from "./pages/SignUpPage";
+import ContactUsForm from "./components/ui/ContactUsForm";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/contact" element={<ContactUsForm />} />
 
         
         {/* Main app routes with sidebar */}
