@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import PortalLayout from "@/layout/PortalLayout";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -7,7 +6,9 @@ import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
+import SignInPage from "@/pages/SignInPage";
 import Sidebar from "@/components/ui/Sidebar";
+import SignUpPage from "./pages/SignUpPage";
 
 function App() {
   return (
@@ -15,6 +16,8 @@ function App() {
       <Routes>
         {/* Landing page */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/signin" element={<SignInPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
 
         
         {/* Main app routes with sidebar */}
@@ -30,6 +33,8 @@ function App() {
                 <Route path="/my-results" element={<MyResults />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/logout" element={<Logout />} />
+                
+        
               </Routes>
             </div>
           </div>
