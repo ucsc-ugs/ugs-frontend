@@ -40,3 +40,23 @@
 .read-the-docs {
   color: #888;
 }
+
+/* src/styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+.main-content {
+  margin-left: 5rem; /* 80px */
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 16rem; /* 256px */
+  }
+}
