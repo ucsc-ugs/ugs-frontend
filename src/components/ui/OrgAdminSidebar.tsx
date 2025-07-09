@@ -24,9 +24,9 @@ const mockAdmin = {
 export function OrgAdminSidebar() {
   const mainLinks = [
     { name: "Dashboard", path: "/admin", icon: Home },
-    { name: "Manage Exams", path: "/admin/exams", icon: BookOpen },
+    { name: "Manage Exams", path: "/admin/manage-exams", icon: BookOpen },
     { name: "Create Exam", path: "/admin/create-exam", icon: BookPlus },
-    { name: "Manage Users", path: "/admin/users", icon: Users },
+    { name: "Manage Users", path: "/admin/manage-users", icon: Users },
     { name: "University", path: "/admin/university", icon: School },
     { name: "Notifications", path: "/admin/notifications", icon: Bell, hasBell: true },
     { name: "Settings", path: "/admin/settings", icon: Settings },
@@ -54,10 +54,9 @@ export function OrgAdminSidebar() {
               to={path}
               end={name === "Dashboard"}
               className={({ isActive }) =>
-                `group flex items-center gap-4 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${
-                  isActive
-                    ? "bg-blue-100 text-blue-800 font-bold border-l-4 border-blue-700 scale-105"
-                    : "text-blue-800 hover:bg-blue-50 hover:scale-105"
+                `group flex items-center gap-4 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                  ? "bg-blue-100 text-blue-800 font-bold border-l-4 border-blue-700 scale-105"
+                  : "text-blue-800 hover:bg-blue-50 hover:scale-105"
                 }`
               }
             >
@@ -92,10 +91,9 @@ export function OrgAdminSidebar() {
         <NavLink
           to={logoutLink.path}
           className={({ isActive }) =>
-            `group flex items-center justify-center gap-3 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${
-              isActive
-                ? "bg-red-100 text-red-600 font-bold border-l-4 border-red-600 scale-105"
-                : "text-red-600 hover:bg-red-50 hover:scale-105"
+            `group flex items-center justify-center gap-3 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+              ? "bg-red-100 text-red-600 font-bold border-l-4 border-red-600 scale-105"
+              : "text-red-600 hover:bg-red-50 hover:scale-105"
             }`
           }
         >
