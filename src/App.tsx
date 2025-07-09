@@ -11,12 +11,13 @@ import Sidebar from "@/components/ui/Sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
 import ContactUsForm from "./components/ui/ContactUsForm";
-import AdminDashboard from "@/pages/OrgAdminHome";
-// import AdminExams from "@/pages/admin/Exams";
-// import AdminCreateExam from "@/pages/admin/CreateExam";
-// import AdminUsers from "@/pages/admin/Users";
-// import AdminUniversity from "@/pages/admin/University";
-// import AdminSettings from "@/pages/admin/Settings";
+import AdminDashboard from "@/pages/admin/OrgAdminHome";
+import AdminNotifications from "@/pages/admin/AdminNotifications";
+import ManageExams from "@/pages/admin/ManageExams";
+import CreateExam from "@/pages/admin/CreateExam";
+import ManageUsers from "@/pages/admin/ManageUsers";
+import University from "@/pages/admin/University";
+import Settings from "@/pages/admin/Settings";
 
 function App() {
   return (
@@ -52,13 +53,13 @@ function App() {
             <div className="ml-20 md:ml-64 p-6">
               <Routes>
                 <Route path="/" element={<AdminDashboard />} />
-                {/* <Route path="/exams" element={<AdminExams />} />
-                <Route path="/create-exam" element={<AdminCreateExam />} />
-                <Route path="/users" element={<AdminUsers />} />
-                <Route path="/university" element={<AdminUniversity />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/settings" element={<AdminSettings />} />
-                <Route path="/logout" element={<Logout />} /> */}
+                <Route path="/notifications" element={<AdminNotifications />} />
+                <Route path="/manage-exams" element={<ManageExams />} />
+                <Route path="/create-exam" element={<CreateExam />} />
+                <Route path="/manage-users" element={<ManageUsers />} />
+                <Route path="/university" element={<University />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/logout" element={<Logout />} />
               </Routes>
             </div>
           </div>
