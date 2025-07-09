@@ -250,7 +250,21 @@ export default function ManageUsers() {
                             <p className="text-gray-600 text-sm">Manage student and admin accounts</p>
                         </div>
                     </div>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => {
+                            setEditingUser({
+                                id: Date.now(),
+                                name: "",
+                                email: "",
+                                role: "student",
+                                status: "active",
+                                university: "",
+                                createdAt: new Date().toISOString(),
+                            });
+                            setShowEditModal(true);
+                        }}
+                    >
                         <Plus className="w-4 h-4 mr-2" />
                         Add New User
                     </Button>
