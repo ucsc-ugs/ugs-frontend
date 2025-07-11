@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
+import Sidebar from "@/components/ui/Sidebar"; // Adjust the import based on your project structure
 
 export default function ContactUsForm() {
   const navigate = useNavigate();
@@ -73,126 +74,129 @@ export default function ContactUsForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Button
-            variant="ghost"
-            onClick={handleBackToHome}
-            className="mb-6 text-gray-600 hover:text-gray-800"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
-          </Button>
-          
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <img 
-              src="../src/assets/ucsc_logo.png" 
-              alt="UCSC Logo" 
-              width={50} 
-              height={35} 
-              className="object-contain" 
-            />
-            <div className="text-left">
-              <h1 className="text-xl font-bold text-gray-900">University Gateway Solution</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 flex">
+      <Sidebar />
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Button
+              variant="ghost"
+              onClick={handleBackToHome}
+              className="mb-6 text-gray-600 hover:text-gray-800"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
+            
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <img 
+                src="../src/assets/ucsc_logo.png" 
+                alt="UCSC Logo" 
+                width={50} 
+                height={35} 
+                className="object-contain" 
+              />
+              <div className="text-left">
+                <h1 className="text-xl font-bold text-gray-900">University Gateway Solution</h1>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Contact Form Card */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-900">Contact Us</CardTitle>
-            <CardDescription className="text-gray-600">
-              Get in touch with our support team
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name Field */}
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                  Full Name
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
-                />
+          {/* Contact Form Card */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-gray-900">Contact Us</CardTitle>
+              <CardDescription className="text-gray-600">
+                Get in touch with our support team
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                    Full Name
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
+                  />
+                </div>
+
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
+                  />
+                </div>
+
+                {/* Message Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="message" className="text-sm font-medium text-gray-700">
+                    Message
+                  </Label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    placeholder="Tell us how we can help you..."
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    required
+                    rows={4}
+                    className="border-gray-300 focus:border-slate-500 focus:ring-slate-500 resize-none"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 bg-slate-700 hover:bg-slate-800 text-white font-medium"
+                >
+                  {isLoading ? (
+                    "Sending..."
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {/* Contact Information */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="text-center text-sm text-gray-600">
+                  <p className="mb-2">You can also reach us at:</p>
+                  <p className="font-medium">support@ucsc.cmb.ac.lk</p>
+                  <p>+94 11 2581245</p>
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Email Field */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
-                />
-              </div>
-
-              {/* Message Field */}
-              <div className="space-y-2">
-                <Label htmlFor="message" className="text-sm font-medium text-gray-700">
-                  Message
-                </Label>
-                <Textarea
-                  id="message"
-                  name="message"
-                  placeholder="Tell us how we can help you..."
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  required
-                  rows={4}
-                  className="border-gray-300 focus:border-slate-500 focus:ring-slate-500 resize-none"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-12 bg-slate-700 hover:bg-slate-800 text-white font-medium"
-              >
-                {isLoading ? (
-                  "Sending..."
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Message
-                  </>
-                )}
-              </Button>
-            </form>
-
-            {/* Contact Information */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <div className="text-center text-sm text-gray-600">
-                <p className="mb-2">You can also reach us at:</p>
-                <p className="font-medium">support@ucsc.cmb.ac.lk</p>
-                <p>+94 11 2581245</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <div className="text-center mt-8 text-sm text-gray-500">
-          <p>&copy; 2024 University of Colombo School of Computing</p>
+          {/* Footer */}
+          <div className="text-center mt-8 text-sm text-gray-500">
+            <p>&copy; 2024 University of Colombo School of Computing</p>
+          </div>
         </div>
       </div>
     </div>
