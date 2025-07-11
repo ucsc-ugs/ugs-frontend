@@ -12,7 +12,7 @@ export default function LandingPage() {
   const handleAccessPortal = () => navigate("/portal");
   const handleStudentPortal = () => navigate("/portal");
   const handleInitiateRegistration = () => navigate("/portal/register");
-  const handleContactUs = () => navigate("/contact"); 
+  const handleContactUs = () => navigate("/contact-us"); 
 
   return (
     <div className="min-h-screen bg-white">

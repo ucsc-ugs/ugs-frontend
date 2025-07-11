@@ -9,6 +9,10 @@ import Notifications from "@/pages/Notifications";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
 import Sidebar from "./components/ui/Sidebar";
+import ContactUsForm from "./components/ContactUsForm"; // Import the ContactUsForm component
+import SignIn from "@/pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage"; // Import SignIn component
+import ContactUs from "@/pages/ContactUs";
 
 function App() {
   return (
@@ -33,11 +37,15 @@ function App() {
                     <Route path="/my-results" element={<MyResults />} />
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/logout" element={<Logout />} />
+                    <Route path="/contact-us" element={<ContactUsForm />} /> {/* Add the new route here */}
                   </Routes>
                 </div>
               </div>
             }
           />
+          <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUpPage />} />
         </Routes>
       </Router>
     </ErrorBoundary>
