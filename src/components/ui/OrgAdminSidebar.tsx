@@ -1,54 +1,41 @@
+// src/components/ui/OrgAdminSidebar.tsx
 import {
   Home,
-  UserPlus,
+  Users,
   BookOpen,
-  Award,
+  BookPlus,
+  School,
   Bell,
+  Settings,
   LogOut,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import ucscLogo from "@/assets/ucsc_logo.png";
-
 import profileSample from "@/assets/profile_sample.png";
-import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const mockUser = {
-  name: "User One",
-  regNumber: "2025/IS/011",
+const mockAdmin = {
+  name: "Admin User",
+  role: "University Admin",
   avatar: profileSample,
+  university: "University of Colombo",
 };
 
-
-function Sidebar() {
+export function OrgAdminSidebar() {
   const mainLinks = [
-    { name: "Home", path: "/portal", icon: Home },
-    { name: "Register", path: "/portal/register", icon: UserPlus },
-    { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
-    { name: "My Results", path: "/portal/my-results", icon: Award },
-    {
-      name: "Notifications",
-      path: "/portal/notifications",
-      icon: Bell,
-      hasBell: true, // use this to render badge
-    },
+    { name: "Dashboard", path: "/admin", icon: Home },
+    { name: "Manage Exams", path: "/admin/manage-exams", icon: BookOpen },
+    { name: "Create Exam", path: "/admin/create-exam", icon: BookPlus },
+    { name: "Manage Users", path: "/admin/manage-users", icon: Users },
+    { name: "University", path: "/admin/university", icon: School },
+    { name: "Notifications", path: "/admin/notifications", icon: Bell, hasBell: true },
+    { name: "Settings", path: "/admin/settings", icon: Settings },
   ];
 
-  const logoutLink = { name: "Log out", path: "/portal/logout", icon: LogOut };
+  const logoutLink = { name: "Log out", path: "/admin/logout", icon: LogOut };
 
   return (
-    <div
-      className={`
-
-    fixed top-0 left-0 z-40
-    h-screen bg-white p-4
-    w-20 md:w-64
-    flex flex-col justify-between
-    transition-all duration-300 ease-in-out
-    shadow-lg shadow-blue-200
-    rounded-tr-2xl rounded-br-2xl
-  `}
-
-    >
+    <div className="fixed top-0 left-0 z-40 h-screen bg-white p-4 w-20 md:w-64 flex flex-col justify-between shadow-lg shadow-blue-200 rounded-tr-2xl rounded-br-2xl">
       {/* Top Section */}
       <div>
         <div className="hidden md:flex items-center justify-center mb-4">
@@ -65,7 +52,7 @@ function Sidebar() {
             <NavLink
               key={name}
               to={path}
-              end={name === "Home"}
+              end={name === "Dashboard"}
               className={({ isActive }) =>
                 `group flex items-center gap-4 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                   ? "bg-blue-100 text-blue-800 font-bold border-l-4 border-blue-700 scale-105"
@@ -85,17 +72,18 @@ function Sidebar() {
         </div>
       </div>
 
-      {/* 👤 User Info + Logout */}
+      {/* User Info + Logout */}
       <div className="mt-6 space-y-6 pb-12">
         {/* User Info */}
         <div className="flex flex-col items-center justify-center gap-3 px-4">
           <Avatar className="h-10 w-10 ring-2 ring-blue-200">
-            <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarImage src={mockAdmin.avatar} alt={mockAdmin.name} />
+            <AvatarFallback>A</AvatarFallback>
           </Avatar>
           <div className="hidden md:flex flex-col text-sm text-center leading-tight">
-            <span className="font-medium text-blue-800">{mockUser.name}</span>
-            <span className="text-gray-500">{mockUser.regNumber}</span>
+            <span className="font-medium text-blue-800">{mockAdmin.name}</span>
+            <span className="text-gray-500">{mockAdmin.role}</span>
+            <span className="text-gray-400 text-xs mt-1">{mockAdmin.university}</span>
           </div>
         </div>
 
@@ -119,4 +107,4 @@ function Sidebar() {
   );
 }
 
-export default Sidebar;
+export default OrgAdminSidebar;

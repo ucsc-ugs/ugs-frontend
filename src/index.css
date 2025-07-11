@@ -134,3 +134,19 @@
     @apply text-[#1e293b] font-bold text-center;
   }
 }
+
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+.main-content {
+  margin-left: 5rem; /* 80px */
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 16rem; /* 256px */
+  }
+}
