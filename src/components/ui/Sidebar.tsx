@@ -1,4 +1,5 @@
 // src/components/ui/Sidebar.tsx
+import { useState } from "react";
 import {
   Home,
   UserPlus,
@@ -7,11 +8,11 @@ import {
   Bell,
   LogOut,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import ucscLogo from "@/assets/ucsc_logo.png";
-
 import profileSample from "@/assets/profile_sample.png";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const mockUser = {
   name: "User One",
@@ -21,6 +22,9 @@ const mockUser = {
 
 
 function Sidebar() {
+  const navigate = useNavigate();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  
   const mainLinks = [
     { name: "Home", path: "/portal", icon: Home },
     { name: "Register", path: "/portal/register", icon: UserPlus },
@@ -34,7 +38,19 @@ function Sidebar() {
     },
   ];
 
-  const logoutLink = { name: "Log out", path: "/portal/logout", icon: LogOut };
+  const handleLogoutClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowLogoutDialog(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutDialog(false);
+    navigate("/portal/logout");
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutDialog(false);
+  };
 
   return (
     <div
@@ -101,21 +117,27 @@ function Sidebar() {
         </div>
 
         {/* Logout */}
-        <NavLink
-          to={logoutLink.path}
-          className={({ isActive }) =>
-            `group flex items-center justify-center gap-3 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
-              ? "bg-red-100 text-red-600 font-bold border-l-4 border-red-600 scale-105"
-              : "text-red-600 hover:bg-red-50 hover:scale-105"
-            }`
-          }
+        <button
+          onClick={handleLogoutClick}
+          className="group flex items-center justify-center gap-3 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform text-red-600 hover:bg-red-50 hover:scale-105 w-full"
         >
           <LogOut className="h-5 w-5 text-red-600" />
           <span className="hidden md:inline transition-all duration-300">
-            {logoutLink.name}
+            Log out
           </span>
-        </NavLink>
+        </button>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutDialog}
+        title="Confirm Logout"
+        message="Are you sure you want to log out? You will need to sign in again to access your account."
+        confirmText="Log out"
+        cancelText="Stay logged in"
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   );
 }

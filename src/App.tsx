@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -12,36 +14,40 @@ import SignUpPage from "./pages/SignUpPage";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Landing page */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/signin" element={<SignInPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Landing page */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
 
-        
-        {/* Main app routes with sidebar */}
-        <Route path="/portal/*" element={
-          <div className="min-h-screen">
-            <Sidebar />
-            {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
-            <div className="ml-20 md:ml-64 p-6">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/my-exams" element={<MyExams />} />
-                <Route path="/my-results" element={<MyResults />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/logout" element={<Logout />} />
-                
-        
-              </Routes>
-            </div>
-          </div>
-        } />
+          
+          {/* Protected routes with sidebar */}
+          <Route path="/portal/*" element={
+            <ProtectedRoute>
+              <div className="min-h-screen">
+                <Sidebar />
+                {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
+                <div className="ml-20 md:ml-64 p-6">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/my-exams" element={<MyExams />} />
+                    <Route path="/my-results" element={<MyResults />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/logout" element={<Logout />} />
+                    
+            
+                  </Routes>
+                </div>
+              </div>
+            </ProtectedRoute>
+          } />
 
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
