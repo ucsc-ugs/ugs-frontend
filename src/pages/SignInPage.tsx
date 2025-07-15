@@ -162,7 +162,7 @@ export default function SignInPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
+                  className="w-full h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
                 />
               </div>
 
@@ -178,7 +178,7 @@ export default function SignInPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500 pr-12"
+                    className="w-full h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500 pr-12"
                   />
                   <Button
                     type="button"

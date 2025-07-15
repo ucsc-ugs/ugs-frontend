@@ -22,11 +22,11 @@ export default function LandingPage() {
   };
 
   const handleRegister = () => {
-    navigate("/portal/register"); // Navigate to register page with sidebar
+    navigate("/signup"); // Navigate to register page with sidebar
   };
 
   const handleInitiateRegistration = () => {
-    navigate("/portal/register"); // Navigate to register page with sidebar
+    navigate("/signup"); // Navigate to register page with sidebar
   };
 
   return (
@@ -42,13 +42,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              className="text-gray-700"
-              onClick={handleAccessPortal}
-            >
-              Access Portal
-            </Button>
+            
             <Button 
               className="bg-gray-800 hover:bg-gray-900 text-white"
               onClick={handleRegister}
@@ -61,12 +55,7 @@ export default function LandingPage() {
             >
               Sign In
             </Button>
-            <Button 
-              className="bg-gray-800 hover:bg-gray-900 text-white"
-              onClick={handleSignUp}
-            >
-              Sign Up
-            </Button>
+            
           </div>
         </div>
       </header>
