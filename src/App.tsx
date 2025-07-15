@@ -13,6 +13,14 @@ import ContactUsForm from "./components/ContactUsForm"; // Import the ContactUsF
 import SignIn from "@/pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage"; // Import SignIn component
 import ContactUs from "@/pages/ContactUs";
+import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
+import AdminDashboard from "@/pages/admin/OrgAdminHome";
+import AdminNotifications from "@/pages/admin/AdminNotifications";
+import ManageExams from "@/pages/admin/ManageExams";
+import CreateExam from "@/pages/admin/CreateExam";
+import ManageUsers from "@/pages/admin/ManageUsers";
+import University from "@/pages/admin/University";
+import Settings from "@/pages/admin/Settings";
 
 function App() {
   return (
@@ -46,6 +54,26 @@ function App() {
           <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUpPage />} />
+
+          {/* Admin portal routes with admin sidebar */}
+        <Route path="/admin/*" element={
+          <div className="min-h-screen">
+            <OrgAdminSidebar />
+            <div className="ml-20 md:ml-64 p-6">
+              <Routes>
+                <Route path="/" element={<AdminDashboard />} />
+                <Route path="/notifications" element={<AdminNotifications />} />
+                <Route path="/manage-exams" element={<ManageExams />} />
+                <Route path="/create-exam" element={<CreateExam />} />
+                <Route path="/manage-users" element={<ManageUsers />} />
+                <Route path="/university" element={<University />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/logout" element={<Logout />} />
+              </Routes>
+            </div>
+          </div>
+        } />
+
         </Routes>
       </Router>
     </ErrorBoundary>
