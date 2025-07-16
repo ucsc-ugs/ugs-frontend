@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
-import Sidebar from "@/components/ui/Sidebar"; // Adjust the import based on your project structure
+import Sidebar from "@/components/ui/sidebar"; // Adjust the import based on your project structure
 
 export default function ContactUsForm() {
   const navigate = useNavigate();
@@ -29,13 +29,13 @@ export default function ContactUsForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     setSubmitted(true);
     setIsLoading(false);
-    
+
     // Reset form after 3 seconds
     setTimeout(() => {
       setSubmitted(false);
@@ -88,14 +88,14 @@ export default function ContactUsForm() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Home
             </Button>
-            
+
             <div className="flex items-center justify-center gap-3 mb-6">
-              <img 
-                src="../src/assets/ucsc_logo.png" 
-                alt="UCSC Logo" 
-                width={50} 
-                height={35} 
-                className="object-contain" 
+              <img
+                src="../src/assets/ucsc_logo.png"
+                alt="UCSC Logo"
+                width={50}
+                height={35}
+                className="object-contain"
               />
               <div className="text-left">
                 <h1 className="text-xl font-bold text-gray-900">University Gateway Solution</h1>
@@ -111,7 +111,7 @@ export default function ContactUsForm() {
                 Get in touch with our support team
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Name Field */}
