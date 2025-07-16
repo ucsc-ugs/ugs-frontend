@@ -37,7 +37,6 @@ export default function ExamResult({
   marks?: number;
 }) {
   const color = getResultColor(marks);
-  const navigate = useNavigate();
   return (
     <div className={styles.container}>
       <Card className={styles.card}>

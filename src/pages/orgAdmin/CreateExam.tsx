@@ -10,8 +10,7 @@ import {
     Users,
     DollarSign,
     FileText,
-    School,
-    ArrowLeft
+    School
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,10 +50,13 @@ const durationOptions = [
     { value: "240", label: "4 hours" },
 ];
 
-export default function CreateExam() {
+interface CreateExamProps {
+    onBack?: () => void;
+}
+
+export default function CreateExam({ onBack }: CreateExamProps = {}) {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-    const [showPreview, setShowPreview] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const [formData, setFormData] = useState<ExamFormData>({
@@ -118,7 +120,11 @@ export default function CreateExam() {
             alert(`Exam ${action === "draft" ? "saved as draft" : "published"} successfully!`);
 
             // Navigate back to manage exams
-            navigate("/admin/manage-exams");
+            if (onBack) {
+                onBack();
+            } else {
+                navigate("/admin/manage-exams");
+            }
 
         } catch {
             alert("Error creating exam. Please try again.");
@@ -160,35 +166,7 @@ export default function CreateExam() {
     return (
         <div className="min-h-screen">
             <div className="max-w-4xl mx-auto p-4 lg:p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="ghost"
-                            onClick={() => navigate("/admin/manage-exams")}
-                            className="p-2"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                        </Button>
-                        <div className="p-2 bg-blue-100 rounded-xl">
-                            <BookOpen className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Create New Exam</h1>
-                            <p className="text-gray-600 text-sm">Set up a new examination for your institution</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowPreview(!showPreview)}
-                            className="flex items-center gap-2"
-                        >
-                            <Eye className="w-4 h-4" />
-                            {showPreview ? "Hide Preview" : "Preview"}
-                        </Button>
-                    </div>
-                </div>
+                
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Form */}
@@ -417,7 +395,7 @@ export default function CreateExam() {
 
                     {/* Preview Panel */}
                     <div className="lg:col-span-1">
-                        <Card className={`sticky top-6 ${showPreview ? "block" : "hidden lg:block"}`}>
+                        <Card className="sticky top-6 hidden lg:block">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Eye className="w-5 h-5" />
