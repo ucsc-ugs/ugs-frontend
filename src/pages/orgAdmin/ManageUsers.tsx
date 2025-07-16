@@ -1,4 +1,4 @@
-// src/pages/admin/ManageUsers.tsx
+// src/pages/orgAdmin/ManageUsers.tsx
 import { useState, useMemo } from "react";
 import {
     Search,
@@ -14,7 +14,8 @@ import {
     RefreshCw,
     Mail,
     Phone,
-    Calendar
+    Calendar,
+    Crown
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -22,101 +23,96 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-interface User {
+interface Admin {
     id: number;
     name: string;
     email: string;
     phone?: string;
-    role: "student" | "admin" | "super_admin";
+    role: "admin" | "super_admin" | "department_admin";
     status: "active" | "blocked" | "pending";
-    university?: string;
+    department?: string;
+    permissions: string[];
     lastLogin?: string;
     createdAt: string;
-    examsTaken?: number;
-    totalExams?: number;
+    examsManaged?: number;
+    studentsManaged?: number;
 }
 
-const mockUsers: User[] = [
+const mockAdmins: Admin[] = [
     {
         id: 1,
-        name: "John Doe",
-        email: "john.doe@student.uoc.lk",
-        phone: "+94771234567",
-        role: "student",
-        status: "active",
-        university: "University of Colombo",
-        lastLogin: "2025-07-09T10:30:00",
-        createdAt: "2025-01-15T08:00:00",
-        examsTaken: 3,
-        totalExams: 5
-    },
-    {
-        id: 2,
         name: "Jane Smith",
         email: "jane.smith@admin.uoc.lk",
         phone: "+94771234568",
         role: "admin",
         status: "active",
-        university: "University of Colombo",
+        department: "Computer Science",
+        permissions: ["manage_exams", "view_reports", "manage_students"],
         lastLogin: "2025-07-09T14:15:00",
         createdAt: "2025-02-01T09:00:00",
-        totalExams: 12
+        examsManaged: 12,
+        studentsManaged: 245
+    },
+    {
+        id: 2,
+        name: "Michael Wilson",
+        email: "michael.wilson@admin.ucsc.lk",
+        role: "super_admin",
+        status: "active",
+        department: "IT Administration",
+        permissions: ["manage_exams", "manage_users", "view_reports", "system_settings"],
+        lastLogin: "2025-07-08T13:20:00",
+        createdAt: "2025-04-20T14:00:00",
+        examsManaged: 8,
+        studentsManaged: 180
     },
     {
         id: 3,
-        name: "Robert Johnson",
-        email: "robert.j@student.pera.lk",
-        role: "student",
-        status: "blocked",
-        university: "University of Peradeniya",
-        lastLogin: "2025-07-05T16:45:00",
-        createdAt: "2025-03-10T10:30:00",
-        examsTaken: 1,
-        totalExams: 2
+        name: "Sarah Johnson",
+        email: "sarah.johnson@admin.uoc.lk",
+        phone: "+94771234569",
+        role: "department_admin",
+        status: "active",
+        department: "Mathematics",
+        permissions: ["manage_exams", "view_reports"],
+        lastLogin: "2025-07-07T09:10:00",
+        createdAt: "2025-05-15T16:30:00",
+        examsManaged: 6,
+        studentsManaged: 120
     },
     {
         id: 4,
-        name: "Emily Davis",
-        email: "emily.davis@student.mora.lk",
-        phone: "+94771234569",
-        role: "student",
+        name: "Robert Davis",
+        email: "robert.davis@admin.uoc.lk",
+        role: "admin",
         status: "pending",
-        university: "University of Moratuwa",
+        department: "Physics",
+        permissions: ["view_reports"],
         createdAt: "2025-07-08T11:00:00",
-        examsTaken: 0,
-        totalExams: 0
+        examsManaged: 0,
+        studentsManaged: 0
     },
     {
         id: 5,
-        name: "Michael Wilson",
-        email: "michael.wilson@admin.ucsc.lk",
-        role: "admin",
-        status: "active",
-        university: "University of Colombo School of Computing",
-        lastLogin: "2025-07-08T13:20:00",
-        createdAt: "2025-04-20T14:00:00",
-        totalExams: 8
-    },
-    {
-        id: 6,
-        name: "Sarah Brown",
-        email: "sarah.brown@student.ruh.lk",
+        name: "Emily Brown",
+        email: "emily.brown@admin.uoc.lk",
         phone: "+94771234570",
-        role: "student",
-        status: "active",
-        university: "University of Ruhuna",
-        lastLogin: "2025-07-07T09:10:00",
-        createdAt: "2025-05-15T16:30:00",
-        examsTaken: 2,
-        totalExams: 4
+        role: "department_admin",
+        status: "blocked",
+        department: "Chemistry",
+        permissions: ["manage_exams"],
+        lastLogin: "2025-07-05T16:45:00",
+        createdAt: "2025-03-10T10:30:00",
+        examsManaged: 4,
+        studentsManaged: 85
     }
 ];
 
 const roleOptions = [
     { value: "all", label: "All Roles" },
-    { value: "student", label: "Students" },
     { value: "admin", label: "Admins" },
-    { value: "super_admin", label: "Super Admins" }
+    { value: "super_admin", label: "Super Admins" },
+    { value: "department_admin", label: "Department Admins" }
 ];
 
 const statusOptions = [
@@ -128,9 +124,9 @@ const statusOptions = [
 
 const getRoleColor = (role: string) => {
     switch (role) {
-        case "student": return "bg-blue-100 text-blue-800";
-        case "admin": return "bg-purple-100 text-purple-800";
+        case "admin": return "bg-blue-100 text-blue-800";
         case "super_admin": return "bg-red-100 text-red-800";
+        case "department_admin": return "bg-purple-100 text-purple-800";
         default: return "bg-gray-100 text-gray-800";
     }
 };
@@ -146,76 +142,78 @@ const getStatusColor = (status: string) => {
 
 const getRoleIcon = (role: string) => {
     switch (role) {
-        case "student": return <Users className="w-3 h-3" />;
         case "admin": return <Shield className="w-3 h-3" />;
-        case "super_admin": return <ShieldCheck className="w-3 h-3" />;
-        default: return <Users className="w-3 h-3" />;
+        case "super_admin": return <Crown className="w-3 h-3" />;
+        case "department_admin": return <Users className="w-3 h-3" />;
+        default: return <Shield className="w-3 h-3" />;
     }
 };
 
-export default function ManageUsers() {
+export default function ManageAdmins() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRole, setSelectedRole] = useState("all");
     const [selectedStatus, setSelectedStatus] = useState("all");
-    const [users, setUsers] = useState<User[]>(mockUsers);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [admins, setAdmins] = useState<Admin[]>(mockAdmins);
+    const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [openPopoverId, setOpenPopoverId] = useState<number | null>(null);
 
-    const filteredUsers = useMemo(() => {
-        return users.filter(user => {
-            const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesRole = selectedRole === "all" || user.role === selectedRole;
-            const matchesStatus = selectedStatus === "all" || user.status === selectedStatus;
+    const filteredAdmins = useMemo(() => {
+        return admins.filter(admin => {
+            const matchesSearch = admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (admin.department && admin.department.toLowerCase().includes(searchTerm.toLowerCase()));
+            const matchesRole = selectedRole === "all" || admin.role === selectedRole;
+            const matchesStatus = selectedStatus === "all" || admin.status === selectedStatus;
 
             return matchesSearch && matchesRole && matchesStatus;
         });
-    }, [users, searchTerm, selectedRole, selectedStatus]);
+    }, [admins, searchTerm, selectedRole, selectedStatus]);
 
     const stats = useMemo(() => {
-        const total = users.length;
-        const students = users.filter(u => u.role === "student").length;
-        const admins = users.filter(u => u.role === "admin").length;
-        const active = users.filter(u => u.status === "active").length;
-        const blocked = users.filter(u => u.status === "blocked").length;
-        const pending = users.filter(u => u.status === "pending").length;
+        const total = admins.length;
+        const regularAdmins = admins.filter(a => a.role === "admin").length;
+        const superAdmins = admins.filter(a => a.role === "super_admin").length;
+        const departmentAdmins = admins.filter(a => a.role === "department_admin").length;
+        const active = admins.filter(a => a.status === "active").length;
+        const blocked = admins.filter(a => a.status === "blocked").length;
+        const pending = admins.filter(a => a.status === "pending").length;
 
-        return { total, students, admins, active, blocked, pending };
-    }, [users]);
+        return { total, regularAdmins, superAdmins, departmentAdmins, active, blocked, pending };
+    }, [admins]);
 
-    const handleDeleteUser = (id: number) => {
-        if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-            setUsers(prev => prev.filter(user => user.id !== id));
+    const handleDeleteAdmin = (id: number) => {
+        if (window.confirm("Are you sure you want to delete this admin? This action cannot be undone.")) {
+            setAdmins(prev => prev.filter(admin => admin.id !== id));
         }
     };
 
-    const handleBlockUser = (id: number) => {
-        setUsers(prev => prev.map(user =>
-            user.id === id ? { ...user, status: user.status === "blocked" ? "active" : "blocked" as const } : user
+    const handleBlockAdmin = (id: number) => {
+        setAdmins(prev => prev.map(admin =>
+            admin.id === id ? { ...admin, status: admin.status === "blocked" ? "active" : "blocked" as const } : admin
         ));
     };
 
     const handleResetPassword = (id: number) => {
-        const user = users.find(u => u.id === id);
-        if (user) {
-            alert(`Password reset email sent to ${user.email}`);
+        const admin = admins.find(a => a.id === id);
+        if (admin) {
+            alert(`Password reset email sent to ${admin.email}`);
         }
     };
 
-    const handleEditUser = (user: User) => {
-        setEditingUser({ ...user });
+    const handleEditAdmin = (admin: Admin) => {
+        setEditingAdmin({ ...admin });
         setShowEditModal(true);
         setOpenPopoverId(null); // Close the popover
     };
 
     const handleSaveEdit = () => {
-        if (editingUser) {
-            setUsers(prev => prev.map(user =>
-                user.id === editingUser.id ? editingUser : user
+        if (editingAdmin) {
+            setAdmins(prev => prev.map(admin =>
+                admin.id === editingAdmin.id ? editingAdmin : admin
             ));
             setShowEditModal(false);
-            setEditingUser(null);
+            setEditingAdmin(null);
         }
     };
 
@@ -243,30 +241,31 @@ export default function ManageUsers() {
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 rounded-xl">
-                            <Users className="w-6 h-6 text-blue-600" />
+                            <Shield className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Manage Users</h1>
-                            <p className="text-gray-600 text-sm">Manage student and admin accounts</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Manage Admins</h1>
+                            <p className="text-gray-600 text-sm">Manage organization administrators and their permissions</p>
                         </div>
                     </div>
                     <Button
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={() => {
-                            setEditingUser({
+                            setEditingAdmin({
                                 id: Date.now(),
                                 name: "",
                                 email: "",
-                                role: "student",
-                                status: "active",
-                                university: "",
+                                role: "admin",
+                                status: "pending",
+                                department: "",
+                                permissions: [],
                                 createdAt: new Date().toISOString(),
                             });
                             setShowEditModal(true);
                         }}
                     >
                         <Plus className="w-4 h-4 mr-2" />
-                        Add New User
+                        Add New Admin
                     </Button>
                 </div>
 
@@ -276,10 +275,10 @@ export default function ManageUsers() {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-600">Total Users</p>
+                                    <p className="text-sm text-gray-600">Total Admins</p>
                                     <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                                 </div>
-                                <Users className="w-8 h-8 text-blue-600" />
+                                <Shield className="w-8 h-8 text-blue-600" />
                             </div>
                         </CardContent>
                     </Card>
@@ -287,10 +286,10 @@ export default function ManageUsers() {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-600">Students</p>
-                                    <p className="text-2xl font-bold text-blue-600">{stats.students}</p>
+                                    <p className="text-sm text-gray-600">Regular Admins</p>
+                                    <p className="text-2xl font-bold text-blue-600">{stats.regularAdmins}</p>
                                 </div>
-                                <Users className="w-8 h-8 text-blue-600" />
+                                <Shield className="w-8 h-8 text-blue-600" />
                             </div>
                         </CardContent>
                     </Card>
@@ -298,10 +297,21 @@ export default function ManageUsers() {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-600">Admins</p>
-                                    <p className="text-2xl font-bold text-purple-600">{stats.admins}</p>
+                                    <p className="text-sm text-gray-600">Super Admins</p>
+                                    <p className="text-2xl font-bold text-red-600">{stats.superAdmins}</p>
                                 </div>
-                                <Shield className="w-8 h-8 text-purple-600" />
+                                <Crown className="w-8 h-8 text-red-600" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Department Admins</p>
+                                    <p className="text-2xl font-bold text-purple-600">{stats.departmentAdmins}</p>
+                                </div>
+                                <Users className="w-8 h-8 text-purple-600" />
                             </div>
                         </CardContent>
                     </Card>
@@ -313,17 +323,6 @@ export default function ManageUsers() {
                                     <p className="text-2xl font-bold text-green-600">{stats.active}</p>
                                 </div>
                                 <ShieldCheck className="w-8 h-8 text-green-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Blocked</p>
-                                    <p className="text-2xl font-bold text-red-600">{stats.blocked}</p>
-                                </div>
-                                <UserX className="w-8 h-8 text-red-600" />
                             </div>
                         </CardContent>
                     </Card>
@@ -348,7 +347,7 @@ export default function ManageUsers() {
                                 <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search users by name or email..."
+                                    placeholder="Search admins by name, email, or department..."
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -382,8 +381,8 @@ export default function ManageUsers() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Users className="w-5 h-5" />
-                            Users ({filteredUsers.length})
+                            <Shield className="w-5 h-5" />
+                            Administrators ({filteredAdmins.length})
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -391,24 +390,24 @@ export default function ManageUsers() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>User</TableHead>
+                                        <TableHead>Admin</TableHead>
                                         <TableHead>Contact</TableHead>
                                         <TableHead>Role</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>University</TableHead>
-                                        <TableHead>Performance</TableHead>
+                                        <TableHead>Department</TableHead>
+                                        <TableHead>Management</TableHead>
                                         <TableHead>Last Login</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredUsers.map((user) => (
-                                        <TableRow key={user.id}>
+                                    {filteredAdmins.map((admin) => (
+                                        <TableRow key={admin.id}>
                                             <TableCell>
                                                 <div>
-                                                    <div className="font-medium">{user.name}</div>
+                                                    <div className="font-medium">{admin.name}</div>
                                                     <div className="text-sm text-gray-500">
-                                                        ID: {user.id} • Joined {formatDate(user.createdAt)}
+                                                        ID: {admin.id} • Joined {formatDate(admin.createdAt)}
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -416,55 +415,49 @@ export default function ManageUsers() {
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
                                                         <Mail className="w-3 h-3 text-gray-400" />
-                                                        <span className="text-sm">{user.email}</span>
+                                                        <span className="text-sm">{admin.email}</span>
                                                     </div>
-                                                    {user.phone && (
+                                                    {admin.phone && (
                                                         <div className="flex items-center gap-2">
                                                             <Phone className="w-3 h-3 text-gray-400" />
-                                                            <span className="text-sm">{user.phone}</span>
+                                                            <span className="text-sm">{admin.phone}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge className={`${getRoleColor(user.role)} flex items-center gap-1 w-fit`}>
-                                                    {getRoleIcon(user.role)}
-                                                    <span className="capitalize">{user.role.replace('_', ' ')}</span>
+                                                <Badge className={`${getRoleColor(admin.role)} flex items-center gap-1 w-fit`}>
+                                                    {getRoleIcon(admin.role)}
+                                                    <span className="capitalize">{admin.role.replace('_', ' ')}</span>
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge className={`${getStatusColor(user.status)} w-fit`}>
-                                                    <span className="capitalize">{user.status}</span>
+                                                <Badge className={`${getStatusColor(admin.status)} w-fit`}>
+                                                    <span className="capitalize">{admin.status}</span>
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="text-sm">{user.university}</div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {user.role === "student" ? (
-                                                    <div className="text-sm">
-                                                        <div className="font-medium">
-                                                            {user.examsTaken}/{user.totalExams} exams
-                                                        </div>
-                                                        <div className="text-gray-500">
-                                                            {user.totalExams ? Math.round((user.examsTaken! / user.totalExams) * 100) : 0}% completion
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-sm">
-                                                        <div className="font-medium">{user.totalExams} exams managed</div>
-                                                    </div>
-                                                )}
+                                                <div className="text-sm">{admin.department || 'N/A'}</div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="text-sm">
-                                                    {user.lastLogin ? formatDateTime(user.lastLogin) : "Never"}
+                                                    <div className="font-medium">
+                                                        {admin.examsManaged || 0} exams
+                                                    </div>
+                                                    <div className="text-gray-500">
+                                                        {admin.studentsManaged || 0} students
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm">
+                                                    {admin.lastLogin ? formatDateTime(admin.lastLogin) : "Never"}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Popover open={openPopoverId === user.id} onOpenChange={(open) => setOpenPopoverId(open ? user.id : null)}>
+                                                <Popover open={openPopoverId === admin.id} onOpenChange={(open) => setOpenPopoverId(open ? admin.id : null)}>
                                                     <PopoverTrigger asChild>
-                                                        <Button variant="ghost" size="sm" onClick={() => setOpenPopoverId(user.id)}>
+                                                        <Button variant="ghost" size="sm" onClick={() => setOpenPopoverId(admin.id)}>
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
                                                     </PopoverTrigger>
@@ -478,16 +471,16 @@ export default function ManageUsers() {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="justify-start"
-                                                                onClick={() => handleEditUser(user)}
+                                                                onClick={() => handleEditAdmin(admin)}
                                                             >
                                                                 <Edit className="w-4 h-4 mr-2" />
-                                                                Edit User
+                                                                Edit Admin
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="justify-start"
-                                                                onClick={() => handleResetPassword(user.id)}
+                                                                onClick={() => handleResetPassword(admin.id)}
                                                             >
                                                                 <RefreshCw className="w-4 h-4 mr-2" />
                                                                 Reset Password
@@ -495,18 +488,18 @@ export default function ManageUsers() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className={`justify-start ${user.status === "blocked" ? "text-green-600" : "text-orange-600"}`}
-                                                                onClick={() => handleBlockUser(user.id)}
+                                                                className={`justify-start ${admin.status === "blocked" ? "text-green-600" : "text-orange-600"}`}
+                                                                onClick={() => handleBlockAdmin(admin.id)}
                                                             >
-                                                                {user.status === "blocked" ? (
+                                                                {admin.status === "blocked" ? (
                                                                     <>
                                                                         <ShieldCheck className="w-4 h-4 mr-2" />
-                                                                        Unblock User
+                                                                        Unblock Admin
                                                                     </>
                                                                 ) : (
                                                                     <>
                                                                         <UserX className="w-4 h-4 mr-2" />
-                                                                        Block User
+                                                                        Block Admin
                                                                     </>
                                                                 )}
                                                             </Button>
@@ -514,10 +507,10 @@ export default function ManageUsers() {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="justify-start text-red-600"
-                                                                onClick={() => handleDeleteUser(user.id)}
+                                                                onClick={() => handleDeleteAdmin(admin.id)}
                                                             >
                                                                 <Trash2 className="w-4 h-4 mr-2" />
-                                                                Delete User
+                                                                Delete Admin
                                                             </Button>
                                                         </div>
                                                     </PopoverContent>
@@ -532,36 +525,38 @@ export default function ManageUsers() {
                 </Card>
 
                 {/* Empty State */}
-                {filteredUsers.length === 0 && (
+                {filteredAdmins.length === 0 && (
                     <Card className="mt-6">
                         <CardContent className="text-center py-12">
-                            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                            <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No administrators found</h3>
                             <p className="text-gray-500 mb-4">
                                 {searchTerm || selectedRole !== "all" || selectedStatus !== "all"
                                     ? "Try adjusting your filters to see more results."
-                                    : "Get started by adding your first user."}
+                                    : "Get started by adding your first administrator."}
                             </p>
                             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                                 <Plus className="w-4 h-4 mr-2" />
-                                Add New User
+                                Add New Admin
                             </Button>
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Edit User Modal */}
-                {showEditModal && editingUser && (
+                {/* Edit Admin Modal */}
+                {showEditModal && editingAdmin && (
                     <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
                         <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
-                            <h3 className="text-lg font-semibold mb-4">Edit User</h3>
+                            <h3 className="text-lg font-semibold mb-4">
+                                {editingAdmin.id && admins.find(a => a.id === editingAdmin.id) ? 'Edit Admin' : 'Add New Admin'}
+                            </h3>
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                                     <input
                                         type="text"
-                                        value={editingUser.name}
-                                        onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                                        value={editingAdmin.name}
+                                        onChange={(e) => setEditingAdmin({ ...editingAdmin, name: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
@@ -569,28 +564,38 @@ export default function ManageUsers() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                     <input
                                         type="email"
-                                        value={editingUser.email}
-                                        onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                                        value={editingAdmin.email}
+                                        onChange={(e) => setEditingAdmin({ ...editingAdmin, email: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                                    <input
+                                        type="text"
+                                        value={editingAdmin.department || ''}
+                                        onChange={(e) => setEditingAdmin({ ...editingAdmin, department: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="e.g., Computer Science"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                                     <select
-                                        value={editingUser.role}
-                                        onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'student' | 'admin' | 'super_admin' })}
+                                        value={editingAdmin.role}
+                                        onChange={(e) => setEditingAdmin({ ...editingAdmin, role: e.target.value as 'admin' | 'super_admin' | 'department_admin' })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
-                                        <option value="student">Student</option>
                                         <option value="admin">Admin</option>
                                         <option value="super_admin">Super Admin</option>
+                                        <option value="department_admin">Department Admin</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                     <select
-                                        value={editingUser.status}
-                                        onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value as 'active' | 'blocked' | 'pending' })}
+                                        value={editingAdmin.status}
+                                        onChange={(e) => setEditingAdmin({ ...editingAdmin, status: e.target.value as 'active' | 'blocked' | 'pending' })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
                                         <option value="active">Active</option>
