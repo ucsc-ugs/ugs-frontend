@@ -12,7 +12,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (user: User) => void;
+  login: (user: User, callback?: () => void) => void;
   logout: () => void;
   checkAuthStatus: () => Promise<boolean>;
 }
@@ -34,8 +34,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const isAuthenticated = !!user && !!getAuthToken();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Check if user is authenticated on app load
   useEffect(() => {
@@ -49,6 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!token) {
       setUser(null);
       setIsLoading(false);
+      setIsAuthenticated(false);
       return false;
     }
 
@@ -65,12 +65,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userData = await response.json();
         setUser(userData);
         setIsLoading(false);
+        setIsAuthenticated(true);
         return true;
       } else {
         // Token is invalid, remove it
         removeAuthToken();
         setUser(null);
         setIsLoading(false);
+        setIsAuthenticated(false);
         return false;
       }
     } catch (error) {
@@ -78,17 +80,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       removeAuthToken();
       setUser(null);
       setIsLoading(false);
+      setIsAuthenticated(false);
       return false;
     }
   };
 
-  const login = (userData: User) => {
+  const login = (userData: User, callback?: () => void) => {
+    console.log('AuthContext: Setting user and token');
     setUser(userData);
+    setIsLoading(false); // Ensure loading is set to false immediately after login
+    setIsAuthenticated(true); // Set authentication status to true
     // Token is already set by the login function in api.ts
+    
+    // Execute callback after state update if provided
+    if (callback) {
+      // Use setTimeout to ensure state update completes
+      setTimeout(() => {
+        console.log('AuthContext: User state updated, executing callback');
+        console.log('AuthContext: User:', userData);
+        console.log('AuthContext: Token exists:', !!getAuthToken());
+        console.log('AuthContext: isAuthenticated:', true);
+        callback();
+      }, 0);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    setIsAuthenticated(false);
     removeAuthToken();
   };
 

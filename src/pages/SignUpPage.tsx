@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -94,14 +95,12 @@ export default function SignUpPage() {
       const response = await register(formData);
       
       // Update auth context with user data
-      authLogin(response.user);
-      
-      setShowSuccess(true);
-      
-      // Wait a moment to show success message
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
+      authLogin(response.user, () => {
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          navigate("/portal/", { replace: true });
+        }, 100);
+      });
       
     } catch (err: any) {
       console.error('Registration error:', err);

@@ -42,14 +42,12 @@ export default function SignInPage() {
       const response = await login(formData);
       
       // Update auth context with user data
-      authLogin(response.user);
-      
-      setShowSuccess(true);
-      
-      // Wait a moment to show success message
-      setTimeout(() => {
-        navigate("/portal");
-      }, 1500);
+      authLogin(response.user, () => {
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          navigate("/portal/", { replace: true });
+        }, 100);
+      });
       
     } catch (err: any) {
       console.error('Login error:', err);

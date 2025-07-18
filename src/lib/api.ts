@@ -92,13 +92,21 @@ export const register = async (userData: RegisterData): Promise<ApiResponse> => 
 };
 
 export const logout = async (): Promise<void> => {
+  const token = getAuthToken();
+  console.log('Logout API: Token before request:', token ? 'EXISTS' : 'MISSING');
+  console.log('Logout API: Token value:', token);
+  
   try {
     await apiRequest('/logout', {
       method: 'POST',
     });
-  } finally {
-    removeAuthToken();
+    console.log('Logout API: Request completed successfully');
+  } catch (error) {
+    console.log('Logout API: Request failed with error:', error);
+    throw error; // Re-throw the error so the calling code can handle it
   }
+  // Don't remove token here - let the calling component handle it
+  // This allows the token to be available for the API request
 };
 
 export const getCurrentUser = async (): Promise<any> => {
