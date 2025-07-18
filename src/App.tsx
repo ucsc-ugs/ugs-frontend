@@ -32,8 +32,8 @@ function App() {
             <Route path="/signup" element={<SignUpPage />} />
 
             {/* Super Admin Routes */}
-            <Route path="/admin/login" element={<SuperAdminLoginPage />} />
-            <Route path="/admin/*" element={
+            <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
+            <Route path="/super-admin/*" element={
               <SuperAdminProtectedRoute>
                 <div className="min-h-screen">
                   <SuperAdminSidebar />

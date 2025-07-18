@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ArrowLeft, Loader2, CheckCircle, XCircle, Shield, Lock } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2, XCircle, Shield, Lock } from "lucide-react";
 import { superAdminLogin } from "@/lib/superAdminApi";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
 
@@ -17,7 +17,6 @@ export default function SuperAdminLoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,13 +37,14 @@ export default function SuperAdminLoginPage() {
 
     try {
       const response = await superAdminLogin(formData);
-      authLogin(response.user, response.token!);
       
-      setShowSuccess(true);
-      
-      setTimeout(() => {
-        navigate("/admin/dashboard");
-      }, 1500);
+      // Update auth context with user data and navigate after state is set
+      authLogin(response.user, response.token!, () => {
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          navigate("/super-admin/dashboard", { replace: true });
+        }, 100);
+      });
       
     } catch (err: any) {
       console.error('Super admin login error:', err);
@@ -67,23 +67,6 @@ export default function SuperAdminLoginPage() {
   const handleBackToLanding = () => {
     navigate("/");
   };
-
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-xl">
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-            <h2 className="text-2xl font-bold text-green-800 mb-2">Welcome, Super Admin!</h2>
-            <p className="text-green-600 mb-4">🎉 Login successful! Accessing admin dashboard...</p>
-            <div className="flex justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center p-4">
@@ -139,7 +122,7 @@ export default function SuperAdminLoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50"
+                  className="w-full h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50"
                 />
               </div>
 
@@ -154,7 +137,7 @@ export default function SuperAdminLoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50 pr-12"
+                    className="w-full h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50 pr-12"
                   />
                   <Button
                     type="button"

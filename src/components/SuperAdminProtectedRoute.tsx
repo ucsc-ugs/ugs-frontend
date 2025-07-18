@@ -11,7 +11,7 @@ interface SuperAdminProtectedRouteProps {
 
 const SuperAdminProtectedRoute: React.FC<SuperAdminProtectedRouteProps> = ({ 
   children, 
-  redirectTo = '/' 
+  redirectTo = '/super-admin/login' 
 }) => {
   const { isAuthenticated, isLoading } = useSuperAdminAuth();
 

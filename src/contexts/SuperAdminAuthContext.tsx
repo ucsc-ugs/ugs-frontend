@@ -13,7 +13,7 @@ interface SuperAdminContextType {
   user: SuperAdminUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (user: SuperAdminUser, token: string) => void;
+  login: (user: SuperAdminUser, token: string, callback?: () => void) => void;
   logout: () => void;
   checkAuthStatus: () => Promise<boolean>;
 }
@@ -35,8 +35,7 @@ interface SuperAdminAuthProviderProps {
 export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<SuperAdminUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const isAuthenticated = !!user && !!getAuthToken();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -49,6 +48,7 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
     if (!token) {
       setUser(null);
       setIsLoading(false);
+      setIsAuthenticated(false);
       return false;
     }
 
@@ -64,11 +64,13 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
         const userData = await response.json();
         setUser(userData.user);
         setIsLoading(false);
+        setIsAuthenticated(true);
         return true;
       } else {
         removeAuthToken();
         setUser(null);
         setIsLoading(false);
+        setIsAuthenticated(false);
         return false;
       }
     } catch (error) {
@@ -76,17 +78,34 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
       removeAuthToken();
       setUser(null);
       setIsLoading(false);
+      setIsAuthenticated(false);
       return false;
     }
   };
 
-  const login = (userData: SuperAdminUser, token: string) => {
+  const login = (userData: SuperAdminUser, token: string, callback?: () => void) => {
+    console.log('SuperAdminAuthContext: Setting user and token');
     setUser(userData);
     setAuthToken(token);
+    setIsLoading(false);
+    setIsAuthenticated(true);
+    
+    // Execute callback after state update if provided
+    if (callback) {
+      // Use setTimeout to ensure state update completes
+      setTimeout(() => {
+        console.log('SuperAdminAuthContext: User state updated, executing callback');
+        console.log('SuperAdminAuthContext: User:', userData);
+        console.log('SuperAdminAuthContext: Token exists:', !!getAuthToken());
+        console.log('SuperAdminAuthContext: isAuthenticated:', true);
+        callback();
+      }, 0);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    setIsAuthenticated(false);
     removeAuthToken();
   };
 

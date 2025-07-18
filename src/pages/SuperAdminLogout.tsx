@@ -14,7 +14,10 @@ function SuperAdminLogout() {
   useEffect(() => {
     const performLogout = async () => {
       try {
+        // Send logout request to backend FIRST (while token is still available)
         await superAdminLogout();
+        
+        // THEN clear auth context after successful backend logout
         authLogout();
         setLogoutSuccess(true);
         setIsLoggingOut(false);
@@ -23,13 +26,27 @@ function SuperAdminLogout() {
           navigate("/");
         }, 2000);
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('Super admin logout error:', error);
-        authLogout();
-        setIsLoggingOut(false);
-        setTimeout(() => {
-          navigate("/");
-        }, 1000);
+        
+        // If it's a 401 error, that's actually expected for logout (user is being unauthenticated)
+        // So we should still proceed with clearing the auth context
+        if (error.status === 401) {
+          console.log('401 error on super admin logout - this is expected, proceeding with local logout');
+          authLogout();
+          setLogoutSuccess(true);
+          setIsLoggingOut(false);
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+        } else {
+          // For other errors, clear auth context and redirect quickly
+          authLogout();
+          setIsLoggingOut(false);
+          setTimeout(() => {
+            navigate("/");
+          }, 1000);
+        }
       }
     };
 

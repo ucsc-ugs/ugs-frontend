@@ -99,13 +99,11 @@ export const superAdminLogin = async (credentials: SuperAdminLoginCredentials): 
 };
 
 export const superAdminLogout = async (): Promise<void> => {
-  try {
-    await adminApiRequest('/logout', {
-      method: 'POST',
-    });
-  } finally {
-    removeAuthToken();
-  }
+  await adminApiRequest('/logout', {
+    method: 'POST',
+  });
+  // Don't remove token here - let the calling component handle it
+  // This allows the token to be available for the API request
 };
 
 // Dashboard
