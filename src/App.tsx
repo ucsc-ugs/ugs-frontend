@@ -3,6 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
+import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -11,7 +12,7 @@ import Notifications from "@/pages/Notifications";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
 import SignInPage from "@/pages/SignInPage";
-import Sidebar from "@/components/ui/sidebar";
+import Sidebar from "@/components/ui/Sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
 import ContactUsForm from "./components/ui/ContactUsForm";
@@ -32,6 +33,8 @@ import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import ManageOrganizations from "@/pages/ManageOrganizations";
 import ManageOrgAdmins from "@/pages/ManageOrgAdmins";
 import SuperAdminLogout from "@/pages/SuperAdminLogout";
+import OrgAdminLoginPage from "@/pages/OrgAdminLoginPage";
+import UnauthorizedPage from "@/pages/UnauthorizedPage";
 
 function App() {
   return (
@@ -44,6 +47,12 @@ function App() {
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/contact" element={<ContactUsForm />} />
+
+            {/* Organization Admin Login */}
+            <Route path="/admin/login" element={<OrgAdminLoginPage />} />
+            
+            {/* Unauthorized access page */}
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Super Admin Routes */}
             <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
@@ -85,25 +94,27 @@ function App() {
 
             {/* Admin portal routes with admin sidebar */}
             <Route path="/admin/*" element={
-              <div className="min-h-screen">
-                <OrgAdminSidebar />
-                <div className="ml-20 md:ml-64 p-6">
-                  <Routes>
-                    <Route path="/" element={<AdminDashboard />} />
-                    <Route path="/notifications" element={<AdminNotifications />} />
-                    <Route path="/manage-exams" element={<ManageExams />} />
-                    <Route path="/create-exam" element={<CreateExam />} />
-                    <Route path="/publish-results" element={<PublishResults />} />
-                    <Route path="/finance" element={<FinanceDashboard />} />
-                    <Route path="/student-management" element={<ManageStudents />} />
-                    <Route path="/manage-users" element={<ManageUsers />} />
-                    <Route path="/set-announcements" element={<SetAnnouncements />} />
-                    <Route path="/create-announcement" element={<CreateAnnouncement />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/logout" element={<Logout />} />
-                  </Routes>
+              <OrgAdminProtectedRoute>
+                <div className="min-h-screen">
+                  <OrgAdminSidebar />
+                  <div className="ml-20 md:ml-64 p-6">
+                    <Routes>
+                      <Route path="/" element={<AdminDashboard />} />
+                      <Route path="/notifications" element={<AdminNotifications />} />
+                      <Route path="/manage-exams" element={<ManageExams />} />
+                      <Route path="/create-exam" element={<CreateExam />} />
+                      <Route path="/publish-results" element={<PublishResults />} />
+                      <Route path="/finance" element={<FinanceDashboard />} />
+                      <Route path="/student-management" element={<ManageStudents />} />
+                      <Route path="/manage-users" element={<ManageUsers />} />
+                      <Route path="/set-announcements" element={<SetAnnouncements />} />
+                      <Route path="/create-announcement" element={<CreateAnnouncement />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/logout" element={<Logout />} />
+                    </Routes>
+                  </div>
                 </div>
-              </div>
+              </OrgAdminProtectedRoute>
             } />
 
           </Routes>
