@@ -94,8 +94,27 @@ export default function SignUpPage() {
     try {
       const response = await register(formData);
       
+      // Transform API response to match User interface if needed
+      let userData;
+      if (response.user) {
+        // Handle legacy response format
+        userData = response.user;
+      } else {
+        // Handle new API response format
+        userData = {
+          id: response.id!,
+          name: (response.data as any).name,
+          email: (response.data as any).email,
+          role: response.role,
+          type: response.type,
+          created_at: (response.data as any).created_at,
+          student: (response.data as any).student,
+          meta: response.meta,
+        };
+      }
+      
       // Update auth context with user data
-      authLogin(response.user, () => {
+      authLogin(userData, () => {
         // Small delay to ensure state is fully updated
         setTimeout(() => {
           navigate("/portal/", { replace: true });

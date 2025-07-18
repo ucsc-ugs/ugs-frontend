@@ -6,6 +6,16 @@ interface SuperAdminUser {
   id: number;
   name: string;
   email: string;
+  role?: string;
+  type?: string;
+  created_at?: string;
+  student?: {
+    local: boolean;
+    passport_nic: string;
+  } | null;
+  meta?: {
+    permissions: string[];
+  };
   roles?: Array<{ name: string }>;
 }
 
@@ -61,8 +71,19 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
       });
 
       if (response.ok) {
-        const userData = await response.json();
-        setUser(userData.user);
+        const apiResponse = await response.json();
+        // Transform the new API response structure to match our SuperAdminUser interface
+        const userData: SuperAdminUser = {
+          id: apiResponse.id,
+          name: apiResponse.data.name,
+          email: apiResponse.data.email,
+          role: apiResponse.role,
+          type: apiResponse.type,
+          created_at: apiResponse.data.created_at,
+          student: apiResponse.data.student,
+          meta: apiResponse.meta,
+        };
+        setUser(userData);
         setIsLoading(false);
         setIsAuthenticated(true);
         return true;

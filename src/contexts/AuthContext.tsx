@@ -6,6 +6,16 @@ interface User {
   id: number;
   name: string;
   email: string;
+  role?: string;
+  type?: string;
+  created_at?: string;
+  student?: {
+    local: boolean;
+    passport_nic: string;
+  } | null;
+  meta?: {
+    permissions: string[];
+  };
 }
 
 interface AuthContextType {
@@ -62,7 +72,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (response.ok) {
-        const userData = await response.json();
+        const apiResponse = await response.json();
+        // Transform the new API response structure to match our User interface
+        const userData: User = {
+          id: apiResponse.id,
+          name: apiResponse.data.name,
+          email: apiResponse.data.email,
+          role: apiResponse.role,
+          type: apiResponse.type,
+          created_at: apiResponse.data.created_at,
+          student: apiResponse.data.student,
+          meta: apiResponse.meta,
+        };
         setUser(userData);
         setIsLoading(false);
         setIsAuthenticated(true);

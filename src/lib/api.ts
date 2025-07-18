@@ -15,10 +15,26 @@ interface RegisterData {
 }
 
 interface ApiResponse<T = any> {
-  message: string;
+  message?: string;
   user?: T;
   token?: string;
   errors?: Record<string, string[]>;
+  // New response structure
+  type?: string;
+  role?: string;
+  id?: number;
+  data?: {
+    name: string;
+    email: string;
+    created_at: string;
+    student?: {
+      local: boolean;
+      passport_nic: string;
+    } | null;
+  };
+  meta?: {
+    permissions: string[];
+  };
 }
 
 // Get stored token
