@@ -80,7 +80,7 @@ export default function SignInPage() {
   };
 
   const handleRegister = () => {
-    navigate("/portal/register");
+    navigate("/signup");
   };
 
   if (showSuccess) {

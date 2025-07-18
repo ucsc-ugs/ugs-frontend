@@ -137,7 +137,7 @@ export default function SignUpPage() {
   };
 
   const handleBackToSignIn = () => {
-    navigate("/portal/signin");
+    navigate("/signin");
   };
 
   const handleBackToLanding = () => {

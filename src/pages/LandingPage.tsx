@@ -44,10 +44,18 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             
             <Button 
-              className="bg-gray-800 hover:bg-gray-900 text-white"
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
               onClick={handleContactUs}
             >
               Contact Us
+            </Button>
+            <Button 
+              variant="outline"
+              className="border-gray-800 text-gray-800 hover:bg-gray-50"
+              onClick={handleRegister}
+            >
+              Register
             </Button>
             <Button 
               className="bg-gray-800 hover:bg-gray-900 text-white"
