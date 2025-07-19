@@ -1,6 +1,6 @@
 // src/layout/PortalLayout.tsx
 import { Outlet } from "react-router-dom";
-import Sidebar from "@/components/ui/sidebar";
+import Sidebar from "@/components/ui/Sidebar";
 
 export default function PortalLayout() {
   return (
