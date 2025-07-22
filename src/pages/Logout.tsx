@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle, LogOut } from "lucide-react";
@@ -10,12 +10,25 @@ function Logout() {
   const { logout: authLogout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(true);
   const [logoutSuccess, setLogoutSuccess] = useState(false);
+  const hasLoggedOut = useRef(false);
 
   useEffect(() => {
-    const performLogout = async () => {
+    const handleLogout = async () => {
+      // Prevent multiple logout attempts
+      if (hasLoggedOut.current) return;
+      
+      hasLoggedOut.current = true;
+      
       try {
+        console.log('Starting logout process...');
+        console.log('Token before logout:', localStorage.getItem('auth_token') ? 'EXISTS' : 'MISSING');
+        
+        // Send logout request to backend FIRST (while token is still available)
         await logout();
-        authLogout(); // Clear auth context
+        console.log('Backend logout successful');
+        
+        // THEN clear auth context after successful backend logout
+        authLogout();
         setLogoutSuccess(true);
         setIsLoggingOut(false);
         
@@ -24,18 +37,32 @@ function Logout() {
           navigate("/");
         }, 2000);
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('Logout error:', error);
-        // Even if there's an error, clear the auth context and redirect
-        authLogout();
-        setIsLoggingOut(false);
-        setTimeout(() => {
-          navigate("/");
-        }, 1000);
+        console.log('Token after error:', localStorage.getItem('auth_token') ? 'EXISTS' : 'MISSING');
+        
+        // If it's a 401 error, that's actually expected for logout (user is being unauthenticated)
+        // So we should still proceed with clearing the auth context
+        if (error.status === 401) {
+          console.log('401 error on logout - this is expected, proceeding with local logout');
+          authLogout();
+          setLogoutSuccess(true);
+          setIsLoggingOut(false);
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+        } else {
+          // For other errors, clear auth context and redirect quickly
+          authLogout();
+          setIsLoggingOut(false);
+          setTimeout(() => {
+            navigate("/");
+          }, 1000);
+        }
       }
     };
 
-    performLogout();
+    handleLogout();
   }, [navigate, authLogout]);
 
   if (isLoggingOut) {

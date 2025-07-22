@@ -41,15 +41,32 @@ export default function SignInPage() {
       // Call the login API function
       const response = await login(formData);
       
+      // Transform API response to match User interface if needed
+      let userData;
+      if (response.user) {
+        // Handle legacy response format
+        userData = response.user;
+      } else {
+        // Handle new API response format
+        userData = {
+          id: response.id!,
+          name: (response.data as any).name,
+          email: (response.data as any).email,
+          role: response.role,
+          type: response.type,
+          created_at: (response.data as any).created_at,
+          student: (response.data as any).student,
+          meta: response.meta,
+        };
+      }
+      
       // Update auth context with user data
-      authLogin(response.user);
-      
-      setShowSuccess(true);
-      
-      // Wait a moment to show success message
-      setTimeout(() => {
-        navigate("/portal");
-      }, 1500);
+      authLogin(userData, () => {
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          navigate("/portal/", { replace: true });
+        }, 100);
+      });
       
     } catch (err: any) {
       console.error('Login error:', err);
@@ -82,7 +99,7 @@ export default function SignInPage() {
   };
 
   const handleRegister = () => {
-    navigate("/portal/register");
+    navigate("/signup");
   };
 
   if (showSuccess) {
@@ -162,7 +179,7 @@ export default function SignInPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
+                  className="w-full h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
                 />
               </div>
 
@@ -178,7 +195,7 @@ export default function SignInPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500 pr-12"
+                    className="w-full h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500 pr-12"
                   />
                   <Button
                     type="button"

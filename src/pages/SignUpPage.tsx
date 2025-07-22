@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -68,7 +69,7 @@ export default function SignUpPage() {
     }
 
     if (!formData.passport_nic.trim()) {
-      newErrors.passport_nic = "NIC/Passport number is required";
+      newErrors.passport_nic = formData.local ? "NIC number is required" : "Passport number is required";
     }
 
     if (!formData.agreeToTerms) {
@@ -93,15 +94,32 @@ export default function SignUpPage() {
     try {
       const response = await register(formData);
       
+      // Transform API response to match User interface if needed
+      let userData;
+      if (response.user) {
+        // Handle legacy response format
+        userData = response.user;
+      } else {
+        // Handle new API response format
+        userData = {
+          id: response.id!,
+          name: (response.data as any).name,
+          email: (response.data as any).email,
+          role: response.role,
+          type: response.type,
+          created_at: (response.data as any).created_at,
+          student: (response.data as any).student,
+          meta: response.meta,
+        };
+      }
+      
       // Update auth context with user data
-      authLogin(response.user);
-      
-      setShowSuccess(true);
-      
-      // Wait a moment to show success message
-      setTimeout(() => {
-        navigate("/portal");
-      }, 2000);
+      authLogin(userData, () => {
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          navigate("/portal/", { replace: true });
+        }, 100);
+      });
       
     } catch (err: any) {
       console.error('Registration error:', err);
@@ -138,7 +156,7 @@ export default function SignUpPage() {
   };
 
   const handleBackToSignIn = () => {
-    navigate("/portal/signin");
+    navigate("/signin");
   };
 
   const handleBackToLanding = () => {
@@ -220,7 +238,7 @@ export default function SignUpPage() {
                   placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`h-12 ${errors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
+                  className={`w-full h-12 ${errors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
                 />
                 {errors.name && (
                   <p className="text-red-600 text-sm">{errors.name}</p>
@@ -236,32 +254,15 @@ export default function SignUpPage() {
                   placeholder="Enter your email address"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`h-12 ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
+                  className={`w-full h-12 ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
                 />
                 {errors.email && (
                   <p className="text-red-600 text-sm">{errors.email}</p>
                 )}
               </div>
 
-              {/* NIC/Passport Field */}
-              <div className="space-y-2">
-                <Input
-                  id="passport_nic"
-                  name="passport_nic"
-                  type="text"
-                  placeholder="Enter your NIC or Passport number"
-                  value={formData.passport_nic}
-                  onChange={handleInputChange}
-                  className={`h-12 ${errors.passport_nic ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
-                />
-                {errors.passport_nic && (
-                  <p className="text-red-600 text-sm">{errors.passport_nic}</p>
-                )}
-              </div>
-
               {/* Student Type Field */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">Student Type</label>
                 <div className="flex space-x-4">
                   <div className="flex items-center space-x-2">
                     <input
@@ -288,6 +289,22 @@ export default function SignUpPage() {
                 </div>
               </div>
 
+              {/* NIC/Passport Field */}
+              <div className="space-y-2">
+                <Input
+                  id="passport_nic"
+                  name="passport_nic"
+                  type="text"
+                  placeholder={formData.local ? "Enter your NIC number" : "Enter your Passport number"}
+                  value={formData.passport_nic}
+                  onChange={handleInputChange}
+                  className={`w-full h-12 ${errors.passport_nic ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
+                />
+                {errors.passport_nic && (
+                  <p className="text-red-600 text-sm">{errors.passport_nic}</p>
+                )}
+              </div>
+
               {/* Password Field */}
               <div className="space-y-2">
                 <div className="relative">
@@ -298,7 +315,7 @@ export default function SignUpPage() {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`h-12 pr-12 ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
+                    className={`w-full h-12 pr-12 ${errors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
                   />
                   <Button
                     type="button"
@@ -325,7 +342,7 @@ export default function SignUpPage() {
                     placeholder="Confirm your password"
                     value={formData.password_confirmation}
                     onChange={handleInputChange}
-                    className={`h-12 pr-12 ${errors.password_confirmation ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
+                    className={`w-full h-12 pr-12 ${errors.password_confirmation ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-slate-500 focus:ring-slate-500'}`}
                   />
                   <Button
                     type="button"

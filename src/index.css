@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css?family=Lato:400,700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -116,5 +117,36 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Lato', Arial, sans-serif;
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Lato', Arial, sans-serif;
+  }
+  .cardHeaderDark {
+    @apply bg-[#334155] rounded-t-lg p-6 flex flex-col items-center;
+  }
+  .cardTitleWhite {
+    @apply text-white font-bold text-center;
+  }
+  .cardTitleNavy {
+    @apply text-[#1e293b] font-bold text-center;
+  }
+}
+
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+.main-content {
+  margin-left: 5rem; /* 80px */
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 16rem; /* 256px */
   }
 }

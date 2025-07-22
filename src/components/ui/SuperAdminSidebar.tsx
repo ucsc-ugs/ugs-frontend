@@ -32,18 +32,18 @@ export default function SuperAdminSidebar() {
 
   const navItems = [
     {
-      to: "/admin/dashboard",
+      to: "/super-admin/dashboard",
       icon: LayoutDashboard,
       label: "Dashboard",
       end: true
     },
     {
-      to: "/admin/organizations",
+      to: "/super-admin/organizations",
       icon: Building2,
       label: "Manage Organizations"
     },
     {
-      to: "/admin/org-admins",
+      to: "/super-admin/org-admins",
       icon: Users,
       label: "Manage Org Admins"
     }

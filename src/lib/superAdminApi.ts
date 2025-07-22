@@ -34,11 +34,27 @@ interface OrgAdmin {
 }
 
 interface SuperAdminApiResponse<T = any> {
-  message: string;
-  data?: T;
+  // Legacy response format
+  message?: string;
   user?: any;
   token?: string;
   errors?: Record<string, string[]>;
+  // New API response format (for login endpoints)
+  type?: string;
+  role?: string;
+  id?: number;
+  data?: T | {
+    name: string;
+    email: string;
+    created_at: string;
+    student?: {
+      local: boolean;
+      passport_nic: string;
+    } | null;
+  };
+  meta?: {
+    permissions: string[];
+  };
 }
 
 // Get stored token
@@ -99,13 +115,11 @@ export const superAdminLogin = async (credentials: SuperAdminLoginCredentials): 
 };
 
 export const superAdminLogout = async (): Promise<void> => {
-  try {
-    await adminApiRequest('/logout', {
-      method: 'POST',
-    });
-  } finally {
-    removeAuthToken();
-  }
+  await adminApiRequest('/logout', {
+    method: 'POST',
+  });
+  // Don't remove token here - let the calling component handle it
+  // This allows the token to be available for the API request
 };
 
 // Dashboard

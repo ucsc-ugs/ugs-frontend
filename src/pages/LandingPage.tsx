@@ -6,13 +6,13 @@ import { useNavigate } from "react-router-dom"
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const handleSignIn = () => {
-    navigate("/signin"); // Navigate to sign-in page
-  };
-  const handleSignUp = () => {
-    navigate("/signup"); // Navigate to sign-up page
-  };
 
+  const handleSignIn = () => navigate("/signin");
+  // const handleSignUp = () => navigate("/signup");
+  // const handleAccessPortal = () => navigate("/portal");
+  // const handleStudentPortal = () => navigate("/portal");
+  // const handleInitiateRegistration = () => navigate("/portal/register");
+  const handleContactUs = () => navigate("/contact-us"); 
   const handleAccessPortal = () => {
     navigate("/portal"); // Navigate to home page with sidebar
   };
@@ -22,11 +22,11 @@ export default function LandingPage() {
   };
 
   const handleRegister = () => {
-    navigate("/portal/register"); // Navigate to register page with sidebar
+    navigate("/signup"); // Navigate to register page with sidebar
   };
 
   const handleInitiateRegistration = () => {
-    navigate("/portal/register"); // Navigate to register page with sidebar
+    navigate("/signup"); // Navigate to register page with sidebar
   };
 
   return (
@@ -42,15 +42,17 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            
             <Button 
-              variant="ghost" 
-              className="text-gray-700"
-              onClick={handleAccessPortal}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              onClick={handleContactUs}
             >
-              Access Portal
+              Contact Us
             </Button>
             <Button 
-              className="bg-gray-800 hover:bg-gray-900 text-white"
+              variant="outline"
+              className="border-gray-800 text-gray-800 hover:bg-gray-50"
               onClick={handleRegister}
             >
               Register
@@ -61,12 +63,7 @@ export default function LandingPage() {
             >
               Sign In
             </Button>
-            <Button 
-              className="bg-gray-800 hover:bg-gray-900 text-white"
-              onClick={handleSignUp}
-            >
-              Sign Up
-            </Button>
+            
           </div>
         </div>
       </header>

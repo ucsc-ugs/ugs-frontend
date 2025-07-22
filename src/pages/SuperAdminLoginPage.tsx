@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ArrowLeft, Loader2, CheckCircle, XCircle, Shield, Lock } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2, XCircle, Shield, Lock } from "lucide-react";
 import { superAdminLogin } from "@/lib/superAdminApi";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
 
@@ -17,7 +17,6 @@ export default function SuperAdminLoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,13 +37,33 @@ export default function SuperAdminLoginPage() {
 
     try {
       const response = await superAdminLogin(formData);
-      authLogin(response.user, response.token!);
       
-      setShowSuccess(true);
+      // Transform API response to match SuperAdminUser interface if needed
+      let userData;
+      if (response.user) {
+        // Handle legacy response format
+        userData = response.user;
+      } else {
+        // Handle new API response format
+        userData = {
+          id: response.id!,
+          name: (response.data as any).name,
+          email: (response.data as any).email,
+          role: response.role,
+          type: response.type,
+          created_at: (response.data as any).created_at,
+          student: (response.data as any).student,
+          meta: response.meta,
+        };
+      }
       
-      setTimeout(() => {
-        navigate("/admin/dashboard");
-      }, 1500);
+      // Update auth context with user data and navigate after state is set
+      authLogin(userData, response.token!, () => {
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          navigate("/super-admin/dashboard", { replace: true });
+        }, 100);
+      });
       
     } catch (err: any) {
       console.error('Super admin login error:', err);
@@ -148,7 +167,11 @@ export default function SuperAdminLoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
+<<<<<<< HEAD
                   className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
+=======
+                  className="w-full h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50"
+>>>>>>> d33e7b977b1ead0213ed98d2dda3b6e03e020954
                 />
               </div>
 
@@ -163,7 +186,11 @@ export default function SuperAdminLoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
+<<<<<<< HEAD
                     className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500 pr-12"
+=======
+                    className="w-full h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50 pr-12"
+>>>>>>> d33e7b977b1ead0213ed98d2dda3b6e03e020954
                   />
                   <Button
                     type="button"

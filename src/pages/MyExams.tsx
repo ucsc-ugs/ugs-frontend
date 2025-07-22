@@ -1,4 +1,20 @@
 import { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion } from "framer-motion";
+import {
+  Calendar,
+  MapPin,
+  CreditCard,
+  Clock,
+  Eye,
+  X,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  BookOpen as BookOpenIcon
+} from "lucide-react";
 
 interface Exam {
   id: number;
@@ -19,21 +35,6 @@ interface Exam {
   questions: number;
   receiptNumber?: string;
 }
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion } from "framer-motion";
-import { 
-  Calendar, 
-  MapPin, 
-  CreditCard, 
-  Clock, 
-  Eye, 
-  X, 
-  Download,
-  AlertCircle,
-  CheckCircle,
-  XCircle
-} from "lucide-react";
 
 const myExams: Exam[] = [
   {
@@ -138,7 +139,7 @@ const MyExams = () => {
   const filteredExams = myExams.filter(exam => {
     const matchesOrganization = filterOrganization === 'all' || exam.organization === filterOrganization;
     const matchesPaymentStatus = filterPaymentStatus === 'all' || exam.paymentStatus === filterPaymentStatus;
-    
+
     return matchesOrganization && matchesPaymentStatus;
   });
 
@@ -202,273 +203,285 @@ const MyExams = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn min-h-svh min-w-[320px] p-4">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <h1 className="text-3xl font-bold text-foreground">My Exams</h1>
-        <p className="text-muted-foreground">View and manage your registered examinations</p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-center">
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-sm font-medium text-foreground">Organization:</span>
-          <Select value={filterOrganization} onValueChange={setFilterOrganization}>
-            <SelectTrigger className="w-full md:w-[200px] rounded-xl shadow-md">
-              <SelectValue placeholder="All Organizations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Organizations</SelectItem>
-              <SelectItem value="UCSC">UCSC</SelectItem>
-              <SelectItem value="Other">Other Universities</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-sm font-medium text-foreground">Payment:</span>
-          <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
-            <SelectTrigger className="w-full md:w-[200px] rounded-xl shadow-md">
-              <SelectValue placeholder="All Payments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Payments</SelectItem>
-              <SelectItem value="Paid">Paid</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Failed">Failed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        Showing {filteredExams.length} of {myExams.length} registered exams
-      </div>
-
-      {/* Exams Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredExams.map((exam, index) => (
-          <motion.div
-            key={exam.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.1 }}
-          >
-            <Card className="hover:scale-[1.02] transition-all duration-200 shadow-sm border-0 bg-card">
-              <CardContent className="p-6">
-                <div className="flex gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-bold text-lg text-foreground leading-tight">
-                          {exam.testName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {exam.fullName}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        exam.organization === 'UCSC' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {exam.organization}
-                      </span>
-                    </div>
-
-                    {/* University */}
-                    <div className="mb-3">
-                      <p className="text-sm text-muted-foreground font-medium">
-                        {exam.university}
-                      </p>
-                    </div>
-
-                    {/* Date & Time */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground">
-                        {exam.date} • {exam.time}
-                      </span>
-                    </div>
-
-                    {/* Location */}
-                    {exam.location && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">
-                          {exam.location}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Registration Deadline */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground">
-                        Registration Deadline: {exam.registrationDeadline}
-                      </span>
-                    </div>
-
-                    {/* Status Badges */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <div className="flex items-center gap-1">
-                        {getPaymentStatusIcon(exam.paymentStatus)}
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPaymentStatusColor(exam.paymentStatus)}`}>
-                          {exam.paymentStatus}
-                        </span>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRegistrationStatusColor(exam.registrationStatus)}`}>
-                        {exam.registrationStatus}
-                      </span>
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                        {exam.fee}
-                      </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleViewDetails(exam)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      >
-                        <Eye className="h-3 w-3" />
-                        View Details
-                      </button>
-
-                      {exam.registrationStatus === 'Cancellable' && (
-                        <button
-                          onClick={() => handleCancelRegistration(exam.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                          Cancel
-                        </button>
-                      )}
-
-                      {exam.paymentStatus === 'Pending' && (
-                        <button
-                          onClick={() => handlePayNow(exam.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-                        >
-                          <CreditCard className="h-3 w-3" />
-                          Pay Now
-                        </button>
-                      )}
-
-                      {exam.paymentStatus === 'Failed' && (
-                        <button
-                          onClick={() => handlePayNow(exam.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
-                        >
-                          <CreditCard className="h-3 w-3" />
-                          Retry Payment
-                        </button>
-                      )}
-
-                      {exam.paymentStatus === 'Paid' && exam.receiptNumber && (
-                        <button
-                          onClick={() => handleDownloadReceipt(exam.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-                        >
-                          <Download className="h-3 w-3" />
-                          Download Receipt
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <img
-                    src={exam.image}
-                    alt={`${exam.university} logo`}
-                    className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* No Results Message */}
-      {filteredExams.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">📋</div>
-          <h3 className="text-lg font-medium text-foreground mb-2">No exams found</h3>
-          <p className="text-muted-foreground">
-            Try adjusting your filters or register for new exams.
-          </p>
-        </div>
-      )}
-
-      {/* Details Modal */}
-      {selectedExam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    {selectedExam.testName}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {selectedExam.fullName}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedExam(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">University</h3>
-                  <p className="text-sm text-muted-foreground">{selectedExam.university}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Description</h3>
-                  <p className="text-sm text-muted-foreground">{selectedExam.description}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-medium text-foreground mb-2">Duration</h3>
-                    <p className="text-sm text-muted-foreground">{selectedExam.duration}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-foreground mb-2">Questions</h3>
-                    <p className="text-sm text-muted-foreground">{selectedExam.questions}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Fee</h3>
-                  <p className="text-sm text-muted-foreground">{selectedExam.fee}</p>
-                </div>
-
-                {selectedExam.receiptNumber && (
-                  <div>
-                    <h3 className="font-medium text-foreground mb-2">Receipt Number</h3>
-                    <p className="text-sm text-muted-foreground">{selectedExam.receiptNumber}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setSelectedExam(null)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+    <div className="min-h-screen">
+      <div className="max-w-8xl mx-auto p-4 lg:p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 rounded-xl">
+              <BookOpenIcon className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">My Exams</h1>
+              <p className="text-gray-600 text-sm">
+                View and manage your registered examinations
+              </p>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Filters + Results Count */}
+        <div className="bg-white dark:bg-muted rounded-2xl shadow p-4 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <span className="text-sm font-medium text-foreground">Organization:</span>
+              <Select value={filterOrganization} onValueChange={setFilterOrganization}>
+                <SelectTrigger className="w-full md:w-[200px] rounded-xl shadow-md">
+                  <SelectValue placeholder="All Organizations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Organizations</SelectItem>
+                  <SelectItem value="UCSC">UCSC</SelectItem>
+                  <SelectItem value="Other">Other Universities</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <span className="text-sm font-medium text-foreground">Payment:</span>
+              <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
+                <SelectTrigger className="w-full md:w-[200px] rounded-xl shadow-md">
+                  <SelectValue placeholder="All Payments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payments</SelectItem>
+                  <SelectItem value="Paid">Paid</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {/* Results Count */}
+          <div className="text-sm text-muted-foreground mt-2">
+            Showing {filteredExams.length} of {myExams.length} registered exams
+          </div>
+        </div>
+
+        {/* Exams Grid */}
+        <div className="bg-white dark:bg-muted rounded-2xl shadow p-4 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredExams.map((exam, index) => (
+              <motion.div
+                key={exam.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <Card className="hover:scale-[1.02] transition-all duration-200 shadow-sm border-0 bg-card">
+                  <CardContent className="p-6">
+                    <div className="flex gap-4">
+                      <div className="flex-1 min-w-0">
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-bold text-lg text-foreground leading-tight">
+                              {exam.testName}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {exam.fullName}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${exam.organization === 'UCSC' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                            }`}>
+                            {exam.organization}
+                          </span>
+                        </div>
+
+                        {/* University */}
+                        <div className="mb-3">
+                          <p className="text-sm text-muted-foreground font-medium">
+                            {exam.university}
+                          </p>
+                        </div>
+
+                        {/* Date & Time */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {exam.date} • {exam.time}
+                          </span>
+                        </div>
+
+                        {/* Location */}
+                        {exam.location && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-foreground">
+                              {exam.location}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Registration Deadline */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            Registration Deadline: {exam.registrationDeadline}
+                          </span>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <div className="flex items-center gap-1">
+                            {getPaymentStatusIcon(exam.paymentStatus)}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPaymentStatusColor(exam.paymentStatus)}`}>
+                              {exam.paymentStatus}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRegistrationStatusColor(exam.registrationStatus)}`}>
+                            {exam.registrationStatus}
+                          </span>
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                            {exam.fee}
+                          </span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleViewDetails(exam)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Details
+                          </button>
+
+                          {exam.registrationStatus === 'Cancellable' && (
+                            <button
+                              onClick={() => handleCancelRegistration(exam.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                              Cancel
+                            </button>
+                          )}
+
+                          {exam.paymentStatus === 'Pending' && (
+                            <button
+                              onClick={() => handlePayNow(exam.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                            >
+                              <CreditCard className="h-3 w-3" />
+                              Pay Now
+                            </button>
+                          )}
+
+                          {exam.paymentStatus === 'Failed' && (
+                            <button
+                              onClick={() => handlePayNow(exam.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                            >
+                              <CreditCard className="h-3 w-3" />
+                              Retry Payment
+                            </button>
+                          )}
+
+                          {exam.paymentStatus === 'Paid' && exam.receiptNumber && (
+                            <button
+                              onClick={() => handleDownloadReceipt(exam.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                            >
+                              <Download className="h-3 w-3" />
+                              Download Receipt
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <img
+                        src={exam.image}
+                        alt={`${exam.university} logo`}
+                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* No Results Message */}
+        {filteredExams.length === 0 && (
+          <div className="bg-white dark:bg-muted rounded-2xl shadow p-8 text-center">
+            <div className="text-6xl mb-4">📋</div>
+            <h3 className="text-lg font-medium text-foreground mb-2">No exams found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your filters or register for new exams.
+            </p>
+          </div>
+        )}
+
+        {/* Details Modal */}
+        {selectedExam && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">
+                      {selectedExam.testName}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {selectedExam.fullName}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedExam(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium text-foreground mb-2">University</h3>
+                    <p className="text-sm text-muted-foreground">{selectedExam.university}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-medium text-foreground mb-2">Description</h3>
+                    <p className="text-sm text-muted-foreground">{selectedExam.description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-medium text-foreground mb-2">Duration</h3>
+                      <p className="text-sm text-muted-foreground">{selectedExam.duration}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground mb-2">Questions</h3>
+                      <p className="text-sm text-muted-foreground">{selectedExam.questions}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-medium text-foreground mb-2">Fee</h3>
+                    <p className="text-sm text-muted-foreground">{selectedExam.fee}</p>
+                  </div>
+
+                  {selectedExam.receiptNumber && (
+                    <div>
+                      <h3 className="font-medium text-foreground mb-2">Receipt Number</h3>
+                      <p className="text-sm text-muted-foreground">{selectedExam.receiptNumber}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setSelectedExam(null)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
