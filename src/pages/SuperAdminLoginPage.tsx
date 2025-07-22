@@ -68,16 +68,8 @@ export default function SuperAdminLoginPage() {
     } catch (err: any) {
       console.error('Super admin login error:', err);
       
-      const errorMessages = [
-        "🔐 Invalid super admin credentials. Please check your access.",
-        "⚠️ Super admin access denied. Verify your credentials.",
-        "🛡️ Authentication failed. Super admin privileges required.",
-        "🔑 Access denied. Please contact system administrator.",
-        "🚨 Invalid super admin login. Check your email and password."
-      ];
-      
-      const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)];
-      setError(err.message || randomError);
+      // Show the actual error message from the backend
+      setError(err.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

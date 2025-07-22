@@ -136,19 +136,8 @@ export default function SignUpPage() {
         });
         setErrors(backendErrors);
       } else {
-        // Creative error messages
-        const errorMessages = [
-          "🎭 Oops! Something went wrong in our registration theater!",
-          "🚀 Houston, we have a problem! Registration failed to launch.",
-          "🎪 The registration circus encountered a technical difficulty!",
-          "🎨 Our registration canvas got a bit messy. Let's try again!",
-          "⚡ A registration lightning strike occurred! Please retry.",
-          "🎯 Missed the registration bullseye! Give it another shot!",
-          "🎲 The registration dice rolled badly. Try your luck again!"
-        ];
-        
-        const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)];
-        setErrors({ general: err.message || randomError });
+        // Show the message property from the backend response
+        setErrors({ general: err.message || "Registration failed. Please try again." });
       }
     } finally {
       setIsLoading(false);
