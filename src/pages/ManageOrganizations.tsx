@@ -109,7 +109,7 @@ export default function ManageOrganizations() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-6 bg-gray-50 min-h-screen">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-32 bg-gray-200 rounded"></div>
@@ -119,8 +119,7 @@ export default function ManageOrganizations() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">{/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Organizations</h1>
@@ -146,10 +145,10 @@ export default function ManageOrganizations() {
 
       {/* Form */}
       {showForm && (
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle>{editingOrg ? 'Edit Organization' : 'Create Organization'}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gray-900">{editingOrg ? 'Edit Organization' : 'Create Organization'}</CardTitle>
+            <CardDescription className="text-gray-600">
               {editingOrg ? 'Update organization details' : 'Add a new organization to the system'}
             </CardDescription>
           </CardHeader>
@@ -218,10 +217,10 @@ export default function ManageOrganizations() {
       </Card>
 
       {/* Organizations List */}
-      <Card>
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Building2 className="h-5 w-5 text-gray-600" />
             Organizations ({filteredOrganizations.length})
           </CardTitle>
         </CardHeader>

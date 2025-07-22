@@ -70,7 +70,7 @@ export default function SuperAdminLoginPage() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-0 shadow-xl">
           <CardContent className="p-8 text-center">
             <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
@@ -86,33 +86,42 @@ export default function SuperAdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <Button
             variant="ghost"
             onClick={handleBackToLanding}
-            className="mb-6 text-gray-300 hover:text-white"
+            className="mb-6 text-gray-600 hover:text-gray-800"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Button>
           
           <div className="flex items-center justify-center gap-3 mb-6">
-            <Shield className="h-12 w-12 text-blue-400" />
+            <img 
+              src="../src/assets/ucsc_logo.png" 
+              alt="UCSC Logo" 
+              width={50} 
+              height={35} 
+              className="object-contain" 
+            />
             <div className="text-left">
-              <h1 className="text-xl font-bold text-white">Super Admin Portal</h1>
-              <p className="text-blue-300 text-sm">University Gateway Solution</p>
+              <h1 className="text-xl font-bold text-gray-900">Super Admin Portal</h1>
+              <p className="text-gray-600 text-sm">University Gateway Solution</p>
             </div>
           </div>
         </div>
 
         {/* Login Card */}
-        <Card className="border-0 shadow-2xl bg-white/10 backdrop-blur-md">
+        <Card className="border-0 shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-white">Admin Access</CardTitle>
-            <CardDescription className="text-blue-200">
+            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
+              <Shield className="h-6 w-6 text-slate-600" />
+              Admin Access
+            </CardTitle>
+            <CardDescription className="text-gray-600">
               Secure login for system administrators
             </CardDescription>
           </CardHeader>
@@ -120,10 +129,10 @@ export default function SuperAdminLoginPage() {
           <CardContent>
             {/* Error Message */}
             {error && (
-              <div className="mb-6 p-4 bg-red-500/20 border border-red-400/30 rounded-lg backdrop-blur-sm">
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
-                  <p className="text-red-200 text-sm">{error}</p>
+                  <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  <p className="text-red-700 text-sm">{error}</p>
                 </div>
               </div>
             )}
@@ -139,7 +148,7 @@ export default function SuperAdminLoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50"
+                  className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500"
                 />
               </div>
 
@@ -154,19 +163,19 @@ export default function SuperAdminLoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="h-12 bg-white/20 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400/50 pr-12"
+                    className="h-12 border-gray-300 focus:border-slate-500 focus:ring-slate-500 pr-12"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 text-gray-300 hover:text-white"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="h-4 w-4 text-gray-500" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-4 w-4 text-gray-500" />
                     )}
                   </Button>
                 </div>
@@ -176,7 +185,7 @@ export default function SuperAdminLoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-lg"
+                className="w-full h-12 bg-slate-700 hover:bg-slate-800 text-white font-medium"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
@@ -195,7 +204,7 @@ export default function SuperAdminLoginPage() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-sm text-blue-200">
+        <div className="text-center mt-8 text-sm text-gray-500">
           <p className="flex items-center justify-center gap-1">
             <Shield className="h-4 w-4" />
             Secured by UCSC

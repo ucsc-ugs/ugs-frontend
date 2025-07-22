@@ -145,7 +145,7 @@ export default function ManageOrgAdmins() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-6 bg-gray-50 min-h-screen">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-32 bg-gray-200 rounded"></div>
@@ -155,8 +155,7 @@ export default function ManageOrgAdmins() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">{/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Org Admins</h1>
@@ -182,10 +181,10 @@ export default function ManageOrgAdmins() {
 
       {/* Form */}
       {showForm && (
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle>{editingAdmin ? 'Edit Org Admin' : 'Create Org Admin'}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gray-900">{editingAdmin ? 'Edit Org Admin' : 'Create Org Admin'}</CardTitle>
+            <CardDescription className="text-gray-600">
               {editingAdmin ? 'Update org admin details' : 'Add a new organizational administrator'}
             </CardDescription>
           </CardHeader>
@@ -295,10 +294,10 @@ export default function ManageOrgAdmins() {
       </Card>
 
       {/* Org Admins List */}
-      <Card>
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Users className="h-5 w-5 text-gray-600" />
             Organizational Admins ({filteredOrgAdmins.length})
           </CardTitle>
         </CardHeader>
