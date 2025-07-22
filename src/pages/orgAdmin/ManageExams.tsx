@@ -127,17 +127,6 @@ const mockExams: Exam[] = [
     }
 ];
 
-const universities = [
-    "All Universities",
-    "University of Colombo",
-    "University of Kelaniya",
-    "University of Peradeniya",
-    "University of Moratuwa",
-    "University of Colombo School of Computing",
-    "University of Ruhuna",
-    "University of Jaffna"
-];
-
 const statusOptions = [
     { value: "all", label: "All Status" },
     { value: "draft", label: "Draft" },
@@ -171,22 +160,18 @@ const getStatusIcon = (status: string) => {
 
 export default function ManageExams() {
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedUniversity, setSelectedUniversity] = useState("All Universities");
     const [selectedStatus, setSelectedStatus] = useState("all");
     const [exams, setExams] = useState<Exam[]>(mockExams);
     const [showCreateExam, setShowCreateExam] = useState(false);
 
     const filteredExams = useMemo(() => {
         return exams.filter(exam => {
-            const matchesSearch = exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                exam.university.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesUniversity = selectedUniversity === "All Universities" ||
-                exam.university === selectedUniversity;
+            const matchesSearch = exam.name.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = selectedStatus === "all" || exam.status === selectedStatus;
 
-            return matchesSearch && matchesUniversity && matchesStatus;
+            return matchesSearch && matchesStatus;
         });
-    }, [exams, searchTerm, selectedUniversity, selectedStatus]);
+    }, [exams, searchTerm, selectedStatus]);
 
     const stats = useMemo(() => {
         const total = exams.length;
@@ -337,22 +322,13 @@ export default function ManageExams() {
                                         <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                                         <input
                                             type="text"
-                                            placeholder="Search exams by name or university..."
+                                            placeholder="Search exams by name..."
                                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <select
-                                            value={selectedUniversity}
-                                            onChange={(e) => setSelectedUniversity(e.target.value)}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        >
-                                            {universities.map(uni => (
-                                                <option key={uni} value={uni}>{uni}</option>
-                                            ))}
-                                        </select>
                                         <select
                                             value={selectedStatus}
                                             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -381,7 +357,6 @@ export default function ManageExams() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Exam Name</TableHead>
-                                                <TableHead>University</TableHead>
                                                 <TableHead>Date & Time</TableHead>
                                                 <TableHead>Duration</TableHead>
                                                 <TableHead>Registrations</TableHead>
@@ -400,9 +375,6 @@ export default function ManageExams() {
                                                             <div className="text-sm text-gray-500">
                                                                 Created: {formatDate(exam.createdAt)}
                                                             </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="text-sm">{exam.university}</div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
@@ -522,7 +494,7 @@ export default function ManageExams() {
                                     <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-gray-900 mb-2">No exams found</h3>
                                     <p className="text-gray-500 mb-4">
-                                        {searchTerm || selectedUniversity !== "All Universities" || selectedStatus !== "all"
+                                        {searchTerm || selectedStatus !== "all"
                                             ? "Try adjusting your filters to see more results."
                                             : "Get started by creating your first exam."}
                                     </p>

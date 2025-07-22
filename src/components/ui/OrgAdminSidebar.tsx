@@ -83,7 +83,7 @@ export function OrgAdminSidebar() {
         </div>
 
         {/* Navigation Links */}
-        <div className="flex flex-col">
+        <div className="flex flex-col space-y-2">
           {/* Dashboard */}
           {mainLinks.slice(0, 1).map(({ name, path, icon: Icon, hasBell }) => (
             <NavLink
@@ -92,7 +92,7 @@ export function OrgAdminSidebar() {
               end={name === "Dashboard"}
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                   ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                   : "text-blue-800 hover:bg-blue-50 hover:scale-105"
                 }`
@@ -110,10 +110,10 @@ export function OrgAdminSidebar() {
           ))}
 
           {/* Exams Dropdown */}
-          <div>
+          <div className="mt-1">
             <button
               onClick={() => setIsExamsOpen(!isExamsOpen)}
-              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
+              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
               title="Exams"
             >
               <div className="relative flex-shrink-0">
@@ -131,13 +131,13 @@ export function OrgAdminSidebar() {
 
             {/* Exam Sub-links */}
             {isExamsOpen && (
-              <div className="mt-1 space-y-1 lg:ml-4">
+              <div className="mt-2 space-y-1 lg:ml-4">
                 {examLinks.map(({ name, path, icon: Icon }) => (
                   <NavLink
                     key={name}
                     to={path}
                     className={({ isActive }) =>
-                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-1.5 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                         ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                         : "text-blue-700 hover:bg-blue-50 hover:scale-105"
                       }`
@@ -155,10 +155,10 @@ export function OrgAdminSidebar() {
           </div>
 
           {/* Manage Users Dropdown */}
-          <div>
+          <div className="mt-1">
             <button
               onClick={() => setIsUsersOpen(!isUsersOpen)}
-              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
+              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
               title="Manage Users"
             >
               <div className="relative flex-shrink-0">
@@ -176,13 +176,13 @@ export function OrgAdminSidebar() {
 
             {/* User Sub-links */}
             {isUsersOpen && (
-              <div className="mt-1 space-y-1 lg:ml-4">
+              <div className="mt-2 space-y-1 lg:ml-4">
                 {userLinks.map(({ name, path, icon: Icon }) => (
                   <NavLink
                     key={name}
                     to={path}
                     className={({ isActive }) =>
-                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-1.5 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                         ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                         : "text-blue-700 hover:bg-blue-50 hover:scale-105"
                       }`
@@ -205,12 +205,20 @@ export function OrgAdminSidebar() {
               key={name}
               to={path}
               onClick={handleNavClick}
-              className={({ isActive }) =>
-                `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+              className={({ isActive }) => {
+                // Special handling for Set Announcements to include create/edit routes
+                const isAnnouncementActive = name === "Set Announcements" &&
+                  (location.pathname === path ||
+                    location.pathname === '/admin/create-announcement' ||
+                    location.pathname.startsWith('/admin/edit-announcement'));
+
+                const shouldBeActive = isActive || isAnnouncementActive;
+
+                return `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform ${shouldBeActive
                   ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                   : "text-blue-800 hover:bg-blue-50 hover:scale-105"
-                }`
-              }
+                  }`;
+              }}
               title={name}
             >
               <div className="relative flex-shrink-0">
