@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, CheckCircle } from "lucide-react";
-import Sidebar from "@/components/ui/Sidebar"; // Adjust the import based on your project structure
+import Sidebar from "@/components/ui/sidebar"; // Adjust the import based on your project structure
 
 export default function ContactUsForm() {
   const navigate = useNavigate();
