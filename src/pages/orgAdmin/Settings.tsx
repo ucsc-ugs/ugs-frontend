@@ -1,97 +1,64 @@
-// src/pages/admin/Settings.tsx
+// src/pages/orgAdmin/Settings.tsx
 import { useState } from "react";
 import {
     Save,
     Settings as SettingsIcon,
     Building,
-    Mail,
     Upload,
-    Clock,
     Shield,
-    Database,
-    Palette
+    Bell,
+    Lock
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar } from "@/components/ui/avatar";
 
-interface SettingsData {
-    // Organization Settings
+interface OrganizationSettings {
+    // Organization Profile
     organizationName: string;
-    organizationEmail: string;
-    organizationPhone: string;
-    organizationAddress: string;
-    organizationWebsite: string;
-    organizationLogo: string;
+    contactEmail: string;
+    phoneNumber: string;
+    address: string;
+    website: string;
+    logo: string;
 
-    // Default Exam Settings
-    defaultExamDuration: number;
-    defaultExamFee: number;
-    defaultMaxParticipants: number;
-    defaultQuestionCount: number;
-
-    // Email Settings
-    emailSenderName: string;
-    emailSenderAddress: string;
+    // Communication Preferences
+    enableEmailNotifications: boolean;
+    enableInAppNotifications: boolean;
     emailSignature: string;
-
-    // System Settings
-    autoPublishResults: boolean;
-    allowStudentRegistration: boolean;
-    requireEmailVerification: boolean;
-    enableNotifications: boolean;
-    maintenanceMode: boolean;
-
-    // UI Settings
-    primaryColor: string;
-    footerMessage: string;
-    aboutMessage: string;
-
-    // Security Settings
-    sessionTimeout: number;
-    passwordMinLength: number;
-    enableTwoFactor: boolean;
-    maxLoginAttempts: number;
 }
 
-const defaultSettings: SettingsData = {
-    organizationName: "University Gateway Solutions",
-    organizationEmail: "admin@ugs.lk",
-    organizationPhone: "+94112581835",
-    organizationAddress: "UCSC Building, University of Colombo, Colombo 07",
-    organizationWebsite: "https://ugs.lk",
-    organizationLogo: "",
+interface PasswordChangeData {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+}
 
-    defaultExamDuration: 120,
-    defaultExamFee: 1000,
-    defaultMaxParticipants: 100,
-    defaultQuestionCount: 50,
-
-    emailSenderName: "UGS Admin",
-    emailSenderAddress: "noreply@ugs.lk",
-    emailSignature: "Best regards,\nUniversity Gateway Solutions Team",
-
-    autoPublishResults: false,
-    allowStudentRegistration: true,
-    requireEmailVerification: true,
-    enableNotifications: true,
-    maintenanceMode: false,
-
-    primaryColor: "#3B82F6",
-    footerMessage: "© 2025 University Gateway Solutions. All rights reserved.",
-    aboutMessage: "University Gateway Solutions provides comprehensive exam management and student portal services for universities across Sri Lanka.",
-
-    sessionTimeout: 30,
-    passwordMinLength: 8,
-    enableTwoFactor: false,
-    maxLoginAttempts: 3
+const defaultSettings: OrganizationSettings = {
+    organizationName: "University of Colombo School of Computing",
+    contactEmail: "admin@ucsc.cmb.ac.lk",
+    phoneNumber: "+94112581835",
+    address: "UCSC Building, University of Colombo, Colombo 07, Sri Lanka",
+    website: "https://ucsc.cmb.ac.lk",
+    logo: "",
+    enableEmailNotifications: true,
+    enableInAppNotifications: true,
+    emailSignature: "Best regards,\nUCSC Administration Team\nUniversity of Colombo School of Computing"
 };
 
 export default function Settings() {
-    const [settings, setSettings] = useState<SettingsData>(defaultSettings);
-    const [activeTab, setActiveTab] = useState("organization");
+    const [settings, setSettings] = useState<OrganizationSettings>(defaultSettings);
+    const [activeTab, setActiveTab] = useState("profile");
     const [isSaving, setIsSaving] = useState(false);
     const [savedMessage, setSavedMessage] = useState("");
+    const [passwordData, setPasswordData] = useState<PasswordChangeData>({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+    });
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -107,17 +74,39 @@ export default function Settings() {
         }
     };
 
-    const handleInputChange = (field: keyof SettingsData, value: string | number | boolean) => {
+    const handleInputChange = (field: keyof OrganizationSettings, value: string | boolean) => {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
 
+    const handlePasswordChange = async () => {
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            alert("New passwords do not match!");
+            return;
+        }
+
+        if (passwordData.newPassword.length < 8) {
+            alert("Password must be at least 8 characters long!");
+            return;
+        }
+
+        try {
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            alert("Password changed successfully!");
+            setPasswordData({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: ""
+            });
+        } catch {
+            alert("Error changing password. Please try again.");
+        }
+    };
+
     const tabs = [
-        { id: "organization", label: "Organization", icon: Building },
-        { id: "exam", label: "Exam Defaults", icon: Clock },
-        { id: "email", label: "Email Settings", icon: Mail },
-        { id: "system", label: "System", icon: Database },
-        { id: "ui", label: "UI & Content", icon: Palette },
-        { id: "security", label: "Security", icon: Shield }
+        { id: "profile", label: "Organization Profile", icon: Building },
+        { id: "communication", label: "Communication", icon: Bell },
+        { id: "account", label: "Account Settings", icon: Lock }
     ];
 
     return (
@@ -162,8 +151,8 @@ export default function Settings() {
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
                                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${activeTab === tab.id
-                                                    ? "bg-blue-50 text-blue-700 border-l-4 border-blue-700"
-                                                    : "text-gray-600 hover:bg-gray-50"
+                                                ? "bg-blue-50 text-blue-700 border-l-4 border-blue-700"
+                                                : "text-gray-600 hover:bg-gray-50"
                                                 }`}
                                         >
                                             <tab.icon className="w-4 h-4" />
@@ -177,245 +166,159 @@ export default function Settings() {
 
                     {/* Content */}
                     <div className="lg:col-span-3">
-                        {/* Organization Settings */}
-                        {activeTab === "organization" && (
+                        {/* Organization Profile */}
+                        {activeTab === "profile" && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Building className="w-5 h-5" />
-                                        Organization Information
+                                        Organization Profile
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <Label htmlFor="organizationName" className="text-sm font-medium text-gray-700">
                                                 Organization Name
-                                            </label>
-                                            <input
+                                            </Label>
+                                            <Input
+                                                id="organizationName"
                                                 type="text"
                                                 value={settings.organizationName}
-                                                onChange={(e) => handleInputChange("organizationName", e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                disabled
+                                                className="mt-1 bg-gray-50"
                                             />
+                                            <p className="text-xs text-gray-500 mt-1">Contact system administrator to change</p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <Label htmlFor="contactEmail" className="text-sm font-medium text-gray-700">
                                                 Contact Email
-                                            </label>
-                                            <input
+                                            </Label>
+                                            <Input
+                                                id="contactEmail"
                                                 type="email"
-                                                value={settings.organizationEmail}
-                                                onChange={(e) => handleInputChange("organizationEmail", e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                value={settings.contactEmail}
+                                                disabled
+                                                className="mt-1 bg-gray-50"
                                             />
+                                            <p className="text-xs text-gray-500 mt-1">Contact system administrator to change</p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700">
                                                 Phone Number
-                                            </label>
-                                            <input
+                                            </Label>
+                                            <Input
+                                                id="phoneNumber"
                                                 type="tel"
-                                                value={settings.organizationPhone}
-                                                onChange={(e) => handleInputChange("organizationPhone", e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                value={settings.phoneNumber}
+                                                onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+                                                className="mt-1"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <Label htmlFor="website" className="text-sm font-medium text-gray-700">
                                                 Website
-                                            </label>
-                                            <input
+                                            </Label>
+                                            <Input
+                                                id="website"
                                                 type="url"
-                                                value={settings.organizationWebsite}
-                                                onChange={(e) => handleInputChange("organizationWebsite", e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                value={settings.website}
+                                                disabled
+                                                className="mt-1 bg-gray-50"
                                             />
+                                            <p className="text-xs text-gray-500 mt-1">Contact system administrator to change</p>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <Label htmlFor="address" className="text-sm font-medium text-gray-700">
                                             Address
-                                        </label>
+                                        </Label>
                                         <textarea
-                                            value={settings.organizationAddress}
-                                            onChange={(e) => handleInputChange("organizationAddress", e.target.value)}
+                                            id="address"
+                                            value={settings.address}
+                                            onChange={(e) => handleInputChange("address", e.target.value)}
                                             rows={3}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <Label className="text-sm font-medium text-gray-700">
                                             Organization Logo
-                                        </label>
-                                        <div className="flex items-center gap-3">
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                id="logo-upload"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        // Handle file upload
-                                                        console.log("Logo uploaded:", file.name);
-                                                    }
-                                                }}
-                                            />
-                                            <label
-                                                htmlFor="logo-upload"
-                                                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
-                                            >
-                                                <Upload className="w-4 h-4" />
-                                                Upload Logo
-                                            </label>
-                                            {settings.organizationLogo && (
-                                                <img
-                                                    src={settings.organizationLogo}
-                                                    alt="Organization Logo"
-                                                    className="w-10 h-10 rounded-lg object-cover"
+                                        </Label>
+                                        <div className="mt-1 flex items-center gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    id="logo-upload"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            // Handle file upload
+                                                            console.log("Logo uploaded:", file.name);
+                                                        }
+                                                    }}
                                                 />
+                                                <label
+                                                    htmlFor="logo-upload"
+                                                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                                                >
+                                                    <Upload className="w-4 h-4" />
+                                                    Upload Logo
+                                                </label>
+                                            </div>
+                                            {settings.logo && (
+                                                <Avatar className="w-16 h-16">
+                                                    <img
+                                                        src={settings.logo}
+                                                        alt="Organization Logo"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </Avatar>
                                             )}
                                         </div>
+                                        <p className="text-xs text-gray-500 mt-1">Recommended size: 200x200px, Max file size: 2MB</p>
+                                    </div>
+                                    <div className="flex justify-end pt-4 border-t border-gray-200">
+                                        <Button
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            <Save className="w-4 h-4 mr-2" />
+                                            {isSaving ? "Saving..." : "Save Profile"}
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
 
-                        {/* Exam Default Settings */}
-                        {activeTab === "exam" && (
+                        {/* Communication Preferences */}
+                        {activeTab === "communication" && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
-                                        <Clock className="w-5 h-5" />
-                                        Default Exam Settings
+                                        <Bell className="w-5 h-5" />
+                                        Communication Preferences
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Default Duration (minutes)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.defaultExamDuration}
-                                                onChange={(e) => handleInputChange("defaultExamDuration", parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Default Fee (LKR)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.defaultExamFee}
-                                                onChange={(e) => handleInputChange("defaultExamFee", parseFloat(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Default Max Participants
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.defaultMaxParticipants}
-                                                onChange={(e) => handleInputChange("defaultMaxParticipants", parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Default Question Count
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.defaultQuestionCount}
-                                                onChange={(e) => handleInputChange("defaultQuestionCount", parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Email Settings */}
-                        {activeTab === "email" && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Mail className="w-5 h-5" />
-                                        Email Configuration
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Sender Name
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={settings.emailSenderName}
-                                                onChange={(e) => handleInputChange("emailSenderName", e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Sender Email Address
-                                            </label>
-                                            <input
-                                                type="email"
-                                                value={settings.emailSenderAddress}
-                                                onChange={(e) => handleInputChange("emailSenderAddress", e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Email Signature
-                                        </label>
-                                        <textarea
-                                            value={settings.emailSignature}
-                                            onChange={(e) => handleInputChange("emailSignature", e.target.value)}
-                                            rows={4}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* System Settings */}
-                        {activeTab === "system" && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Database className="w-5 h-5" />
-                                        System Configuration
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-6">
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <label className="text-sm font-medium text-gray-700">
-                                                    Auto-publish Results
-                                                </label>
+                                                <Label className="text-sm font-medium text-gray-700">
+                                                    Enable Email Notifications
+                                                </Label>
                                                 <p className="text-sm text-gray-500">
-                                                    Automatically publish exam results when available
+                                                    Receive system notifications via email
                                                 </p>
                                             </div>
                                             <label className="relative inline-flex items-center cursor-pointer">
                                                 <input
                                                     type="checkbox"
-                                                    checked={settings.autoPublishResults}
-                                                    onChange={(e) => handleInputChange("autoPublishResults", e.target.checked)}
+                                                    checked={settings.enableEmailNotifications}
+                                                    onChange={(e) => handleInputChange("enableEmailNotifications", e.target.checked)}
                                                     className="sr-only peer"
                                                 />
                                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -424,206 +327,112 @@ export default function Settings() {
 
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <label className="text-sm font-medium text-gray-700">
-                                                    Allow Student Registration
-                                                </label>
+                                                <Label className="text-sm font-medium text-gray-700">
+                                                    Enable In-App Notifications
+                                                </Label>
                                                 <p className="text-sm text-gray-500">
-                                                    Allow students to register for exams
+                                                    Show notifications within the application
                                                 </p>
                                             </div>
                                             <label className="relative inline-flex items-center cursor-pointer">
                                                 <input
                                                     type="checkbox"
-                                                    checked={settings.allowStudentRegistration}
-                                                    onChange={(e) => handleInputChange("allowStudentRegistration", e.target.checked)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-700">
-                                                    Require Email Verification
-                                                </label>
-                                                <p className="text-sm text-gray-500">
-                                                    Require users to verify their email addresses
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings.requireEmailVerification}
-                                                    onChange={(e) => handleInputChange("requireEmailVerification", e.target.checked)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-700">
-                                                    Enable Notifications
-                                                </label>
-                                                <p className="text-sm text-gray-500">
-                                                    Send system notifications to users
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings.enableNotifications}
-                                                    onChange={(e) => handleInputChange("enableNotifications", e.target.checked)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-700">
-                                                    Maintenance Mode
-                                                </label>
-                                                <p className="text-sm text-gray-500">
-                                                    Put the system in maintenance mode
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings.maintenanceMode}
-                                                    onChange={(e) => handleInputChange("maintenanceMode", e.target.checked)}
+                                                    checked={settings.enableInAppNotifications}
+                                                    onChange={(e) => handleInputChange("enableInAppNotifications", e.target.checked)}
                                                     className="sr-only peer"
                                                 />
                                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                             </label>
                                         </div>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        )}
 
-                        {/* UI Settings */}
-                        {activeTab === "ui" && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Palette className="w-5 h-5" />
-                                        UI & Content Settings
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Primary Color
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="color"
-                                                value={settings.primaryColor}
-                                                onChange={(e) => handleInputChange("primaryColor", e.target.value)}
-                                                className="w-12 h-10 rounded border border-gray-300"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={settings.primaryColor}
-                                                onChange={(e) => handleInputChange("primaryColor", e.target.value)}
-                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Footer Message
-                                        </label>
+                                        <Label htmlFor="emailSignature" className="text-sm font-medium text-gray-700">
+                                            Email Signature for Announcements
+                                        </Label>
                                         <textarea
-                                            value={settings.footerMessage}
-                                            onChange={(e) => handleInputChange("footerMessage", e.target.value)}
-                                            rows={2}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            About Message
-                                        </label>
-                                        <textarea
-                                            value={settings.aboutMessage}
-                                            onChange={(e) => handleInputChange("aboutMessage", e.target.value)}
+                                            id="emailSignature"
+                                            value={settings.emailSignature}
+                                            onChange={(e) => handleInputChange("emailSignature", e.target.value)}
                                             rows={4}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Enter your email signature for official announcements..."
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">This signature will be automatically added to announcement emails</p>
+                                    </div>
+
+                                    <div className="flex justify-end pt-4 border-t border-gray-200">
+                                        <Button
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            <Save className="w-4 h-4 mr-2" />
+                                            {isSaving ? "Saving..." : "Save Preferences"}
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
 
-                        {/* Security Settings */}
-                        {activeTab === "security" && (
+                        {/* Account Settings */}
+                        {activeTab === "account" && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
-                                        <Shield className="w-5 h-5" />
-                                        Security Settings
+                                        <Lock className="w-5 h-5" />
+                                        Account Settings
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Session Timeout (minutes)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.sessionTimeout}
-                                                onChange={(e) => handleInputChange("sessionTimeout", parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
+                                <CardContent className="space-y-6">
+                                    <div>
+                                        <h3 className="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
+                                        <div className="space-y-4 max-w-md">
+                                            <div>
+                                                <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
+                                                    Current Password
+                                                </Label>
+                                                <Input
+                                                    id="currentPassword"
+                                                    type="password"
+                                                    value={passwordData.currentPassword}
+                                                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+                                                    New Password
+                                                </Label>
+                                                <Input
+                                                    id="newPassword"
+                                                    type="password"
+                                                    value={passwordData.newPassword}
+                                                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                                                    className="mt-1"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters long</p>
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                                                    Confirm New Password
+                                                </Label>
+                                                <Input
+                                                    id="confirmPassword"
+                                                    type="password"
+                                                    value={passwordData.confirmPassword}
+                                                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                            <Button
+                                                onClick={handlePasswordChange}
+                                                className="bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                <Shield className="w-4 h-4 mr-2" />
+                                                Change Password
+                                            </Button>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Password Minimum Length
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.passwordMinLength}
-                                                onChange={(e) => handleInputChange("passwordMinLength", parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Max Login Attempts
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={settings.maxLoginAttempts}
-                                                onChange={(e) => handleInputChange("maxLoginAttempts", parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-700">
-                                                Enable Two-Factor Authentication
-                                            </label>
-                                            <p className="text-sm text-gray-500">
-                                                Require 2FA for admin accounts
-                                            </p>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.enableTwoFactor}
-                                                onChange={(e) => handleInputChange("enableTwoFactor", e.target.checked)}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </label>
                                     </div>
                                 </CardContent>
                             </Card>
