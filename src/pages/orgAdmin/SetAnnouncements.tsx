@@ -151,27 +151,6 @@ export default function SetAnnouncements() {
                 pushNotificationsEnabled: false,
                 viewCount: 0,
                 clickCount: 0
-            },
-            {
-                id: '4',
-                title: 'URGENT: Campus Emergency Drill',
-                message: 'Emergency evacuation drill scheduled for tomorrow at 2 PM. All students and staff must participate.',
-                audience: 'all',
-                expiryDate: '2025-07-17',
-                publishDate: '2025-07-16T08:00:00',
-                status: 'scheduled',
-                priority: 'urgent',
-                category: 'emergency',
-                tags: ['emergency', 'drill', 'safety', 'urgent'],
-                isPinned: true,
-                createdAt: '2025-07-15',
-                createdBy: 'Safety Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: true,
-                smsNotificationsEnabled: true,
-                pushNotificationsEnabled: true,
-                viewCount: 0,
-                clickCount: 0
             }
         ]);
     }, []);
