@@ -10,19 +10,13 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import ucscLogo from "@/assets/ucsc_logo.png";
-import profileSample from "@/assets/profile_sample.png";
-import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import { Avatar, AvatarFallback } from "./avatar";
 import { ConfirmDialog } from "./ConfirmDialog";
-
-const mockUser = {
-  name: "User One",
-  regNumber: "2025/IS/011",
-  avatar: profileSample,
-};
-
+import { useAuth } from "@/contexts/AuthContext";
 
 function Sidebar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   
   const mainLinks = [
@@ -50,6 +44,18 @@ function Sidebar() {
 
   const handleLogoutCancel = () => {
     setShowLogoutDialog(false);
+  };
+
+  const handleProfileClick = () => {
+    navigate("/portal/profile");
+  };
+
+  // Generate user's registration number or ID for display
+  const getUserDisplayId = () => {
+    if (user?.student?.passport_nic) {
+      return user.email;
+    }
+    return `ID: ${user?.id || 'N/A'}`;
   };
 
   return (
@@ -105,16 +111,24 @@ function Sidebar() {
       {/* 👤 User Info + Logout */}
       <div className="mt-6 space-y-6 pb-12">
         {/* User Info */}
-        <div className="flex flex-col items-center justify-center gap-3 px-4">
-          <Avatar className="h-10 w-10 ring-2 ring-blue-200">
-            <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-            <AvatarFallback>U</AvatarFallback>
+        <button
+          onClick={handleProfileClick}
+          className="flex flex-col items-center justify-center gap-3 px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform hover:bg-blue-50 hover:scale-105 w-full group"
+        >
+          <Avatar className="h-10 w-10 ring-2 ring-blue-200 group-hover:ring-blue-300 transition-all">
+            <AvatarFallback>
+              {user?.name?.charAt(0).toUpperCase() || "U"}
+            </AvatarFallback>
           </Avatar>
           <div className="hidden md:flex flex-col text-sm text-center leading-tight">
-            <span className="font-medium text-blue-800">{mockUser.name}</span>
-            <span className="text-gray-500">{mockUser.regNumber}</span>
+            <span className="font-medium text-blue-800 group-hover:text-blue-900">
+              {user?.name || "Loading..."}
+            </span>
+            <span className="text-gray-500 text-xs">
+              {getUserDisplayId()}
+            </span>
           </div>
-        </div>
+        </button>
 
         {/* Logout */}
         <button

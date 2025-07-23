@@ -9,10 +9,11 @@ import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
 import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
+import Profile from "@/pages/Profile";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
 import SignInPage from "@/pages/SignInPage";
-import Sidebar from "@/components/ui/Sidebar";
+import Sidebar from "@/components/ui/sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
 import ContactUsForm from "./components/ui/ContactUsForm";
@@ -85,6 +86,7 @@ function App() {
                       <Route path="/my-exams" element={<MyExams />} />
                       <Route path="/my-results" element={<MyResults />} />
                       <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
                     </Routes>
                   </div>

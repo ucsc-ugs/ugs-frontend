@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      // Verify token with backend
+      // Verify token with backend and get user profile
       const response = await fetch('http://localhost:8000/api/user', {
         headers: {
           'Authorization': `Bearer ${token}`,

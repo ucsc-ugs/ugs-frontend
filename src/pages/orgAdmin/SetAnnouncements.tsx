@@ -7,20 +7,13 @@ import {
     Trash2,
     Filter,
     Search,
-    Calendar,
     Users,
-    Eye,
-    Bell,
-    Mail,
-    Clock,
     FileText,
     Star,
     AlertCircle,
     Info,
     CheckSquare,
-    Copy,
     Send,
-    BarChart3,
     Tag,
     Pin,
     Zap,
@@ -76,31 +69,14 @@ interface FileAttachment {
     type: string;
 }
 
-interface Exam {
-    id: string;
-    title: string;
-    date: string;
-    department: string;
-}
 
-interface Department {
-    id: string;
-    name: string;
-    code: string;
-}
 
 export default function SetAnnouncements() {
     const navigate = useNavigate();
 
     // State management
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [departments] = useState<Department[]>([
-        { id: '1', name: 'Computer Science', code: 'CS' },
-        { id: '2', name: 'Mathematics', code: 'MATH' },
-        { id: '3', name: 'Physics', code: 'PHY' },
-        { id: '4', name: 'Chemistry', code: 'CHEM' }
-    ]);
+    
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterCategory, setFilterCategory] = useState('all');
@@ -110,13 +86,7 @@ export default function SetAnnouncements() {
 
     // Mock data initialization
     useEffect(() => {
-        // Mock exams data
-        setExams([
-            { id: '1', title: 'Computer Science Final Exam', date: '2025-08-15', department: 'Computer Science' },
-            { id: '2', title: 'Mathematics Midterm', date: '2025-07-30', department: 'Mathematics' },
-            { id: '3', title: 'Physics Lab Practical', date: '2025-08-10', department: 'Physics' },
-            { id: '4', title: 'Chemistry Theory Exam', date: '2025-08-20', department: 'Chemistry' }
-        ]);
+        
 
         // Mock announcements data
         setAnnouncements([
@@ -250,20 +220,6 @@ export default function SetAnnouncements() {
         }
     };
 
-    // Get status badge
-    const getStatusBadge = (announcement: Announcement) => {
-        if (announcement.status === 'draft') {
-            return <Badge variant="secondary" className="text-gray-600">Draft</Badge>;
-        }
-        if (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date()) {
-            return <Badge variant="destructive">Expired</Badge>;
-        }
-        if (announcement.status === 'published') {
-            return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
-        }
-        return <Badge variant="secondary">Unknown</Badge>;
-    };
-
     // Get priority badge
     const getPriorityBadge = (priority: 'low' | 'medium' | 'high' | 'urgent') => {
         const config = {
@@ -278,6 +234,65 @@ export default function SetAnnouncements() {
                 <Icon className="w-3 h-3" />
                 {label}
             </Badge>
+        );
+    };
+
+    // Get status badge with expiry date
+    const getStatusBadge = (announcement: Announcement) => {
+        const now = new Date();
+        const expiryDate = new Date(announcement.expiryDate);
+
+        if (announcement.status === 'draft') {
+            return (
+                <div className="space-y-1">
+                    <Badge variant="secondary" className="text-gray-600">Draft</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expires: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        if (announcement.status === 'scheduled') {
+            return (
+                <div className="space-y-1">
+                    <Badge className="bg-yellow-100 text-yellow-800">Scheduled</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expires: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        if (announcement.status === 'published' && expiryDate <= now) {
+            return (
+                <div className="space-y-1">
+                    <Badge variant="destructive">Expired</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expired: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        if (announcement.status === 'published') {
+            return (
+                <div className="space-y-1">
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expires: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-1">
+                <Badge variant="secondary">Unknown</Badge>
+                <div className="text-xs text-gray-500">
+                    Expires: {expiryDate.toLocaleDateString()}
+                </div>
+            </div>
         );
     };
 
@@ -335,22 +350,6 @@ export default function SetAnnouncements() {
         ));
         setNotification({ type: 'success', message: 'Announcement pin status updated!' });
         setTimeout(() => setNotification(null), 2000);
-    };
-
-    // Handle duplicate
-    const handleDuplicate = (announcement: Announcement) => {
-        const duplicate = {
-            ...announcement,
-            id: Date.now().toString(),
-            title: `Copy of ${announcement.title}`,
-            status: 'draft' as const,
-            createdAt: new Date().toISOString().split('T')[0],
-            viewCount: 0,
-            clickCount: 0
-        };
-        setAnnouncements(prev => [...prev, duplicate]);
-        setNotification({ type: 'success', message: 'Announcement duplicated successfully!' });
-        setTimeout(() => setNotification(null), 3000);
     };
 
     return (
@@ -518,13 +517,11 @@ export default function SetAnnouncements() {
                                                 className="rounded"
                                             />
                                         </TableHead>
-                                        <TableHead>Title & Priority</TableHead>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Priority</TableHead>
                                         <TableHead>Category</TableHead>
-                                        <TableHead>Audience</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Analytics</TableHead>
-                                        <TableHead>Expiry Date</TableHead>
-                                        <TableHead>Notifications</TableHead>
+                                        <TableHead>Audience</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -555,7 +552,6 @@ export default function SetAnnouncements() {
                                                         {announcement.message}
                                                     </div>
                                                     <div className="flex items-center gap-1">
-                                                        {getPriorityBadge(announcement.priority)}
                                                         {announcement.tags.slice(0, 2).map(tag => (
                                                             <Badge key={tag} variant="outline" className="text-xs">
                                                                 {tag}
@@ -570,7 +566,13 @@ export default function SetAnnouncements() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
+                                                {getPriorityBadge(announcement.priority)}
+                                            </TableCell>
+                                            <TableCell>
                                                 {getCategoryBadge(announcement.category)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {getStatusBadge(announcement)}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
@@ -582,56 +584,6 @@ export default function SetAnnouncements() {
                                                                     announcement.audience === 'year-specific' ? `Year ${announcement.yearLevel}` :
                                                                         announcement.audience}
                                                     </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {getStatusBadge(announcement)}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="text-sm space-y-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <Eye className="w-3 h-3 text-blue-500" />
-                                                        <span>{announcement.viewCount}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <BarChart3 className="w-3 h-3 text-green-500" />
-                                                        <span>{announcement.clickCount}</span>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-gray-400" />
-                                                    <span className="text-sm">
-                                                        {new Date(announcement.expiryDate).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                                {announcement.publishDate && (
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Clock className="w-3 h-3 text-orange-400" />
-                                                        <span className="text-xs text-gray-500">
-                                                            Scheduled: {new Date(announcement.publishDate).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    {announcement.notificationsEnabled ? (
-                                                        <Bell className="w-4 h-4 text-blue-500" />
-                                                    ) : (
-                                                        <Bell className="w-4 h-4 text-gray-300" />
-                                                    )}
-                                                    {announcement.emailNotificationsEnabled ? (
-                                                        <Mail className="w-4 h-4 text-green-500" />
-                                                    ) : (
-                                                        <Mail className="w-4 h-4 text-gray-300" />
-                                                    )}
-                                                    {announcement.smsNotificationsEnabled ? (
-                                                        <Send className="w-3 h-3 text-purple-500" />
-                                                    ) : (
-                                                        <Send className="w-3 h-3 text-gray-300" />
-                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -664,15 +616,6 @@ export default function SetAnnouncements() {
                                                             >
                                                                 <Edit className="w-4 h-4 mr-2" />
                                                                 Edit
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleDuplicate(announcement)}
-                                                                className="w-full justify-start"
-                                                            >
-                                                                <Copy className="w-4 h-4 mr-2" />
-                                                                Duplicate
                                                             </Button>
                                                             <Button
                                                                 variant="ghost"

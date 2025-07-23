@@ -2,16 +2,13 @@
 import { useState, useMemo, useCallback } from "react";
 import {
     Search,
-    Filter,
     Download,
     Eye,
-    Calendar,
     CreditCard,
     User,
     GraduationCap,
     Phone,
     Mail,
-    MapPin,
     Clock,
     CheckCircle,
     XCircle,
@@ -21,9 +18,7 @@ import {
     ChevronLeft,
     ChevronRight,
     RefreshCw,
-    MoreVertical,
-    Edit,
-    Trash2
+    MoreVertical
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -72,13 +67,13 @@ interface PaymentHistory {
 const mockStudents: Student[] = [
     {
         id: 1,
-        name: "John Doe",
-        email: "john.doe@student.uoc.lk",
+        name: "K.A. Perera",
+        email: "kasun.perera@student.ucsc.cmb.ac.lk",
         phone: "+94771234567",
         nicPassport: "200012345678",
         registrationNumber: "CS/2020/001",
-        university: "University of Colombo",
-        address: "123 Main St, Colombo 07",
+        university: "University of Colombo School of Computing",
+        address: "123 Galle Road, Colombo 03",
         registeredExams: [
             {
                 examId: 1,
@@ -108,13 +103,13 @@ const mockStudents: Student[] = [
     },
     {
         id: 2,
-        name: "Jane Smith",
-        email: "jane.smith@student.pera.lk",
+        name: "S.M. Fernando",
+        email: "sachini.fernando@student.ucsc.cmb.ac.lk",
         phone: "+94771234568",
         nicPassport: "199987654321",
-        registrationNumber: "ENG/2019/045",
-        university: "University of Peradeniya",
-        address: "456 Hill View, Kandy",
+        registrationNumber: "CS/2019/045",
+        university: "University of Colombo School of Computing",
+        address: "456 Kandy Road, Malabe",
         registeredExams: [
             {
                 examId: 3,
@@ -133,11 +128,11 @@ const mockStudents: Student[] = [
     },
     {
         id: 3,
-        name: "Michael Brown",
-        email: "michael.brown@student.mora.lk",
+        name: "T.D. Silva",
+        email: "tharaka.silva@student.ucsc.cmb.ac.lk",
         nicPassport: "200156789012",
         registrationNumber: "IT/2021/078",
-        university: "University of Moratuwa",
+        university: "University of Colombo School of Computing",
         registeredExams: [
             {
                 examId: 1,
@@ -167,13 +162,13 @@ const mockStudents: Student[] = [
     },
     {
         id: 4,
-        name: "Sarah Wilson",
-        email: "sarah.wilson@student.ruh.lk",
+        name: "N.K. Rajapaksha",
+        email: "nimali.rajapaksha@student.ucsc.cmb.ac.lk",
         phone: "+94771234569",
         nicPassport: "200278901234",
-        registrationNumber: "SCI/2022/012",
-        university: "University of Ruhuna",
-        address: "789 Beach Road, Matara",
+        registrationNumber: "CS/2022/012",
+        university: "University of Colombo School of Computing",
+        address: "789 Nugegoda Road, Nugegoda",
         registeredExams: [
             {
                 examId: 5,
@@ -192,8 +187,8 @@ const mockStudents: Student[] = [
     },
     {
         id: 5,
-        name: "David Kumar",
-        email: "david.kumar@student.ucsc.lk",
+        name: "P.R. Wijesinghe",
+        email: "priyanka.wijesinghe@student.ucsc.cmb.ac.lk",
         nicPassport: "200034567890",
         registrationNumber: "CS/2020/156",
         university: "University of Colombo School of Computing",
@@ -604,11 +599,9 @@ export default function ManageStudents() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Student</TableHead>
-                                        <TableHead>Contact</TableHead>
                                         <TableHead>Registration</TableHead>
                                         <TableHead>Exams</TableHead>
                                         <TableHead>Payment Status</TableHead>
-                                        <TableHead>Status</TableHead>
                                         <TableHead>Registered</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -622,23 +615,16 @@ export default function ManageStudents() {
                                         return (
                                             <TableRow key={student.id}>
                                                 <TableCell>
-                                                    <div>
-                                                        <div className="font-medium">{student.name}</div>
-                                                        <div className="text-sm text-gray-500">
-                                                            ID: {student.id} • {student.university}
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
                                                     <div className="space-y-1">
+                                                        <div className="font-medium">{student.name}</div>
                                                         <div className="flex items-center gap-2">
                                                             <Mail className="w-3 h-3 text-gray-400" />
-                                                            <span className="text-sm">{student.email}</span>
+                                                            <span className="text-sm text-gray-500">{student.email}</span>
                                                         </div>
                                                         {student.phone && (
                                                             <div className="flex items-center gap-2">
                                                                 <Phone className="w-3 h-3 text-gray-400" />
-                                                                <span className="text-sm">{student.phone}</span>
+                                                                <span className="text-sm text-gray-500">{student.phone}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -665,11 +651,6 @@ export default function ManageStudents() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge className={`${getStudentStatusColor(student.status)} w-fit`}>
-                                                        <span className="capitalize">{student.status}</span>
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
                                                     <div className="text-sm">
                                                         {formatDate(student.registrationDate)}
                                                     </div>
@@ -692,13 +673,13 @@ export default function ManageStudents() {
                                                                     <Eye className="w-4 h-4 mr-2" />
                                                                     View Profile
                                                                 </Button>
-                                                                <Button variant="ghost" size="sm" className="justify-start">
-                                                                    <Edit className="w-4 h-4 mr-2" />
-                                                                    Edit Student
-                                                                </Button>
-                                                                <Button variant="ghost" size="sm" className="justify-start text-red-600">
-                                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                                    Remove Student
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="justify-start text-orange-600"
+                                                                >
+                                                                    <XCircle className="w-4 h-4 mr-2" />
+                                                                    Disable Student
                                                                 </Button>
                                                             </div>
                                                         </PopoverContent>

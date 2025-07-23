@@ -71,19 +71,8 @@ export default function SignInPage() {
     } catch (err: any) {
       console.error('Login error:', err);
       
-      // Creative error messages
-      const errorMessages = [
-        "🤔 Hmm, those credentials seem to be playing hide and seek!",
-        "🔐 Your password and our records are having a disagreement...",
-        "📧 Double-check that email - typos happen to the best of us!",
-        "🎯 Close, but not quite! Try again with the right combo.",
-        "🔑 The digital keys don't match our lock. Give it another shot!",
-        "📱 Maybe your fingers got excited? Check those details again!",
-        "🎪 Error 401: Credentials not found in our magic hat!"
-      ];
-      
-      const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)];
-      setError(err.message || randomError);
+      // Show the actual error message from the backend
+      setError(err.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
