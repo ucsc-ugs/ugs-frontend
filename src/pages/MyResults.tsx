@@ -315,7 +315,8 @@ const MyResults = () => {
               >
                 <Card className="hover:scale-[1.01] transition-all duration-200 shadow-sm border-0 bg-card">
                   <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex flex-col lg:flex-row justify-between gap-4">
+                      {/* Left Section: Image and Exam Info */}
                       <div className="flex gap-4 flex-1">
                         <img
                           src={result.image}
@@ -339,69 +340,29 @@ const MyResults = () => {
                         </div>
                       </div>
 
-                      <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
-                        {/* Status and Score */}
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            {getResultStatusIcon(result.resultStatus)}
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getResultStatusColor(result.resultStatus)}`}>
+                      {/* Right Section: Status on top, View button at bottom */}
+                      <div className="flex flex-col justify-center items-end">
+                        {/* Top Right: Result Status */}
+                        {result.resultStatus === 'Pending' && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <span
+                              className={`px-2 py-1 text-sm font-medium rounded-full ${getResultStatusColor(result.resultStatus)}`}
+                            >
                               {result.resultStatus}
                             </span>
                           </div>
+                        )}
 
-                          {result.score && result.grade && (
-                            <div className="flex items-center gap-2">
-                              <Award className="h-4 w-4 text-muted-foreground" />
-                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getGradeColor(result.status)}`}>
-                                {result.score}% ({result.grade})
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Transcript Status */}
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${result.transcriptStatus === 'Available'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                            }`}>
-                            {result.transcriptStatus}
-                          </span>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-wrap gap-2">
-                          {result.resultStatus === 'Released' && (
-                            <button
-                              onClick={() => handleViewResult(result)}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                            >
-                              <Eye className="h-3 w-3" />
-                              View
-                            </button>
-                          )}
-
-                          {result.transcriptStatus === 'Available' && (
-                            <button
-                              onClick={() => handleDownloadTranscript(result.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-                            >
-                              <Download className="h-3 w-3" />
-                              Download
-                            </button>
-                          )}
-
-                          {result.appealAvailable && result.resultStatus === 'Released' && (
-                            <button
-                              onClick={() => handleAppeal(result.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-                            >
-                              <MessageSquare className="h-3 w-3" />
-                              Appeal
-                            </button>
-                          )}
-                        </div>
+                        {/* Bottom Right: View Button */}
+                        {result.resultStatus === 'Released' && (
+                          <button
+                            onClick={() => handleViewResult(result)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View Results
+                          </button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -505,33 +466,38 @@ const MyResults = () => {
                   </div>
                 )}
 
-                <div className="mt-6 flex flex-wrap gap-3">
-                  {selectedResult.transcriptStatus === 'Available' && (
-                    <button
-                      onClick={() => handleDownloadTranscript(selectedResult.id)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download Transcript
-                    </button>
-                  )}
+                <div className="mt-6 flex justify-between flex-wrap gap-3 items-center">
+                  <div className="flex flex-wrap gap-3">
+                    {selectedResult.transcriptStatus === 'Available' && (
+                      <button
+                        onClick={() => handleDownloadTranscript(selectedResult.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Transcript
+                      </button>
+                    )}
 
-                  {selectedResult.appealAvailable && (
-                    <button
-                      onClick={() => handleAppeal(selectedResult.id)}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      Submit Appeal
-                    </button>
-                  )}
+                    {selectedResult.appealAvailable && (
+                      <button
+                        onClick={() => handleAppeal(selectedResult.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Submit Appeal
+                      </button>
+                    )}
+                  </div>
 
-                  <button
-                    onClick={() => setSelectedResult(null)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
+                    
+                  <div>
+                    <button
+                      onClick={() => setSelectedResult(null)}
+                      className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
