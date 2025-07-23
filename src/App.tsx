@@ -28,11 +28,11 @@ import Settings from "@/pages/orgAdmin/Settings";
 import SetAnnouncements from "@/pages/orgAdmin/SetAnnouncements";
 import CreateAnnouncement from "@/pages/orgAdmin/CreateAnnouncement";
 import SuperAdminSidebar from "@/components/ui/SuperAdminSidebar";
-import SuperAdminLoginPage from "@/pages/SuperAdminLoginPage";
-import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
-import ManageOrganizations from "@/pages/ManageOrganizations";
-import ManageOrgAdmins from "@/pages/ManageOrgAdmins";
-import SuperAdminLogout from "@/pages/SuperAdminLogout";
+import SuperAdminLoginPage from "@/pages/superAdmin/SuperAdminLoginPage";
+import SuperAdminDashboard from "@/pages/superAdmin/SuperAdminDashboard";
+import ManageOrganizations from "@/pages/superAdmin/ManageOrganizations";
+import ManageOrgAdmins from "@/pages/superAdmin/ManageOrgAdmins";
+import SuperAdminLogout from "@/pages/superAdmin/SuperAdminLogout";
 import OrgAdminLoginPage from "@/pages/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
 
