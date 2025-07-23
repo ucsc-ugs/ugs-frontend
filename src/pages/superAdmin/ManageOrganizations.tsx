@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Building2, Plus, Edit, Trash2, Search } from "lucide-react";
 import { getOrganizations, createOrganization, updateOrganization, deleteOrganization } from "@/lib/superAdminApi";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -119,7 +120,8 @@ export default function ManageOrganizations() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">{/* Header */}
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Organizations</h1>
@@ -145,60 +147,84 @@ export default function ManageOrganizations() {
 
       {/* Form */}
       {showForm && (
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-gray-900">{editingOrg ? 'Edit Organization' : 'Create Organization'}</CardTitle>
-            <CardDescription className="text-gray-600">
-              {editingOrg ? 'Update organization details' : 'Add a new organization to the system'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {formErrors.general && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                  {formErrors.general}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-white p-4 rounded-lg max-w-md w-full">
+            <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="text-center space-y-4 pb-8">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Building2 className="w-8 h-8 text-white" />
                 </div>
-              )}
-              
-              <div>
-                <Input
-                  placeholder="Organization Name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className={formErrors.name ? 'border-red-300' : ''}
-                />
-                {formErrors.name && (
-                  <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>
-                )}
-              </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
+                    {editingOrg ? "Edit Organization" : "Create Organization"}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-2">
+                    {editingOrg ? "Update organization details" : "Add a new organization to the system"}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {formErrors.general && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                      {formErrors.general}
+                    </div>
+                  )}
 
-              <div>
-                <Input
-                  placeholder="Description (optional)"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                      Organization Name
+                    </Label>
+                    <Input
+                      id="name"
+                      placeholder="Organization Name"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                        formErrors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                      }`}
+                    />
+                    {formErrors.name && <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>}
+                  </div>
 
-              <div className="flex gap-2">
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isSubmitting ? 'Saving...' : (editingOrg ? 'Update' : 'Create')}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={resetForm}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                      Description
+                    </Label>
+                    <Input
+                      id="description"
+                      placeholder="Description (optional)"
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                        formErrors.description ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                      }`}
+                    />
+                    {formErrors.description && <p className="text-red-600 text-sm mt-1">{formErrors.description}</p>}
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:transform-none"
+                    >
+                      {isSubmitting ? "Saving..." : editingOrg ? "Update" : "Create"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={resetForm}
+                      className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors bg-transparent"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Search */}

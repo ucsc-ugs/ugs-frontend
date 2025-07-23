@@ -36,6 +36,8 @@ import ManageOrgAdmins from "@/pages/superAdmin/ManageOrgAdmins";
 import SuperAdminLogout from "@/pages/superAdmin/SuperAdminLogout";
 import OrgAdminLoginPage from "@/pages/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
+import Revenue from "./pages/superAdmin/Revenue";
+import SuperAdminExams from "./pages/superAdmin/ManageExams";
 
 function App() {
   return (
@@ -67,6 +69,8 @@ function App() {
                       <Route path="/organizations" element={<ManageOrganizations />} />
                       <Route path="/org-admins" element={<ManageOrgAdmins />} />
                       <Route path="/logout" element={<SuperAdminLogout />} />
+                      <Route path="/revenue" element={<Revenue />} />
+                      <Route path="/exams" element={<SuperAdminExams />} />
                     </Routes>
                   </div>
                 </div>

@@ -12,17 +12,9 @@ import {
 
 const mockAdminNotifications: Notification[] = [
     {
-        id: 1,
-        title: "High Priority: System Security Alert",
-        message: "Multiple failed login attempts detected from suspicious IPs. Immediate attention required to review security logs and potentially block IPs.",
-        type: "alert",
-        read: false,
-        date: "2025-07-09T14:30:00",
-    },
-    {
         id: 2,
-        title: "Urgent: Server Capacity Warning",
-        message: "Database server is at 85% capacity. Schedule maintenance and consider scaling to handle upcoming exam season load.",
+        title: "Capacity Filled",
+        message: "GCCT August 2025 is now at full capacity. No new registrations can be accepted.",
         type: "alert",
         read: false,
         date: "2025-07-09T13:45:00",
@@ -44,14 +36,6 @@ const mockAdminNotifications: Notification[] = [
         date: "2025-07-09T09:15:00",
     },
     {
-        id: 5,
-        title: "Success: Monthly Backup Completed",
-        message: "July 2025 full system backup completed successfully. All student data and exam records are secure.",
-        type: "success",
-        read: true,
-        date: "2025-07-08T23:00:00",
-    },
-    {
         id: 6,
         title: "Notice: University Partnership Update",
         message: "University of Peradeniya has updated admission criteria for Engineering programs. Update exam weightings accordingly.",
@@ -66,14 +50,6 @@ const mockAdminNotifications: Notification[] = [
         type: "success",
         read: true,
         date: "2025-07-08T14:00:00",
-    },
-    {
-        id: 8,
-        title: "Reminder: Faculty Training Session",
-        message: "Quarterly faculty training on new exam protocols is scheduled for tomorrow at 10:00 AM. 12 faculty members registered.",
-        type: "info",
-        read: false,
-        date: "2025-07-07T10:00:00",
     },
     {
         id: 9,
