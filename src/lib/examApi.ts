@@ -13,6 +13,7 @@ interface ExamData {
   id?: number;
   name: string;
   description?: string;
+  price: number;
   organization_id: number;
   exam_dates?: ExamDate[];
   created_at?: string;

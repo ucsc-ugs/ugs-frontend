@@ -9,6 +9,8 @@ interface Organization {
   id: number;
   name: string;
   description: string;
+  logo?: string;
+  status?: string;
   org_admins_count?: number;
   created_at: string;
   updated_at: string;
@@ -150,6 +152,35 @@ export const deleteOrganization = async (id: number): Promise<SuperAdminApiRespo
   return await adminApiRequest(`/organizations/${id}`, {
     method: 'DELETE',
   });
+};
+
+export const uploadOrganizationLogo = async (id: number, logoFile: File): Promise<SuperAdminApiResponse<Organization>> => {
+  const token = getAuthToken();
+  
+  const formData = new FormData();
+  formData.append('logo', logoFile);
+
+  const response = await fetch(`${ADMIN_API_BASE_URL}/organization/${id}/logo`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: formData, // Don't set Content-Type for FormData
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw {
+      message: data.message || 'Upload failed',
+      status: response.status,
+      errors: data.errors || {},
+      data: data
+    };
+  }
+
+  return data;
 };
 
 // Org Admins
