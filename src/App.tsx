@@ -38,6 +38,7 @@ import OrgAdminLoginPage from "@/pages/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import Revenue from "./pages/superAdmin/Revenue";
 import SuperAdminExams from "./pages/superAdmin/ManageExams";
+import UniversitiesPage from "./pages/UniversitiesPage";
 
 function App() {
   return (
@@ -50,6 +51,9 @@ function App() {
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/contact" element={<ContactUsForm />} />
+            <Route path="/universities" element={<UniversitiesPage />} />
+
+            {/* Sign in and sign up routes */}
 
             {/* Organization Admin Login */}
             <Route path="/admin/login" element={<OrgAdminLoginPage />} />

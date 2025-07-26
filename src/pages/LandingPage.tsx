@@ -133,6 +133,10 @@ export default function LandingPage() {
     navigate("/signup"); // Navigate to register page with sidebar
   };
 
+  const handleUniDetails = () => {
+    navigate("/universities"); // Navigate to universities page
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -286,10 +290,10 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 className="bg-[#01497C] hover:bg-[#012A4A] text-[#FFFFFF] text-xl px-12 py-4 border-0 shadow-xl"
-                onClick={handleAccessPortal}
+                onClick={handleUniDetails}
               >
                 <GraduationCap className="mr-3 h-6 w-6" />
-                Institutional Access
+                Discover 
               </Button>
             </motion.div>
             <motion.div
