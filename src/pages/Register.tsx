@@ -40,6 +40,8 @@ const RegisterPage = () => {
   const [exams, setExams] = useState<ExamCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedExam, setSelectedExam] = useState<ExamCardData | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   // Load exams from API
   useEffect(() => {
@@ -68,7 +70,7 @@ const RegisterPage = () => {
               minute: '2-digit',
               hour12: true
             }),
-            fee: `LKR ${exam.price.toFixed(1)}`,
+            fee: `LKR ${Math.round(exam.price)}`,
             image: exam.organization?.logo 
               ? `http://localhost:8000${exam.organization.logo}` 
               : "../src/assets/ucsc_logo.png", // Fallback image
@@ -92,6 +94,24 @@ const RegisterPage = () => {
 
   // Get unique universities for filter
   const universities = [...new Set(exams.map(exam => exam.university))];
+
+  // Modal handlers
+  const handleViewDetails = (exam: ExamCardData) => {
+    setSelectedExam(exam);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedExam(null);
+    setShowModal(false);
+  };
+
+  const handleRegister = () => {
+    // TODO: Implement registration logic
+    console.log('Registering for exam:', selectedExam);
+    // For now, just close the modal
+    handleCloseModal();
+  };
 
   // Filter exams based on search and university filter
   const filteredExams = exams.filter(exam => {
@@ -221,7 +241,10 @@ const RegisterPage = () => {
                               </div>
                             </div>
 
-                            <button className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm mt-auto">
+                            <button 
+                              className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm mt-auto"
+                              onClick={() => handleViewDetails(exam)}
+                            >
                               View Details
                             </button>
                           </div>
@@ -254,6 +277,86 @@ const RegisterPage = () => {
               </div>
             )}
           </>
+        )}
+
+        {/* Exam Details Modal */}
+        {showModal && selectedExam && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center gap-4 mb-6">
+                  <img
+                    src={selectedExam.image}
+                    alt={`${selectedExam.university} logo`}
+                    className="w-16 h-16 rounded-lg object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "../src/assets/ucsc_logo.png";
+                    }}
+                  />
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-gray-900">{selectedExam.testName}</h2>
+                    <p className="text-gray-600">{selectedExam.university}</p>
+                  </div>
+                </div>
+
+                {/* Exam Details */}
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Description</h3>
+                    <p className="text-gray-600">{selectedExam.description}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Date</h3>
+                      <p className="text-gray-600">{selectedExam.date}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Time</h3>
+                      <p className="text-gray-600">{selectedExam.time}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Duration</h3>
+                      <p className="text-gray-600">{selectedExam.duration}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Questions</h3>
+                      <p className="text-gray-600">{selectedExam.questions}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Registration Fee</h3>
+                    <div className="inline-block">
+                      <span className="px-3 py-2 text-lg font-bold rounded-lg bg-blue-100 text-blue-800">
+                        {selectedExam.fee}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCloseModal}
+                    className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleRegister}
+                    className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Register
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
