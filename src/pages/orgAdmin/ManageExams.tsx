@@ -1,5 +1,5 @@
 // src/pages/admin/ManageExams.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     Search,
     Plus,
@@ -16,14 +16,20 @@ import {
     XCircle,
     AlertCircle,
     Download,
-    ArrowLeft
+    ArrowLeft,
+    Loader2
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import CreateExam from "./CreateExam";
+import { getExams, createExam, updateExam, deleteExam, type ExamData, type ExamDate } from "@/lib/examApi";
 
 interface Exam {
     id: number;
@@ -38,94 +44,10 @@ interface Exam {
     resultsPublished: boolean;
     createdAt: string;
     updatedAt: string;
+    description?: string;
+    organization_id?: number;
+    exam_dates?: ExamDate[];
 }
-
-const mockExams: Exam[] = [
-    {
-        id: 1,
-        name: "General Certificate of Competency Test (GCCT)",
-        university: "University of Colombo",
-        date: "2025-07-15",
-        time: "10:00",
-        duration: 180,
-        maxParticipants: 500,
-        currentRegistrations: 423,
-        status: "published",
-        resultsPublished: false,
-        createdAt: "2025-06-01T10:00:00",
-        updatedAt: "2025-07-01T14:30:00"
-    },
-    {
-        id: 2,
-        name: "BIT Aptitude Test",
-        university: "University of Kelaniya",
-        date: "2025-07-20",
-        time: "14:00",
-        duration: 120,
-        maxParticipants: 200,
-        currentRegistrations: 190,
-        status: "published",
-        resultsPublished: false,
-        createdAt: "2025-06-15T09:00:00",
-        updatedAt: "2025-07-08T11:00:00"
-    },
-    {
-        id: 3,
-        name: "GMAT Preparation Assessment",
-        university: "University of Peradeniya",
-        date: "2025-07-25",
-        time: "09:00",
-        duration: 240,
-        maxParticipants: 150,
-        currentRegistrations: 87,
-        status: "published",
-        resultsPublished: false,
-        createdAt: "2025-06-10T16:00:00",
-        updatedAt: "2025-07-05T10:15:00"
-    },
-    {
-        id: 4,
-        name: "Engineering Entrance Exam",
-        university: "University of Moratuwa",
-        date: "2025-06-30",
-        time: "10:00",
-        duration: 180,
-        maxParticipants: 300,
-        currentRegistrations: 298,
-        status: "completed",
-        resultsPublished: true,
-        createdAt: "2025-05-01T12:00:00",
-        updatedAt: "2025-07-01T09:00:00"
-    },
-    {
-        id: 5,
-        name: "Computer Science Aptitude Test",
-        university: "University of Colombo School of Computing",
-        date: "2025-08-10",
-        time: "11:00",
-        duration: 150,
-        maxParticipants: 250,
-        currentRegistrations: 45,
-        status: "draft",
-        resultsPublished: false,
-        createdAt: "2025-07-01T14:00:00",
-        updatedAt: "2025-07-08T16:30:00"
-    },
-    {
-        id: 6,
-        name: "Medical Faculty Entrance",
-        university: "University of Peradeniya",
-        date: "2025-08-05",
-        time: "08:00",
-        duration: 200,
-        maxParticipants: 400,
-        currentRegistrations: 312,
-        status: "published",
-        resultsPublished: false,
-        createdAt: "2025-06-20T08:00:00",
-        updatedAt: "2025-07-07T13:45:00"
-    }
-];
 
 const statusOptions = [
     { value: "all", label: "All Status" },
@@ -161,8 +83,150 @@ const getStatusIcon = (status: string) => {
 export default function ManageExams() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
-    const [exams, setExams] = useState<Exam[]>(mockExams);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
     const [showCreateExam, setShowCreateExam] = useState(false);
+    const [editingExam, setEditingExam] = useState<Exam | null>(null);
+    const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Form data for create/edit
+    const [formData, setFormData] = useState({
+        name: "",
+        description: "",
+        organization_id: 1, // This should come from current user's organization
+        exam_dates: [{ date: "", location: "" }]
+    });
+
+    // Load exams on component mount
+    useEffect(() => {
+        loadExams();
+    }, []);
+
+    const loadExams = async () => {
+        try {
+            setIsLoading(true);
+            const response = await getExams();
+            // Convert API response to component format
+            const examData = response.data.map((exam: ExamData) => ({
+                id: exam.id!,
+                name: exam.name,
+                university: "Organization", // Placeholder
+                date: exam.exam_dates?.[0]?.date || "2025-08-01", // Use first exam date or placeholder
+                time: "10:00", // Placeholder
+                duration: 120, // Placeholder
+                maxParticipants: 100, // Placeholder
+                currentRegistrations: 0, // Placeholder
+                status: "draft" as const, // Default status
+                resultsPublished: false,
+                createdAt: exam.created_at!,
+                updatedAt: exam.updated_at!,
+                description: exam.description,
+                organization_id: exam.organization_id,
+                exam_dates: exam.exam_dates
+            }));
+            setExams(examData);
+        } catch (err: any) {
+            console.error('Load exams error:', err);
+            setError(err.message || 'Failed to load exams');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCreateExam = async () => {
+        if (!formData.name.trim()) {
+            setError("Exam name is required");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            await createExam({
+                name: formData.name,
+                description: formData.description,
+                organization_id: formData.organization_id,
+                exam_dates: formData.exam_dates.filter(date => date.date.trim() !== "")
+            });
+            
+            // Reload exams after creating
+            await loadExams();
+            setShowCreateExam(false);
+            setFormData({ name: "", description: "", organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+            setError("");
+        } catch (err: any) {
+            console.error('Create exam error:', err);
+            setError(err.message || 'Failed to create exam');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleUpdateExam = async () => {
+        if (!editingExam || !formData.name.trim()) {
+            setError("Exam name is required");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            await updateExam(editingExam.id, {
+                name: formData.name,
+                description: formData.description,
+                exam_dates: formData.exam_dates.filter(date => date.date.trim() !== "")
+            });
+            
+            // Reload exams after updating
+            await loadExams();
+            setEditingExam(null);
+            setFormData({ name: "", description: "", organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+            setError("");
+        } catch (err: any) {
+            console.error('Update exam error:', err);
+            setError(err.message || 'Failed to update exam');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteExam = async () => {
+        if (!deleteExamId) return;
+
+        try {
+            setIsSubmitting(true);
+            await deleteExam(deleteExamId);
+            
+            // Reload exams after deleting
+            await loadExams();
+            setDeleteExamId(null);
+            setError("");
+        } catch (err: any) {
+            console.error('Delete exam error:', err);
+            setError(err.message || 'Failed to delete exam');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const openEditModal = (exam: Exam) => {
+        setEditingExam(exam);
+        setFormData({
+            name: exam.name,
+            description: exam.description || "",
+            organization_id: exam.organization_id || 1,
+            exam_dates: exam.exam_dates?.map(d => ({ date: d.date, location: d.location || "" })) || [{ date: "", location: "" }]
+        });
+        setError("");
+    };
+
+    const closeModals = () => {
+        setShowCreateExam(false);
+        setEditingExam(null);
+        setDeleteExamId(null);
+        setFormData({ name: "", description: "", organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+        setError("");
+    };
 
     const filteredExams = useMemo(() => {
         return exams.filter(exam => {
@@ -183,20 +247,10 @@ export default function ManageExams() {
         return { total, published, active, completed, totalRegistrations };
     }, [exams]);
 
-    const handlePublishExam = (id: number) => {
-        setExams(prev => prev.map(exam =>
-            exam.id === id ? { ...exam, status: "published" as const } : exam
-        ));
-    };
-
     const handlePublishResults = (id: number) => {
         setExams(prev => prev.map(exam =>
             exam.id === id ? { ...exam, resultsPublished: true } : exam
         ));
-    };
-
-    const handleDeleteExam = (id: number) => {
-        setExams(prev => prev.filter(exam => exam.id !== id));
     };
 
     const formatDate = (dateString: string) => {
@@ -237,25 +291,45 @@ export default function ManageExams() {
                     </Button>
                 </div>
 
-                {/* Conditional rendering: Show CreateExam or Manage Exams content */}
-                {showCreateExam ? (
-                    <div className="relative">
-                        {/* Custom back button */}
-                        <div className="mb-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowCreateExam(false)}
-                                className="flex items-center gap-2"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                Back to Manage Exams
-                            </Button>
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                            <p className="text-red-700 text-sm">{error}</p>
                         </div>
-                        <CreateExam onBack={() => setShowCreateExam(false)} />
+                    </div>
+                )}
+
+                {/* Loading State */}
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="flex items-center gap-3">
+                            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                            <p className="text-gray-600">Loading exams...</p>
+                        </div>
                     </div>
                 ) : (
                     <>
-                        {/* Stats Cards */}
+                        {/* Conditional rendering: Show CreateExam or Manage Exams content */}
+                        {showCreateExam ? (
+                            <div className="relative">
+                                {/* Custom back button */}
+                                <div className="mb-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowCreateExam(false)}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <ArrowLeft className="w-4 h-4" />
+                                        Back to Manage Exams
+                                    </Button>
+                                </div>
+                                <CreateExam onBack={() => setShowCreateExam(false)} />
+                            </div>
+                        ) : (
+                            <>
+                                {/* Stats Cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                             <Card>
                                 <CardContent className="p-4">
@@ -380,8 +454,22 @@ export default function ManageExams() {
                                                             <div className="flex items-center gap-2">
                                                                 <Calendar className="w-4 h-4 text-gray-400" />
                                                                 <div>
-                                                                    <div className="font-medium">{formatDate(exam.date)}</div>
-                                                                    <div className="text-sm text-gray-500">{exam.time}</div>
+                                                                    {exam.exam_dates && exam.exam_dates.length > 0 ? (
+                                                                        <div>
+                                                                            <div className="font-medium">{formatDate(exam.exam_dates[0].date)}</div>
+                                                                            {exam.exam_dates[0].location && (
+                                                                                <div className="text-sm text-gray-500">{exam.exam_dates[0].location}</div>
+                                                                            )}
+                                                                            {exam.exam_dates.length > 1 && (
+                                                                                <div className="text-xs text-blue-600">+{exam.exam_dates.length - 1} more</div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div>
+                                                                            <div className="font-medium">{formatDate(exam.date)}</div>
+                                                                            <div className="text-sm text-gray-500">{exam.time}</div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </TableCell>
@@ -431,7 +519,12 @@ export default function ManageExams() {
                                                                             <Eye className="w-4 h-4 mr-2" />
                                                                             View Details
                                                                         </Button>
-                                                                        <Button variant="ghost" size="sm" className="justify-start">
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="sm" 
+                                                                            className="justify-start"
+                                                                            onClick={() => openEditModal(exam)}
+                                                                        >
                                                                             <Edit className="w-4 h-4 mr-2" />
                                                                             Edit Exam
                                                                         </Button>
@@ -443,17 +536,6 @@ export default function ManageExams() {
                                                                             <Download className="w-4 h-4 mr-2" />
                                                                             Export Data
                                                                         </Button>
-                                                                        {exam.status === "draft" && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="sm"
-                                                                                className="justify-start text-blue-600"
-                                                                                onClick={() => handlePublishExam(exam.id)}
-                                                                            >
-                                                                                <BookOpen className="w-4 h-4 mr-2" />
-                                                                                Publish Exam
-                                                                            </Button>
-                                                                        )}
                                                                         {exam.status === "completed" && !exam.resultsPublished && (
                                                                             <Button
                                                                                 variant="ghost"
@@ -469,7 +551,7 @@ export default function ManageExams() {
                                                                             variant="ghost"
                                                                             size="sm"
                                                                             className="justify-start text-red-600"
-                                                                            onClick={() => handleDeleteExam(exam.id)}
+                                                                            onClick={() => setDeleteExamId(exam.id)}
                                                                         >
                                                                             <Trash2 className="w-4 h-4 mr-2" />
                                                                             Delete Exam
@@ -508,7 +590,146 @@ export default function ManageExams() {
                                 </CardContent>
                             </Card>
                         )}
+                            </>
+                        )}
                     </>
+                )}
+
+                {/* Create/Edit Modal */}
+                {(showCreateExam || editingExam) && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-lg w-full max-w-md">
+                            <div className="p-6">
+                                <h3 className="text-lg font-semibold mb-4">
+                                    {editingExam ? 'Edit Exam' : 'Create New Exam'}
+                                </h3>
+                                
+                                {error && (
+                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-red-700 text-sm">{error}</p>
+                                    </div>
+                                )}
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="examName">Exam Name</Label>
+                                        <Input
+                                            id="examName"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                            placeholder="Enter exam name"
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                    
+                                    <div>
+                                        <Label htmlFor="examDescription">Description (Optional)</Label>
+                                        <Textarea
+                                            id="examDescription"
+                                            value={formData.description}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                            placeholder="Enter exam description"
+                                            className="mt-1"
+                                            rows={3}
+                                        />
+                                    </div>
+
+                                    {/* Exam Dates Section */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Label>Exam Dates</Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    exam_dates: [...prev.exam_dates, { date: "", location: "" }]
+                                                }))}
+                                            >
+                                                <Plus className="w-4 h-4 mr-1" />
+                                                Add Date
+                                            </Button>
+                                        </div>
+                                        
+                                        {formData.exam_dates.map((examDate, index) => (
+                                            <div key={index} className="flex gap-2 mb-2">
+                                                <div className="flex-1">
+                                                    <Input
+                                                        type="datetime-local"
+                                                        value={examDate.date}
+                                                        onChange={(e) => {
+                                                            const newExamDates = [...formData.exam_dates];
+                                                            newExamDates[index] = { ...newExamDates[index], date: e.target.value };
+                                                            setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                        }}
+                                                        className="text-sm"
+                                                    />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <Input
+                                                        placeholder="Location (optional)"
+                                                        value={examDate.location}
+                                                        onChange={(e) => {
+                                                            const newExamDates = [...formData.exam_dates];
+                                                            newExamDates[index] = { ...newExamDates[index], location: e.target.value };
+                                                            setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                        }}
+                                                        className="text-sm"
+                                                    />
+                                                </div>
+                                                {formData.exam_dates.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            const newExamDates = formData.exam_dates.filter((_, i) => i !== index);
+                                                            setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                        }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-6">
+                                    <Button
+                                        variant="outline"
+                                        onClick={closeModals}
+                                        disabled={isSubmitting}
+                                        className="flex-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={editingExam ? handleUpdateExam : handleCreateExam}
+                                        disabled={isSubmitting || !formData.name.trim()}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                        {editingExam ? 'Update' : 'Create'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {deleteExamId && (
+                    <ConfirmDialog
+                        isOpen={!!deleteExamId}
+                        title="Delete Exam"
+                        message="Are you sure you want to delete this exam? This action cannot be undone."
+                        confirmText="Delete"
+                        cancelText="Cancel"
+                        onConfirm={handleDeleteExam}
+                        onCancel={() => setDeleteExamId(null)}
+                    />
                 )}
             </div>
         </div>
