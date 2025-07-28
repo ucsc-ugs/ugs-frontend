@@ -46,7 +46,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/contact" element={<ContactUsForm />} />
+            <Route path="/contact-us" element={<ContactUsForm />} />
 
             {/* Organization Admin Login */}
             <Route path="/admin/login" element={<OrgAdminLoginPage />} />
