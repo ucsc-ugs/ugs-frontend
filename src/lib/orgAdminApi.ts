@@ -83,4 +83,41 @@ export const orgAdminApi = {
       method: 'DELETE',
     });
   },
+
+  // Get current organization details
+  getMyOrganization: async (): Promise<any> => {
+    const response = await apiRequest('/admin/my-organization');
+    return response.data;
+  },
+
+  // Upload organization logo
+  uploadOrganizationLogo: async (logoFile: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('logo', logoFile);
+
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/admin/my-organization/logo`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload logo');
+    }
+
+    return response.json();
+  },
+
+  // Update organization details (name, description, etc.)
+  updateMyOrganization: async (data: any): Promise<any> => {
+    const response = await apiRequest('/admin/my-organization', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  },
 };

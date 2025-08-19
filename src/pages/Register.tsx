@@ -20,20 +20,6 @@ interface ExamCardData {
   questions: number;
 }
 
-interface ExamCardData {
-  id: number;
-  testName: string;
-  fullName: string;
-  university: string;
-  date: string;
-  time: string;
-  fee: string;
-  image: string;
-  description: string;
-  duration: string;
-  questions: number;
-}
-
 const RegisterPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState('all');
@@ -72,7 +58,7 @@ const RegisterPage = () => {
             }),
             fee: `LKR ${Math.round(exam.price)}`,
             image: exam.organization?.logo 
-              ? `http://localhost:8000${exam.organization.logo}` 
+              ? `http://localhost:8000/storage${exam.organization.logo}` 
               : "../src/assets/ucsc_logo.png", // Fallback image
             description: exam.description || 'No description available',
             duration: "2 hours", // Default duration (could be added to database later)

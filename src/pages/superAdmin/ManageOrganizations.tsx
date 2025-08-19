@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Plus, Edit, Trash2, Search, Upload, X } from "lucide-react";
-import { getOrganizations, createOrganization, updateOrganization, deleteOrganization, uploadOrganizationLogo } from "@/lib/superAdminApi";
+import { Building2, Plus, Edit, Trash2, Search } from "lucide-react";
+import { getOrganizations, createOrganization, updateOrganization, deleteOrganization } from "@/lib/superAdminApi";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface Organization {
@@ -31,11 +31,6 @@ export default function ManageOrganizations() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Logo upload states
-  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string>('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadOrganizations();
@@ -56,62 +51,16 @@ export default function ManageOrganizations() {
     }
   };
 
-  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setFormErrors({ logo: 'Logo file size must be less than 5MB' });
-        return;
-      }
-      
-      if (!file.type.startsWith('image/')) {
-        setFormErrors({ logo: 'Please select an image file' });
-        return;
-      }
-      
-      setSelectedLogo(file);
-      setFormErrors({ ...formErrors, logo: '' });
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setLogoPreview(e.target?.result as string || '');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeLogo = () => {
-    setSelectedLogo(null);
-    setLogoPreview('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    setFormErrors({ ...formErrors, logo: '' });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFormErrors({});
 
     try {
-      let organization;
       if (editingOrg) {
-        organization = await updateOrganization(editingOrg.id, formData);
+        await updateOrganization(editingOrg.id, formData);
       } else {
-        organization = await createOrganization(formData);
-      }
-      
-      // Upload logo if a new file was selected
-      if (selectedLogo && organization.data && 'id' in organization.data) {
-        try {
-          await uploadOrganizationLogo(organization.data.id, selectedLogo);
-        } catch (logoErr: any) {
-          console.error('Logo upload error:', logoErr);
-          // Don't fail the whole operation for logo upload failure
-          setFormErrors({ logo: 'Organization saved but logo upload failed. You can try uploading it again.' });
-        }
+        await createOrganization(formData);
       }
       
       await loadOrganizations();
@@ -134,15 +83,6 @@ export default function ManageOrganizations() {
       name: org.name,
       description: org.description || ""
     });
-    
-    // Set existing logo as preview if it exists
-    if (org.logo) {
-      setLogoPreview(`http://localhost:8000${org.logo}`);
-    } else {
-      setLogoPreview('');
-    }
-    setSelectedLogo(null); // Clear selected file since we're showing existing logo
-    
     setShowForm(true);
   };
 
@@ -164,11 +104,6 @@ export default function ManageOrganizations() {
     setFormErrors({});
     setEditingOrg(null);
     setShowForm(false);
-    setSelectedLogo(null);
-    setLogoPreview('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const filteredOrganizations = organizations.filter(org =>
@@ -271,57 +206,6 @@ export default function ManageOrganizations() {
                     {formErrors.description && <p className="text-red-600 text-sm mt-1">{formErrors.description}</p>}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">
-                      Logo (optional)
-                    </Label>
-                    <div className="space-y-3">
-                      {logoPreview && (
-                        <div className="relative inline-block">
-                          <img 
-                            src={logoPreview} 
-                            alt="Logo preview" 
-                            className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeLogo}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                          >
-                            <X size={12} />
-                          </button>
-                          {editingOrg?.logo && !selectedLogo && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-b-lg">
-                              Current Logo
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoSelect}
-                          className="hidden"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex items-center gap-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
-                        >
-                          <Upload size={16} />
-                          {logoPreview ? (editingOrg?.logo && !selectedLogo ? 'Replace Logo' : 'Change Logo') : 'Upload Logo'}
-                        </Button>
-                        <span className="text-gray-500 text-sm">
-                          Max 5MB, JPG/PNG
-                        </span>
-                      </div>
-                    </div>
-                    {formErrors.logo && <p className="text-red-600 text-sm mt-1">{formErrors.logo}</p>}
-                  </div>
-
                   <div className="flex gap-3 pt-4">
                     <Button
                       type="submit"
@@ -381,23 +265,11 @@ export default function ManageOrganizations() {
                 <div key={org.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div className="flex items-start gap-4 flex-1">
-                      {/* Logo Display */}
+                      {/* Organization Icon */}
                       <div className="flex-shrink-0">
-                        {org.logo ? (
-                          <img 
-                            src={`http://localhost:8000${org.logo}`}
-                            alt={`${org.name} logo`}
-                            className="w-12 h-12 object-cover rounded-lg border-2 border-gray-200"
-                            onError={(e) => {
-                              // Hide image if it fails to load
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-gray-400" />
-                          </div>
-                        )}
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-6 h-6 text-blue-600" />
+                        </div>
                       </div>
                       
                       {/* Organization Info */}
