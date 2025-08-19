@@ -11,6 +11,7 @@ interface Organization {
   id: number;
   name: string;
   description: string;
+  logo?: string;
   org_admins_count?: number;
   created_at: string;
   updated_at: string;
@@ -39,7 +40,9 @@ export default function ManageOrganizations() {
     try {
       setIsLoading(true);
       const response = await getOrganizations();
-      setOrganizations(response.data || []);
+      // Ensure we're setting an array of organizations
+      const orgsData = Array.isArray(response.data) ? response.data : [];
+      setOrganizations(orgsData);
     } catch (err: any) {
       console.error('Load organizations error:', err);
       setError(err.message || 'Failed to load organizations');
@@ -261,12 +264,22 @@ export default function ManageOrganizations() {
               {filteredOrganizations.map((org) => (
                 <div key={org.id} className="border rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{org.name}</h3>
-                      <p className="text-gray-600 text-sm mt-1">{org.description}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        <span>Admins: {org.org_admins_count || 0}</span>
-                        <span>Created: {new Date(org.created_at).toLocaleDateString()}</span>
+                    <div className="flex items-start gap-4 flex-1">
+                      {/* Organization Icon */}
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-6 h-6 text-blue-600" />
+                        </div>
+                      </div>
+                      
+                      {/* Organization Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900">{org.name}</h3>
+                        <p className="text-gray-600 text-sm mt-1">{org.description}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                          <span>Admins: {org.org_admins_count || 0}</span>
+                          <span>Created: {new Date(org.created_at).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2 ml-4">
