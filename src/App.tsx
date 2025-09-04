@@ -39,6 +39,7 @@ import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import Revenue from "./pages/superAdmin/Revenue";
 import SuperAdminExams from "./pages/superAdmin/ManageExams";
 import UniversitiesPage from "./pages/UniversitiesPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 function App() {
   return (
@@ -96,6 +97,7 @@ function App() {
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
                     </Routes>
                   </div>
                 </div>

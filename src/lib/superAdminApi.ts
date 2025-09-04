@@ -59,19 +59,19 @@ interface SuperAdminApiResponse<T = any> {
   };
 }
 
-// Get stored token
+// Get stored token for super admin
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('super_admin_auth_token');
 };
 
-// Set auth token
+// Set auth token for super admin
 export const setAuthToken = (token: string): void => {
-  localStorage.setItem('auth_token', token);
+  localStorage.setItem('super_admin_auth_token', token);
 };
 
-// Remove auth token
+// Remove auth token for super admin
 export const removeAuthToken = (): void => {
-  localStorage.removeItem('auth_token');
+  localStorage.removeItem('super_admin_auth_token');
 };
 
 // API request helper for super admin

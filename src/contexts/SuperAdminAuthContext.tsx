@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { getAuthToken, removeAuthToken, setAuthToken } from '@/lib/api';
+
+// Separate token management for super admin
+const getSuperAdminToken = (): string | null => {
+  return localStorage.getItem('super_admin_auth_token');
+};
+
+const setSuperAdminToken = (token: string): void => {
+  localStorage.setItem('super_admin_auth_token', token);
+};
+
+const removeSuperAdminToken = (): void => {
+  localStorage.removeItem('super_admin_auth_token');
+};
 
 interface SuperAdminUser {
   id: number;
@@ -48,12 +60,21 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    checkAuthStatus();
+    // Only check auth status if we're on super admin routes
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/super-admin')) {
+      checkAuthStatus();
+    } else {
+      // For non-super-admin routes, set loading to false immediately
+      setIsLoading(false);
+      setIsAuthenticated(false);
+      setUser(null);
+    }
   }, []);
 
   const checkAuthStatus = async (): Promise<boolean> => {
     setIsLoading(true);
-    const token = getAuthToken();
+    const token = getSuperAdminToken();
     
     if (!token) {
       setUser(null);
@@ -88,7 +109,8 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
         setIsAuthenticated(true);
         return true;
       } else {
-        removeAuthToken();
+        // Only remove super admin token, don't affect regular user token
+        removeSuperAdminToken();
         setUser(null);
         setIsLoading(false);
         setIsAuthenticated(false);
@@ -96,7 +118,8 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
       }
     } catch (error) {
       console.error('Super admin auth check failed:', error);
-      removeAuthToken();
+      // Only log error, don't remove token on network failures
+      console.log('Network error during super admin auth check, keeping token');
       setUser(null);
       setIsLoading(false);
       setIsAuthenticated(false);
@@ -107,7 +130,7 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
   const login = (userData: SuperAdminUser, token: string, callback?: () => void) => {
     console.log('SuperAdminAuthContext: Setting user and token');
     setUser(userData);
-    setAuthToken(token);
+    setSuperAdminToken(token);
     setIsLoading(false);
     setIsAuthenticated(true);
     
@@ -117,7 +140,7 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
       setTimeout(() => {
         console.log('SuperAdminAuthContext: User state updated, executing callback');
         console.log('SuperAdminAuthContext: User:', userData);
-        console.log('SuperAdminAuthContext: Token exists:', !!getAuthToken());
+        console.log('SuperAdminAuthContext: Token exists:', !!getSuperAdminToken());
         console.log('SuperAdminAuthContext: isAuthenticated:', true);
         callback();
       }, 0);
@@ -127,7 +150,7 @@ export const SuperAdminAuthProvider: React.FC<SuperAdminAuthProviderProps> = ({ 
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    removeAuthToken();
+    removeSuperAdminToken();
   };
 
   const value: SuperAdminContextType = {

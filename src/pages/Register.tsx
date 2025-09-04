@@ -92,8 +92,65 @@ const RegisterPage = () => {
     setShowModal(false);
   };
 
-  const handleRegister = () => {
-    // TODO: Implement registration logic
+  const handleRegister = async () => {
+    if (!selectedExam) return;
+    try {
+      setIsLoading(true);
+      setError('');
+      // Replace with your actual registration API endpoint and payload
+      const token = localStorage.getItem('auth_token');
+      console.log('TOKEN= ', token);
+      const response = await fetch('http://localhost:8000/api/exam/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({
+          examId: selectedExam.id 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to register for the exam');
+      } else {
+        const payhereData = await response.json();
+        // Create a form and submit to PayHere sandbox
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://sandbox.payhere.lk/pay/checkout';
+
+        Object.entries(payhereData).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = String(value);
+          form.appendChild(input);
+        });
+
+        // Add return_url manually
+        const returnUrlInput = document.createElement('input');
+        returnUrlInput.type = 'hidden';
+        returnUrlInput.name = 'return_url';
+        returnUrlInput.value = 'http://localhost:5173/portal/payment-success'; // Change to your actual return URL
+        form.appendChild(returnUrlInput);
+
+        const cancelUrlInput = document.createElement('input');
+        cancelUrlInput.type = 'hidden';
+        cancelUrlInput.name = 'cancel_url';
+        cancelUrlInput.value = 'http://localhost:5173/portal/register'; // Change to your actual cancel URL
+        form.appendChild(cancelUrlInput);
+
+        document.body.appendChild(form);
+        form.submit();
+      }
+
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
+    
     console.log('Registering for exam:', selectedExam);
     // For now, just close the modal
     handleCloseModal();
