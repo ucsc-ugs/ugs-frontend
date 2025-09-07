@@ -45,6 +45,7 @@ interface Exam {
     createdAt: string;
     updatedAt: string;
     description?: string;
+    price: number;
     organization_id?: number;
     exam_dates?: ExamDate[];
 }
@@ -95,6 +96,7 @@ export default function ManageExams() {
     const [formData, setFormData] = useState({
         name: "",
         description: "",
+        price: 0,
         organization_id: 1, // This should come from current user's organization
         exam_dates: [{ date: "", location: "" }]
     });
@@ -123,6 +125,7 @@ export default function ManageExams() {
                 createdAt: exam.created_at!,
                 updatedAt: exam.updated_at!,
                 description: exam.description,
+                price: Number(exam.price) || 0,
                 organization_id: exam.organization_id,
                 exam_dates: exam.exam_dates
             }));
@@ -146,6 +149,7 @@ export default function ManageExams() {
             await createExam({
                 name: formData.name,
                 description: formData.description,
+                price: formData.price,
                 organization_id: formData.organization_id,
                 exam_dates: formData.exam_dates.filter(date => date.date.trim() !== "")
             });
@@ -153,7 +157,7 @@ export default function ManageExams() {
             // Reload exams after creating
             await loadExams();
             setShowCreateExam(false);
-            setFormData({ name: "", description: "", organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", description: "", price: 0, organization_id: 1, exam_dates: [{ date: "", location: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Create exam error:', err);
@@ -174,13 +178,14 @@ export default function ManageExams() {
             await updateExam(editingExam.id, {
                 name: formData.name,
                 description: formData.description,
+                price: formData.price,
                 exam_dates: formData.exam_dates.filter(date => date.date.trim() !== "")
             });
             
             // Reload exams after updating
             await loadExams();
             setEditingExam(null);
-            setFormData({ name: "", description: "", organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", description: "", price: 0, organization_id: 1, exam_dates: [{ date: "", location: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Update exam error:', err);
@@ -214,6 +219,7 @@ export default function ManageExams() {
         setFormData({
             name: exam.name,
             description: exam.description || "",
+            price: Number(exam.price) || 0,
             organization_id: exam.organization_id || 1,
             exam_dates: exam.exam_dates?.map(d => ({ date: d.date, location: d.location || "" })) || [{ date: "", location: "" }]
         });
@@ -224,7 +230,7 @@ export default function ManageExams() {
         setShowCreateExam(false);
         setEditingExam(null);
         setDeleteExamId(null);
-        setFormData({ name: "", description: "", organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+        setFormData({ name: "", description: "", price: 0, organization_id: 1, exam_dates: [{ date: "", location: "" }] });
         setError("");
     };
 
@@ -433,6 +439,7 @@ export default function ManageExams() {
                                                 <TableHead>Exam Name</TableHead>
                                                 <TableHead>Date & Time</TableHead>
                                                 <TableHead>Duration</TableHead>
+                                                <TableHead>Price</TableHead>
                                                 <TableHead>Registrations</TableHead>
                                                 <TableHead>Status</TableHead>
                                                 <TableHead>Results</TableHead>
@@ -475,6 +482,11 @@ export default function ManageExams() {
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="text-sm">{exam.duration} min</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="text-sm font-medium">
+                                                                ${exam.price.toFixed(2)}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className={`flex items-center gap-1 ${regStatus.color}`}>
@@ -631,6 +643,20 @@ export default function ManageExams() {
                                             placeholder="Enter exam description"
                                             className="mt-1"
                                             rows={3}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="examPrice">Price ($)</Label>
+                                        <Input
+                                            id="examPrice"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={formData.price}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                                            placeholder="Enter exam price"
+                                            className="mt-1"
                                         />
                                     </div>
 

@@ -34,11 +34,12 @@ import SuperAdminDashboard from "@/pages/superAdmin/SuperAdminDashboard";
 import ManageOrganizations from "@/pages/superAdmin/ManageOrganizations";
 import ManageOrgAdmins from "@/pages/superAdmin/ManageOrgAdmins";
 import SuperAdminLogout from "@/pages/superAdmin/SuperAdminLogout";
-import OrgAdminLoginPage from "@/pages/OrgAdminLoginPage";
+import OrgAdminLoginPage from "@/pages/orgAdmin/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import Revenue from "./pages/superAdmin/Revenue";
 import SuperAdminExams from "./pages/superAdmin/ManageExams";
 import UniversitiesPage from "./pages/UniversitiesPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 function App() {
   return (
@@ -96,6 +97,7 @@ function App() {
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
                     </Routes>
                   </div>
                 </div>
