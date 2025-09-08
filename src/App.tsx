@@ -40,6 +40,7 @@ import Revenue from "./pages/superAdmin/Revenue";
 import SuperAdminExams from "./pages/superAdmin/ManageExams";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import MyRegisteredExams from "./pages/test";
 
 function App() {
   return (
