@@ -23,7 +23,6 @@ function Sidebar() {
     { name: "Home", path: "/portal", icon: Home },
     { name: "Register", path: "/portal/register", icon: UserPlus },
     { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
-    { name: "My Results", path: "/portal/my-results", icon: Award },
     {
       name: "Notifications",
       path: "/portal/notifications",
