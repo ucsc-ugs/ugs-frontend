@@ -31,6 +31,7 @@ interface ExamWithPivot {
     status: string;
     attended: boolean;
     result: string | null;
+    index_number: string;
     created_at: string;
     updated_at: string;
   };
@@ -333,6 +334,11 @@ const MyExams = () => {
                   <div>
                     <h3 className="font-medium text-foreground mb-2">Fee</h3>
                     <p className="text-sm text-muted-foreground">LKR {selectedExam.price.toLocaleString()}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-medium text-foreground mb-2">Index Number</h3>
+                    <p className="text-sm text-muted-foreground">{selectedExam.pivot.index_number}</p>
                   </div>
 
                   {selectedExam.pivot.payment_id && (
