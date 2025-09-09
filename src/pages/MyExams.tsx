@@ -34,6 +34,7 @@ interface ExamWithPivot {
     index_number: string;
     created_at: string;
     updated_at: string;
+    date: string | null; // ✅ added exam date
   };
 }
 
@@ -206,11 +207,11 @@ const MyExams = () => {
                           {exam.description}
                         </p>
                         
-                        {/* Registration Date */}
+                        {/* ✅ Exam Date (visible on card) */}
                         <div className="flex items-center gap-2 mt-3">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-foreground">
-                            Registered: {new Date(exam.pivot.created_at).toLocaleDateString()}
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm text-blue-700 font-medium">
+                            Exam Date: {exam.pivot.date ? new Date(exam.pivot.date).toLocaleDateString() : "Not Scheduled"}
                           </span>
                         </div>
                       </div>
@@ -322,6 +323,14 @@ const MyExams = () => {
                         {selectedExam.pivot.attended ? 'Attended' : 'Not Attended'}
                       </p>
                     </div>
+                  </div>
+
+                  {/* ✅ Exam Date inside modal */}
+                  <div>
+                    <h3 className="font-medium text-foreground mb-2">Exam Date</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedExam.pivot.date ? new Date(selectedExam.pivot.date).toLocaleDateString() : "Not Scheduled"}
+                    </p>
                   </div>
 
                   <div>
