@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,9 +19,11 @@ interface ExamCardData {
   description: string;
   duration: string;
   questions: number;
+  codeName?: string;
 }
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState('all');
   const [exams, setExams] = useState<ExamCardData[]>([]);
@@ -59,10 +62,11 @@ const RegisterPage = () => {
             fee: `LKR ${Math.round(exam.price)}`,
             image: exam.organization?.logo 
               ? `http://localhost:8000/storage${exam.organization.logo}` 
-              : "../src/assets/ucsc_logo.png", // Fallback image
+              : "/ucsclogo.png", // Fallback image
             description: exam.description || 'No description available',
             duration: "2 hours", // Default duration (could be added to database later)
-            questions: 50 // Default questions (could be added to database later)
+            questions: 50, // Default questions (could be added to database later)
+            codeName: exam.code_name
           };
         });
         
@@ -83,8 +87,13 @@ const RegisterPage = () => {
 
   // Modal handlers
   const handleViewDetails = (exam: ExamCardData) => {
-    setSelectedExam(exam);
-    setShowModal(true);
+    if (exam.codeName) {
+      navigate(`/exams/${exam.codeName}`);
+    } else {
+      // Fallback to modal if no code_name is available
+      setSelectedExam(exam);
+      setShowModal(true);
+    }
   };
 
   const handleCloseModal = () => {
@@ -298,7 +307,7 @@ const RegisterPage = () => {
                             className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
                             onError={(e) => {
                               // Fallback to default image if logo fails to load
-                              e.currentTarget.src = "../src/assets/ucsc_logo.png";
+                              e.currentTarget.src = "/ucsclogo.png";
                             }}
                           />
                         </div>
@@ -334,7 +343,7 @@ const RegisterPage = () => {
                     alt={`${selectedExam.university} logo`}
                     className="w-16 h-16 rounded-lg object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = "../src/assets/ucsc_logo.png";
+                      e.currentTarget.src = "/ucsclogo.png";
                     }}
                   />
                   <div className="flex-1">

@@ -13,6 +13,7 @@ import Profile from "@/pages/Profile";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
 import SignInPage from "@/pages/SignInPage";
+import ExamDetails from "@/pages/ExamDetails";
 import Sidebar from "@/components/ui/sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
@@ -54,6 +55,7 @@ function App() {
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/contact" element={<ContactUsForm />} />
             <Route path="/universities" element={<UniversitiesPage />} />
+            <Route path="/exams/:codeName" element={<ExamDetails />} />
 
             {/* Sign in and sign up routes */}
 
