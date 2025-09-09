@@ -14,7 +14,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import ucscLogo from "@/assets/ucsc_logo.png";
 import profileSample from "@/assets/profile_sample.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +30,7 @@ const mockAdmin = {
 export function OrgAdminSidebar() {
   const [isExamsOpen, setIsExamsOpen] = useState(false);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [user, setUser] = useState<{ id: string; name: string; role: string; university?: string; avatar?: string } | null>(null);
   const location = useLocation();
 
   // Close dropdowns when navigating to non-related routes
@@ -49,6 +51,27 @@ export function OrgAdminSidebar() {
     setIsExamsOpen(false);
     setIsUsersOpen(false);
   };
+
+  useEffect(() => {
+    // Fetch user info from backend (adjust endpoint as needed)
+    const token = localStorage.getItem('auth_token');
+    axios.get(
+      (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL
+        : 'http://localhost:8000') + '/api/user',
+      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+    )
+      .then(res => {
+        setUser({
+          id: String(res.data.id),
+          name: res.data.name,
+          role: res.data.role || 'University Admin',
+          university: res.data.university || 'University of Colombo',
+          avatar: res.data.avatar || profileSample
+        });
+      })
+      .catch(() => setUser(null));
+  }, []);
 
   const mainLinks = [
     { name: "Dashboard", path: "/admin", icon: Home },
@@ -238,13 +261,16 @@ export function OrgAdminSidebar() {
         {/* User Info */}
         <div className="flex flex-col items-center justify-center gap-2 lg:gap-3 px-2 lg:px-4">
           <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-blue-200">
-            <AvatarImage src={mockAdmin.avatar} alt={mockAdmin.name} />
-            <AvatarFallback>A</AvatarFallback>
+            <AvatarImage src={user?.avatar || profileSample} alt={user?.name || 'User'} />
+            <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
           </Avatar>
           <div className="hidden lg:flex flex-col text-xs xl:text-sm text-center leading-tight">
-            <span className="font-medium text-blue-800 truncate max-w-full">{mockAdmin.name}</span>
-            <span className="text-gray-500 truncate max-w-full">{mockAdmin.role}</span>
-            <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{mockAdmin.university}</span>
+            <span className="font-medium text-blue-800 truncate max-w-full">{user?.name || mockAdmin.name}</span>
+            <span className="text-gray-500 truncate max-w-full">{user?.role || mockAdmin.role}</span>
+            <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{user?.university || mockAdmin.university}</span>
+            {user?.id && (
+              <span className="text-gray-400 text-xs mt-1 truncate max-w-full">ID: {user.id}</span>
+            )}
           </div>
         </div>
 

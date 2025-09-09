@@ -30,6 +30,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Toast } from '@/components/ui/toast';
+import axios from 'axios';
 
 // Types
 interface Announcement {
@@ -72,117 +73,110 @@ interface FileAttachment {
 
 
 export default function SetAnnouncements() {
+    // Add API_URL at the top of the component
+    const API_URL =
+        (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
+            ? import.meta.env.VITE_API_URL
+            : (typeof process !== 'undefined' && process.env.REACT_APP_API_URL)
+                ? process.env.REACT_APP_API_URL
+                : 'http://localhost:8000';
+
     const navigate = useNavigate();
 
     // State management
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    
+
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterCategory, setFilterCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([]);
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
 
-    // Mock data initialization
+    // Fetch announcements from backend
+    const fetchAnnouncements = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/announcements`);
+            setAnnouncements(response.data.map((a: any) => ({
+                id: a.id,
+                title: a.title,
+                message: a.message,
+                audience: a.audience,
+                examId: a.exam_id,
+                examTitle: a.examTitle || '',
+                departmentId: a.department_id,
+                departmentName: a.departmentName || '',
+                yearLevel: a.year_level,
+                expiryDate: a.expiry_date,
+                publishDate: a.publish_date,
+                status: a.status,
+                priority: a.priority,
+                category: a.category,
+                tags: Array.isArray(a.tags) ? a.tags : [],
+                isPinned: a.is_pinned,
+                createdAt: a.created_at,
+                updatedAt: a.updated_at,
+                createdBy: a.created_by ? String(a.created_by) : '',
+                notificationsEnabled: a.notifications_enabled,
+                emailNotificationsEnabled: a.email_notifications_enabled,
+                smsNotificationsEnabled: a.sms_notifications_enabled,
+                pushNotificationsEnabled: a.push_notifications_enabled,
+                viewCount: a.view_count || 0,
+                clickCount: a.click_count || 0,
+                attachments: a.attachments || [],
+            })));
+        } catch (error) {
+            setNotification({ type: 'error', message: 'Failed to load announcements!' });
+            setTimeout(() => setNotification(null), 3000);
+        }
+    };
+
     useEffect(() => {
-        
-
-        // Mock announcements data
-        setAnnouncements([
-            {
-                id: '1',
-                title: 'Important: Exam Schedule Updated',
-                message: 'The exam schedule has been updated. Please check your individual timetables for any changes.',
-                audience: 'all',
-                expiryDate: '2025-08-30',
-                status: 'published',
-                priority: 'high',
-                category: 'exam',
-                tags: ['schedule', 'exam', 'important'],
-                isPinned: true,
-                createdAt: '2025-07-10',
-                createdBy: 'Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: true,
-                smsNotificationsEnabled: false,
-                pushNotificationsEnabled: true,
-                viewCount: 1250,
-                clickCount: 890
-            },
-            {
-                id: '2',
-                title: 'Computer Science Final - Additional Guidelines',
-                message: 'Please bring your student ID and calculator for the Computer Science final exam.',
-                audience: 'exam-specific',
-                examId: '1',
-                examTitle: 'Computer Science Final Exam',
-                expiryDate: '2025-08-15',
-                status: 'published',
-                priority: 'medium',
-                category: 'exam',
-                tags: ['computer-science', 'final-exam', 'guidelines'],
-                isPinned: false,
-                createdAt: '2025-07-12',
-                createdBy: 'Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: false,
-                smsNotificationsEnabled: true,
-                pushNotificationsEnabled: true,
-                viewCount: 456,
-                clickCount: 234
-            },
-            {
-                id: '3',
-                title: 'Draft: New Library Rules',
-                message: 'Updated library access rules will be implemented from next month.',
-                audience: 'all',
-                expiryDate: '2025-09-01',
-                status: 'draft',
-                priority: 'low',
-                category: 'administrative',
-                tags: ['library', 'rules', 'policy'],
-                isPinned: false,
-                createdAt: '2025-07-14',
-                createdBy: 'Admin',
-                notificationsEnabled: false,
-                emailNotificationsEnabled: false,
-                smsNotificationsEnabled: false,
-                pushNotificationsEnabled: false,
-                viewCount: 0,
-                clickCount: 0
-            }
-        ]);
+        fetchAnnouncements();
     }, []);
 
+    useEffect(() => {
+        // Fetch user id from backend
+        const token = localStorage.getItem('auth_token');
+        axios.get(
+            `${API_URL}/api/user`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        )
+            .then(res => setUserId(String(res.data.id)))
+            .catch(() => setUserId(null));
+    }, [API_URL]);
+
     // Filter announcements
-    const filteredAnnouncements = announcements.filter(announcement => {
-        const matchesStatus = filterStatus === 'all' ||
-            (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
-            (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
-            (filterStatus === 'scheduled' && announcement.status === 'scheduled') ||
-            announcement.status === filterStatus;
+    const filteredAnnouncements = announcements
+        .filter(a => !userId || a.createdBy === userId) // Only show announcements created by logged-in user
+        .filter(announcement => {
+            const matchesStatus = filterStatus === 'all' ||
+                (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
+                (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
+                (filterStatus === 'scheduled' && announcement.status === 'scheduled') ||
+                announcement.status === filterStatus;
 
-        const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
+            const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
 
-        const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
+            const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
 
-        const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            announcement.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+            const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                announcement.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
-    }).sort((a, b) => {
-        // Sort by pinned first, then by priority, then by creation date
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
+            return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
+        }).sort((a, b) => {
+            // Sort by pinned first, then by priority, then by creation date
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
 
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-        if (priorityDiff !== 0) return priorityDiff;
+            const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+            const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+            if (priorityDiff !== 0) return priorityDiff;
 
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
 
     // Handle edit (navigate to edit page)
     const handleEdit = (announcement: Announcement) => {
@@ -191,11 +185,21 @@ export default function SetAnnouncements() {
     };
 
     // Handle delete
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Are you sure you want to delete this announcement?')) {
-            setAnnouncements(prev => prev.filter(a => a.id !== id));
-            setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
-            setTimeout(() => setNotification(null), 3000);
+            const token = localStorage.getItem('auth_token');
+            try {
+                await axios.delete(
+                    `${API_URL}/api/announcements/${id}`,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+                setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
+                fetchAnnouncements(); // Refresh table
+                setTimeout(() => setNotification(null), 3000);
+            } catch (error) {
+                setNotification({ type: 'error', message: 'Failed to delete announcement!' });
+                setTimeout(() => setNotification(null), 3000);
+            }
         }
     };
 
@@ -294,13 +298,26 @@ export default function SetAnnouncements() {
     };
 
     // Handle bulk operations
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (selectedAnnouncements.length === 0) return;
         if (confirm(`Are you sure you want to delete ${selectedAnnouncements.length} announcements?`)) {
-            setAnnouncements(prev => prev.filter(a => !selectedAnnouncements.includes(a.id)));
-            setSelectedAnnouncements([]);
-            setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
-            setTimeout(() => setNotification(null), 3000);
+            const token = localStorage.getItem('auth_token');
+            try {
+                // Delete each selected announcement
+                await Promise.all(selectedAnnouncements.map(id =>
+                    axios.delete(
+                        `${API_URL}/api/announcements/${id}`,
+                        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                    )
+                ));
+                setSelectedAnnouncements([]);
+                setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
+                fetchAnnouncements(); // Refresh table
+                setTimeout(() => setNotification(null), 3000);
+            } catch (error) {
+                setNotification({ type: 'error', message: 'Failed to delete selected announcements!' });
+                setTimeout(() => setNotification(null), 3000);
+            }
         }
     };
 
@@ -323,12 +340,42 @@ export default function SetAnnouncements() {
     };
 
     // Handle pin/unpin
-    const handleTogglePin = (id: string) => {
-        setAnnouncements(prev => prev.map(a =>
-            a.id === id ? { ...a, isPinned: !a.isPinned } : a
-        ));
-        setNotification({ type: 'success', message: 'Announcement pin status updated!' });
-        setTimeout(() => setNotification(null), 2000);
+    const handleTogglePin = async (id: string) => {
+        const announcement = announcements.find(a => a.id === id);
+        if (!announcement) return;
+        const token = localStorage.getItem('auth_token');
+        try {
+            await axios.put(
+                `${API_URL}/api/announcements/${id}`,
+                {
+                    title: announcement.title,
+                    message: announcement.message,
+                    audience: announcement.audience,
+                    exam_id: announcement.examId || null,
+                    department_id: announcement.departmentId || null,
+                    year_level: announcement.yearLevel || null,
+                    expiry_date: announcement.expiryDate,
+                    publish_date: announcement.publishDate || null,
+                    status: announcement.status,
+                    priority: announcement.priority,
+                    category: announcement.category,
+                    tags: announcement.tags,
+                    is_pinned: !announcement.isPinned, // Toggle pin
+                    notifications_enabled: announcement.notificationsEnabled,
+                    email_notifications_enabled: announcement.emailNotificationsEnabled,
+                    sms_notifications_enabled: announcement.smsNotificationsEnabled,
+                    push_notifications_enabled: announcement.pushNotificationsEnabled,
+                    created_by: announcement.createdBy
+                },
+                token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+            );
+            setNotification({ type: 'success', message: 'Announcement pin status updated!' });
+            fetchAnnouncements(); // Refresh table
+            setTimeout(() => setNotification(null), 2000);
+        } catch (error) {
+            setNotification({ type: 'error', message: 'Failed to update pin status!' });
+            setTimeout(() => setNotification(null), 3000);
+        }
     };
 
     return (
@@ -452,7 +499,8 @@ export default function SetAnnouncements() {
                                         <span className="text-sm font-medium text-blue-900 mr-2">
                                             {selectedAnnouncements.length} selected:
                                         </span>
-                                        <Button
+                                        {/* Remove the Publish button from bulk actions */}
+                                        {/* <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={handleBulkPublish}
@@ -460,7 +508,7 @@ export default function SetAnnouncements() {
                                         >
                                             <Send className="w-3 h-3 mr-1" />
                                             Publish
-                                        </Button>
+                                        </Button> */}
                                         <Button
                                             variant="destructive"
                                             size="sm"
