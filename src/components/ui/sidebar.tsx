@@ -18,11 +18,16 @@ function Sidebar() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  
+
   const mainLinks = [
     { name: "Home", path: "/portal", icon: Home },
     { name: "Register", path: "/portal/register", icon: UserPlus },
     { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
+    {
+      name: "Announcements",
+      path: "/portal/announcements",
+      icon: Award,
+    },
     {
       name: "Notifications",
       path: "/portal/notifications",
