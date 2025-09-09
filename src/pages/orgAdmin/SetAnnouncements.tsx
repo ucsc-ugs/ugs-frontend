@@ -40,8 +40,7 @@ interface Announcement {
     audience: 'all' | 'exam-specific' | 'department-specific' | 'year-specific';
     examId?: string;
     examTitle?: string;
-    departmentId?: string;
-    departmentName?: string;
+    // departmentId and departmentName removed
     yearLevel?: string;
     expiryDate: string;
     publishDate?: string; // For scheduled publishing
@@ -53,10 +52,7 @@ interface Announcement {
     createdAt: string;
     updatedAt?: string;
     createdBy: string;
-    notificationsEnabled: boolean;
-    emailNotificationsEnabled: boolean;
-    smsNotificationsEnabled: boolean;
-    pushNotificationsEnabled: boolean;
+    // Notification settings removed for announcements
     viewCount: number;
     clickCount: number;
     attachments?: FileAttachment[];
@@ -105,8 +101,7 @@ export default function SetAnnouncements() {
                 audience: a.audience,
                 examId: a.exam_id,
                 examTitle: a.examTitle || '',
-                departmentId: a.department_id,
-                departmentName: a.departmentName || '',
+                // departmentId and departmentName removed
                 yearLevel: a.year_level,
                 expiryDate: a.expiry_date,
                 publishDate: a.publish_date,
@@ -118,10 +113,7 @@ export default function SetAnnouncements() {
                 createdAt: a.created_at,
                 updatedAt: a.updated_at,
                 createdBy: a.created_by ? String(a.created_by) : '',
-                notificationsEnabled: a.notifications_enabled,
-                emailNotificationsEnabled: a.email_notifications_enabled,
-                smsNotificationsEnabled: a.sms_notifications_enabled,
-                pushNotificationsEnabled: a.push_notifications_enabled,
+                // Notification settings removed for announcements
                 viewCount: a.view_count || 0,
                 clickCount: a.click_count || 0,
                 attachments: a.attachments || [],
@@ -154,11 +146,8 @@ export default function SetAnnouncements() {
             const matchesStatus = filterStatus === 'all' ||
                 (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
                 (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
-                (filterStatus === 'scheduled' && announcement.status === 'scheduled') ||
-                announcement.status === filterStatus;
-
+                (filterStatus === 'scheduled' && announcement.status === 'scheduled');
             const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
-
             const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
 
             const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -352,7 +341,7 @@ export default function SetAnnouncements() {
                     message: announcement.message,
                     audience: announcement.audience,
                     exam_id: announcement.examId || null,
-                    department_id: announcement.departmentId || null,
+                    // department_id removed
                     year_level: announcement.yearLevel || null,
                     expiry_date: announcement.expiryDate,
                     publish_date: announcement.publishDate || null,
@@ -361,10 +350,6 @@ export default function SetAnnouncements() {
                     category: announcement.category,
                     tags: announcement.tags,
                     is_pinned: !announcement.isPinned, // Toggle pin
-                    notifications_enabled: announcement.notificationsEnabled,
-                    email_notifications_enabled: announcement.emailNotificationsEnabled,
-                    sms_notifications_enabled: announcement.smsNotificationsEnabled,
-                    push_notifications_enabled: announcement.pushNotificationsEnabled,
                     created_by: announcement.createdBy
                 },
                 token ? { headers: { Authorization: `Bearer ${token}` } } : undefined

@@ -4,9 +4,6 @@ import {
     ArrowLeft,
     Eye,
     EyeOff,
-    Bell,
-    Mail,
-    Send,
     Pin,
     Loader2
 } from 'lucide-react';
@@ -26,11 +23,7 @@ interface Exam {
     department: string;
 }
 
-interface Department {
-    id: string;
-    name: string;
-    code: string;
-}
+// Department interface removed (not used)
 
 interface AnnouncementTemplate {
     id: string;
@@ -54,18 +47,54 @@ export default function CreateAnnouncement() {
     const editingAnnouncement = location.state?.editingAnnouncement || null;
 
     // State management
-    const [exams] = useState<Exam[]>([
-        { id: '1', title: 'Final Year Exam', date: '2024-01-15', department: 'Computer Science' },
-        { id: '2', title: 'Mid Term Exam', date: '2024-01-20', department: 'Mathematics' },
-        { id: '3', title: 'Practical Test', date: '2024-01-25', department: 'Physics' }
-    ]);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [userOrgId, setUserOrgId] = useState<number | null>(null);
 
-    const [departments] = useState<Department[]>([
-        { id: '1', name: 'Computer Science', code: 'CS' },
-        { id: '2', name: 'Mathematics', code: 'MATH' },
-        { id: '3', name: 'Physics', code: 'PHY' },
-        { id: '4', name: 'Chemistry', code: 'CHEM' }
-    ]);
+    // Fetch logged-in user's organization_id
+    useEffect(() => {
+        const token = localStorage.getItem('auth_token');
+        axios.get(
+            `${API_URL}/api/user`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        )
+            .then(res => {
+                setUserOrgId(res.data.organization_id || null);
+            })
+            .catch(() => setUserOrgId(null));
+    }, [API_URL]);
+
+    // Fetch exams for logged-in org admin, filter by user's organization_id
+    useEffect(() => {
+        if (userOrgId === null) {
+            setExams([]);
+            return;
+        }
+        const fetchExams = async () => {
+            const token = localStorage.getItem('auth_token');
+            try {
+                const response = await axios.get(
+                    `${API_URL}/api/exams`,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+                const examsData = response.data.data || response.data;
+                setExams(
+                    examsData
+                        .filter((exam: any) => exam.organization_id === userOrgId)
+                        .map((exam: any) => ({
+                            id: exam.id,
+                            title: exam.name,
+                            date: exam.exam_dates?.[0]?.date || '',
+                            department: exam.organization?.name || ''
+                        }))
+                );
+            } catch (err) {
+                setExams([]);
+            }
+        };
+        fetchExams();
+    }, [API_URL, userOrgId]);
+
+    // Department-specific audience removed; departments variable not needed
 
     const [templates] = useState<AnnouncementTemplate[]>([
         { id: '1', name: 'Exam Reminder', title: 'Exam Reminder: [Exam Name]', message: 'This is a reminder about your upcoming exam...', category: 'exam', priority: 'high' },
@@ -81,9 +110,9 @@ export default function CreateAnnouncement() {
     const [formData, setFormData] = useState({
         title: '',
         message: '',
-        audience: 'all' as 'all' | 'exam-specific' | 'department-specific' | 'year-specific',
+        audience: 'all' as 'all' | 'exam-specific' | 'year-specific',
         examId: '',
-        departmentId: '',
+        // departmentId removed
         yearLevel: '',
         expiryDate: '',
         publishDate: '',
@@ -92,10 +121,7 @@ export default function CreateAnnouncement() {
         category: 'general' as 'general' | 'exam' | 'academic' | 'administrative' | 'emergency',
         tags: [] as string[],
         isPinned: false,
-        notificationsEnabled: true,
-        emailNotificationsEnabled: true,
-        smsNotificationsEnabled: false,
-        pushNotificationsEnabled: true,
+        // Notification settings removed for announcements
         selectedTemplate: ''
     });
 
@@ -105,9 +131,9 @@ export default function CreateAnnouncement() {
             setFormData({
                 title: editingAnnouncement.title,
                 message: editingAnnouncement.message,
-                audience: editingAnnouncement.audience,
+                audience: editingAnnouncement.audience === 'department-specific' ? 'all' : editingAnnouncement.audience,
                 examId: editingAnnouncement.examId || '',
-                departmentId: editingAnnouncement.departmentId || '',
+                // departmentId removed
                 yearLevel: editingAnnouncement.yearLevel || '',
                 expiryDate: editingAnnouncement.expiryDate,
                 publishDate: editingAnnouncement.publishDate || '',
@@ -116,10 +142,7 @@ export default function CreateAnnouncement() {
                 category: editingAnnouncement.category,
                 tags: editingAnnouncement.tags || [],
                 isPinned: editingAnnouncement.isPinned,
-                notificationsEnabled: editingAnnouncement.notificationsEnabled,
-                emailNotificationsEnabled: editingAnnouncement.emailNotificationsEnabled,
-                smsNotificationsEnabled: editingAnnouncement.smsNotificationsEnabled || false,
-                pushNotificationsEnabled: editingAnnouncement.pushNotificationsEnabled || true,
+                // Notification settings removed for announcements
                 selectedTemplate: ''
             });
         }
@@ -157,12 +180,7 @@ export default function CreateAnnouncement() {
             return;
         }
 
-        if (formData.audience === 'department-specific' && !formData.departmentId) {
-            setNotification({ type: 'error', message: 'Please select a department for department-specific announcements!' });
-            setTimeout(() => setNotification(null), 3000);
-            setIsSubmitting(false); // Stop loading
-            return;
-        }
+        // Department-specific audience removed
 
         if (formData.audience === 'year-specific' && !formData.yearLevel) {
             setNotification({ type: 'error', message: 'Please select a year level for year-specific announcements!' });
@@ -177,7 +195,7 @@ export default function CreateAnnouncement() {
             message: formData.message,
             audience: formData.audience,
             exam_id: formData.examId || null,
-            department_id: formData.departmentId || null,
+            // department_id removed
             year_level: formData.yearLevel || null,
             expiry_date: formData.expiryDate,
             publish_date: formData.publishDate || null,
@@ -186,10 +204,7 @@ export default function CreateAnnouncement() {
             category: formData.category,
             tags: formData.tags,
             is_pinned: formData.isPinned,
-            notifications_enabled: formData.notificationsEnabled,
-            email_notifications_enabled: formData.emailNotificationsEnabled,
-            sms_notifications_enabled: formData.smsNotificationsEnabled,
-            push_notifications_enabled: formData.pushNotificationsEnabled,
+            // Notification settings removed for announcements
             created_by: userId // Use logged-in user's id
         };
 
@@ -240,7 +255,7 @@ export default function CreateAnnouncement() {
             message: '',
             audience: 'all',
             examId: '',
-            departmentId: '',
+            // departmentId removed
             yearLevel: '',
             expiryDate: '',
             publishDate: '',
@@ -249,10 +264,7 @@ export default function CreateAnnouncement() {
             category: 'general',
             tags: [],
             isPinned: false,
-            notificationsEnabled: true,
-            emailNotificationsEnabled: true,
-            smsNotificationsEnabled: false,
-            pushNotificationsEnabled: true,
+            // Notification settings removed for announcements
             selectedTemplate: ''
         });
     };
@@ -442,7 +454,7 @@ export default function CreateAnnouncement() {
                                     onValueChange={(value) =>
                                         setFormData(prev => ({
                                             ...prev,
-                                            audience: value as 'all' | 'exam-specific' | 'department-specific' | 'year-specific',
+                                            audience: value as 'all' | 'exam-specific' | 'year-specific',
                                             examId: '',
                                             departmentId: '',
                                             yearLevel: ''
@@ -454,7 +466,6 @@ export default function CreateAnnouncement() {
                                             placeholder={{
                                                 'all': 'All Students',
                                                 'exam-specific': 'Exam-specific',
-                                                'department-specific': 'Department-specific',
                                                 'year-specific': 'Year-specific'
                                             }[formData.audience]}
                                         />
@@ -462,7 +473,6 @@ export default function CreateAnnouncement() {
                                     <SelectContent>
                                         <SelectItem value="all">All Students</SelectItem>
                                         <SelectItem value="exam-specific">Exam-specific</SelectItem>
-                                        <SelectItem value="department-specific">Department-specific</SelectItem>
                                         <SelectItem value="year-specific">Year-specific</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -482,52 +492,27 @@ export default function CreateAnnouncement() {
                                             <SelectValue
                                                 placeholder={
                                                     exams.find(e => e.id === formData.examId)
-                                                        ? exams.find(e => e.id === formData.examId)!.title + ' - ' + exams.find(e => e.id === formData.examId)!.department
+                                                        ? exams.find(e => e.id === formData.examId)!.title
                                                         : 'Choose an exam'
                                                 }
                                             />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {exams.map(exam => (
-                                                <SelectItem key={exam.id} value={exam.id}>
-                                                    {exam.title} - {exam.department}
-                                                </SelectItem>
-                                            ))}
+                                            {exams.length === 0 ? (
+                                                <SelectItem value="" disabled>No exams available</SelectItem>
+                                            ) : (
+                                                exams.map(exam => (
+                                                    <SelectItem key={exam.id} value={exam.id}>
+                                                        {exam.title}
+                                                    </SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             )}
 
-                            {/* Department Selection (if department-specific) */}
-                            {formData.audience === 'department-specific' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Select Department <span className="text-red-500">*</span>
-                                    </label>
-                                    <Select
-                                        value={formData.departmentId}
-                                        onValueChange={(value) => setFormData(prev => ({ ...prev, departmentId: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue
-                                                placeholder={
-                                                    departments.find(d => d.id === formData.departmentId)
-                                                        ? departments.find(d => d.id === formData.departmentId)!.name + ' (' + departments.find(d => d.id === formData.departmentId)!.code + ')'
-                                                        : 'Choose a department'
-                                                }
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {departments.map(dept => (
-                                                <SelectItem key={dept.id} value={dept.id}>
-                                                    {dept.name} ({dept.code})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
+                            {/* Department-specific audience and selection removed */}
                             {/* Year Level Selection (if year-specific) */}
                             {formData.audience === 'year-specific' && (
                                 <div>
@@ -605,72 +590,7 @@ export default function CreateAnnouncement() {
                                 </label>
                             </div>
 
-                            {/* Notification Options */}
-                            <div className="space-y-4">
-                                <h3 className="font-medium">Notification Settings</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.notificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                notificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Bell className="w-4 h-4 text-blue-500" />
-                                            <span>In-app notifications</span>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.emailNotificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                emailNotificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Mail className="w-4 h-4 text-green-500" />
-                                            <span>Email notifications</span>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.smsNotificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                smsNotificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Send className="w-4 h-4 text-purple-500" />
-                                            <span>SMS notifications</span>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.pushNotificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                pushNotificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Bell className="w-4 h-4 text-indigo-500" />
-                                            <span>Push notifications</span>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
+                            {/* Notification settings removed for announcements */}
 
                             {/* Form Actions */}
                             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
@@ -716,6 +636,6 @@ export default function CreateAnnouncement() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </div >
     );
 }
