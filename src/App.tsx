@@ -4,6 +4,7 @@ import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
+import Announcements from "@/pages/Announcements";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -61,7 +62,7 @@ function App() {
 
             {/* Organization Admin Login */}
             <Route path="/admin/login" element={<OrgAdminLoginPage />} />
-            
+
             {/* Unauthorized access page */}
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
@@ -84,7 +85,7 @@ function App() {
                 </div>
               </SuperAdminProtectedRoute>
             } />
-            
+
             {/* Protected routes with sidebar */}
             <Route path="/portal/*" element={
               <ProtectedRoute>
@@ -97,6 +98,7 @@ function App() {
                       <Route path="/register" element={<Register />} />
                       <Route path="/my-exams" element={<MyExams />} />
                       <Route path="/my-results" element={<MyResults />} />
+                      <Route path="/announcements" element={<Announcements />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
