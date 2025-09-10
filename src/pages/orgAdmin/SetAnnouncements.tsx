@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AnnouncementModal from '@/components/AnnouncementModal';
 import {
     Megaphone,
     Plus,
@@ -13,7 +14,6 @@ import {
     AlertCircle,
     Info,
     CheckSquare,
-    Send,
     Tag,
     Pin,
     Zap,
@@ -37,11 +37,11 @@ interface Announcement {
     id: string;
     title: string;
     message: string;
-    audience: 'all' | 'exam-specific' | 'department-specific' | 'year-specific';
+    audience: 'all' | 'exam-specific' | 'department-specific';
     examId?: string;
     examTitle?: string;
     // departmentId and departmentName removed
-    yearLevel?: string;
+    // yearLevel removed
     expiryDate: string;
     publishDate?: string; // For scheduled publishing
     status: 'published' | 'draft' | 'expired' | 'scheduled';
@@ -69,6 +69,8 @@ interface FileAttachment {
 
 
 export default function SetAnnouncements() {
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     // Add API_URL at the top of the component
     const API_URL =
         (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
@@ -102,7 +104,7 @@ export default function SetAnnouncements() {
                 examId: a.exam_id,
                 examTitle: a.examTitle || '',
                 // departmentId and departmentName removed
-                yearLevel: a.year_level,
+                // yearLevel removed
                 expiryDate: a.expiry_date,
                 publishDate: a.publish_date,
                 status: a.status,
@@ -201,8 +203,9 @@ export default function SetAnnouncements() {
             low: { color: 'bg-gray-100 text-gray-600', icon: Info, label: 'Low' }
         };
         const { color, icon: Icon, label } = config[priority];
+        
         return (
-            <Badge className={`${color} flex items-center gap-1`}>
+            <Badge variant="outline" className={`${color} flex items-center gap-1`}>
                 <Icon className="w-3 h-3" />
                 {label}
             </Badge>
@@ -217,7 +220,7 @@ export default function SetAnnouncements() {
         if (announcement.status === 'draft') {
             return (
                 <div className="space-y-1">
-                    <Badge variant="secondary" className="text-gray-600">Draft</Badge>
+                    <Badge variant="outline" className="text-gray-600">Draft</Badge>
                     <div className="text-xs text-gray-500">
                         Expires: {expiryDate.toLocaleDateString()}
                     </div>
@@ -228,7 +231,7 @@ export default function SetAnnouncements() {
         if (announcement.status === 'scheduled') {
             return (
                 <div className="space-y-1">
-                    <Badge className="bg-yellow-100 text-yellow-800">Scheduled</Badge>
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Scheduled</Badge>
                     <div className="text-xs text-gray-500">
                         Expires: {expiryDate.toLocaleDateString()}
                     </div>
@@ -250,7 +253,7 @@ export default function SetAnnouncements() {
         if (announcement.status === 'published') {
             return (
                 <div className="space-y-1">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                    <Badge variant="outline" className="bg-green-100 text-green-800" style={{ cursor: 'default' }}>Active</Badge>
                     <div className="text-xs text-gray-500">
                         Expires: {expiryDate.toLocaleDateString()}
                     </div>
@@ -310,15 +313,6 @@ export default function SetAnnouncements() {
         }
     };
 
-    const handleBulkPublish = () => {
-        if (selectedAnnouncements.length === 0) return;
-        setAnnouncements(prev => prev.map(a =>
-            selectedAnnouncements.includes(a.id) ? { ...a, status: 'published' as const } : a
-        ));
-        setSelectedAnnouncements([]);
-        setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements published successfully!` });
-        setTimeout(() => setNotification(null), 3000);
-    };
 
     const handleSelectAll = () => {
         if (selectedAnnouncements.length === filteredAnnouncements.length) {
@@ -342,7 +336,7 @@ export default function SetAnnouncements() {
                     audience: announcement.audience,
                     exam_id: announcement.examId || null,
                     // department_id removed
-                    year_level: announcement.yearLevel || null,
+                    // year_level removed
                     expiry_date: announcement.expiryDate,
                     publish_date: announcement.publishDate || null,
                     status: announcement.status,
@@ -484,16 +478,7 @@ export default function SetAnnouncements() {
                                         <span className="text-sm font-medium text-blue-900 mr-2">
                                             {selectedAnnouncements.length} selected:
                                         </span>
-                                        {/* Remove the Publish button from bulk actions */}
-                                        {/* <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleBulkPublish}
-                                            className="h-8 px-3 text-xs"
-                                        >
-                                            <Send className="w-3 h-3 mr-1" />
-                                            Publish
-                                        </Button> */}
+
                                         <Button
                                             variant="destructive"
                                             size="sm"
@@ -539,11 +524,19 @@ export default function SetAnnouncements() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredAnnouncements.map((announcement) => (
-                                        <TableRow key={announcement.id} className={announcement.isPinned ? 'bg-yellow-50' : ''}>
+                                        <TableRow
+                                            key={announcement.id}
+                                            className={announcement.isPinned ? 'bg-yellow-50 cursor-pointer' : 'cursor-pointer'}
+                                            onClick={() => {
+                                                setSelectedAnnouncement(announcement);
+                                                setModalOpen(true);
+                                            }}
+                                        >
                                             <TableCell>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedAnnouncements.includes(announcement.id)}
+                                                    onClick={e => e.stopPropagation()}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
                                                             setSelectedAnnouncements(prev => [...prev, announcement.id]);
@@ -591,10 +584,8 @@ export default function SetAnnouncements() {
                                                     <Users className="w-4 h-4 text-gray-400" />
                                                     <span className="capitalize">
                                                         {announcement.audience === 'all' ? 'All Students' :
-                                                            announcement.audience === 'exam-specific' ? announcement.examTitle :
-                                                                announcement.audience === 'department-specific' ? announcement.departmentName :
-                                                                    announcement.audience === 'year-specific' ? `Year ${announcement.yearLevel}` :
-                                                                        announcement.audience}
+                                                            announcement.audience === 'exam-specific' ? (announcement.examTitle ? announcement.examTitle : 'Exam specific') :
+                                                                announcement.audience}
                                                     </span>
                                                 </div>
                                             </TableCell>
@@ -605,6 +596,7 @@ export default function SetAnnouncements() {
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
+                                                            onClick={e => e.stopPropagation()}
                                                         >
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
@@ -644,6 +636,16 @@ export default function SetAnnouncements() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+
+
+                                    <>
+                                        {/* ...existing JSX... */}
+                                        <AnnouncementModal
+                                            open={modalOpen}
+                                            onClose={() => setModalOpen(false)}
+                                            announcement={selectedAnnouncement}
+                                        />
+                                    </>
                                 </TableBody>
                             </Table>
                             {filteredAnnouncements.length === 0 && (
@@ -656,5 +658,5 @@ export default function SetAnnouncements() {
                 </Card>
             </div>
         </div>
-    );
+    )
 }
