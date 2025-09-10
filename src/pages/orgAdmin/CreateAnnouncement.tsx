@@ -110,10 +110,10 @@ export default function CreateAnnouncement() {
     const [formData, setFormData] = useState({
         title: '',
         message: '',
-        audience: 'all' as 'all' | 'exam-specific' | 'year-specific',
+        audience: 'all' as 'all' | 'exam-specific',
         examId: '',
         // departmentId removed
-        yearLevel: '',
+        // yearLevel removed
         expiryDate: '',
         publishDate: '',
         status: 'published' as 'published' | 'draft' | 'scheduled',
@@ -182,12 +182,7 @@ export default function CreateAnnouncement() {
 
         // Department-specific audience removed
 
-        if (formData.audience === 'year-specific' && !formData.yearLevel) {
-            setNotification({ type: 'error', message: 'Please select a year level for year-specific announcements!' });
-            setTimeout(() => setNotification(null), 3000);
-            setIsSubmitting(false); // Stop loading
-            return;
-        }
+        // year-specific audience removed
 
         // Prepare payload for backend
         const payload = {
@@ -196,7 +191,7 @@ export default function CreateAnnouncement() {
             audience: formData.audience,
             exam_id: formData.examId || null,
             // department_id removed
-            year_level: formData.yearLevel || null,
+            // year_level removed
             expiry_date: formData.expiryDate,
             publish_date: formData.publishDate || null,
             status: formData.status,
@@ -454,10 +449,8 @@ export default function CreateAnnouncement() {
                                     onValueChange={(value) =>
                                         setFormData(prev => ({
                                             ...prev,
-                                            audience: value as 'all' | 'exam-specific' | 'year-specific',
-                                            examId: '',
-                                            departmentId: '',
-                                            yearLevel: ''
+                                            audience: value as 'all' | 'exam-specific',
+                                            examId: ''
                                         }))
                                     }
                                 >
@@ -473,7 +466,6 @@ export default function CreateAnnouncement() {
                                     <SelectContent>
                                         <SelectItem value="all">All Students</SelectItem>
                                         <SelectItem value="exam-specific">Exam-specific</SelectItem>
-                                        <SelectItem value="year-specific">Year-specific</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -513,37 +505,7 @@ export default function CreateAnnouncement() {
                             )}
 
                             {/* Department-specific audience and selection removed */}
-                            {/* Year Level Selection (if year-specific) */}
-                            {formData.audience === 'year-specific' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Select Year Level <span className="text-red-500">*</span>
-                                    </label>
-                                    <Select
-                                        value={formData.yearLevel}
-                                        onValueChange={(value) => setFormData(prev => ({ ...prev, yearLevel: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue
-                                                placeholder={{
-                                                    '1': 'Year 1',
-                                                    '2': 'Year 2',
-                                                    '3': 'Year 3',
-                                                    '4': 'Year 4',
-                                                    'postgraduate': 'Postgraduate'
-                                                }[formData.yearLevel] || 'Choose year level'}
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="1">Year 1</SelectItem>
-                                            <SelectItem value="2">Year 2</SelectItem>
-                                            <SelectItem value="3">Year 3</SelectItem>
-                                            <SelectItem value="4">Year 4</SelectItem>
-                                            <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
+                            
 
                             {/* Dates Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -603,18 +565,7 @@ export default function CreateAnnouncement() {
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Cancel
                                 </Button>
-                                <Button
-                                    type="button"
-                                    onClick={(e) => {
-                                        setFormData(prev => ({ ...prev, status: 'draft' }));
-                                        handleSubmit(e as React.FormEvent);
-                                    }}
-                                    variant="outline"
-                                    className="flex-1"
-                                >
-                                    <EyeOff className="w-4 h-4 mr-2" />
-                                    Save as Draft
-                                </Button>
+                                {/* Save as Draft button removed */}
                                 <Button
                                     type="submit"
                                     onClick={() => setFormData(prev => ({ ...prev, status: formData.publishDate ? 'scheduled' : 'published' }))}
