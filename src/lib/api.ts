@@ -151,3 +151,22 @@ export const updatePassword = async (passwordData: {
 export const isAuthenticated = (): boolean => {
   return getAuthToken() !== null;
 };
+
+// Payment verification
+export const verifyPayment = async (orderId: string): Promise<{
+  exam_name: string;
+  registration_status: string;
+  index_number: string;
+  payment: {
+    payment_id: string;
+    amount: string;
+    currency: string;
+    status_message: string;
+    created_at: string;
+  };
+}> => {
+  return await apiRequest('/payment/verify', {
+    method: 'POST',
+    body: JSON.stringify({ order_id: orderId }),
+  });
+};

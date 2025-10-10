@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,9 +20,11 @@ interface ExamCardData {
   description: string;
   duration: string;
   questions: number;
+  codeName?: string;
 }
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState('all');
   const [exams, setExams] = useState<ExamCardData[]>([]);
@@ -74,10 +77,11 @@ const RegisterPage = () => {
             registrationDeadline,
             image: exam.organization?.logo 
               ? `http://localhost:8000/storage${exam.organization.logo}` 
-              : "../src/assets/ucsc_logo.png", // Fallback image
+              : "/ucsclogo.png", // Fallback image
             description: exam.description || 'No description available',
             duration: "2 hours", // Default duration (could be added to database later)
-            questions: 50 // Default questions (could be added to database later)
+            questions: 50, // Default questions (could be added to database later)
+            codeName: exam.code_name
           };
         });
         
@@ -98,8 +102,13 @@ const RegisterPage = () => {
 
   // Modal handlers
   const handleViewDetails = (exam: ExamCardData) => {
-    setSelectedExam(exam);
-    setShowModal(true);
+    if (exam.codeName) {
+      navigate(`/exams/${exam.codeName}`);
+    } else {
+      // Fallback to modal if no code_name is available
+      setSelectedExam(exam);
+      setShowModal(true);
+    }
   };
 
   const handleCloseModal = () => {
@@ -107,21 +116,65 @@ const RegisterPage = () => {
     setShowModal(false);
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!selectedExam) return;
-    
-    // Check if registration deadline has passed
-    if (selectedExam.registrationDeadline) {
-      const deadline = new Date(selectedExam.registrationDeadline);
-      const now = new Date();
-      
-      if (now > deadline) {
-        alert('Registration deadline has passed for this exam.');
-        return;
+    try {
+      setIsLoading(true);
+      setError('');
+      // Replace with your actual registration API endpoint and payload
+      const token = localStorage.getItem('auth_token');
+      console.log('TOKEN= ', token);
+      const response = await fetch('http://localhost:8000/api/exam/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({
+          examId: selectedExam.id 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to register for the exam');
+      } else {
+        const payhereData = await response.json();
+        // Create a form and submit to PayHere sandbox
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'https://sandbox.payhere.lk/pay/checkout';
+
+        Object.entries(payhereData).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = String(value);
+          form.appendChild(input);
+        });
+
+        // Add return_url manually
+        const returnUrlInput = document.createElement('input');
+        returnUrlInput.type = 'hidden';
+        returnUrlInput.name = 'return_url';
+        returnUrlInput.value = 'http://localhost:5173/portal/payment-success'; // Change to your actual return URL
+        form.appendChild(returnUrlInput);
+
+        const cancelUrlInput = document.createElement('input');
+        cancelUrlInput.type = 'hidden';
+        cancelUrlInput.name = 'cancel_url';
+        cancelUrlInput.value = 'http://localhost:5173/portal/register'; // Change to your actual cancel URL
+        form.appendChild(cancelUrlInput);
+
+        document.body.appendChild(form);
+        form.submit();
       }
+
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
     
-    // TODO: Implement registration logic
     console.log('Registering for exam:', selectedExam);
     // For now, just close the modal
     handleCloseModal();
@@ -277,7 +330,7 @@ const RegisterPage = () => {
                             className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
                             onError={(e) => {
                               // Fallback to default image if logo fails to load
-                              e.currentTarget.src = "../src/assets/ucsc_logo.png";
+                              e.currentTarget.src = "/ucsclogo.png";
                             }}
                           />
                         </div>
@@ -313,7 +366,7 @@ const RegisterPage = () => {
                     alt={`${selectedExam.university} logo`}
                     className="w-16 h-16 rounded-lg object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = "../src/assets/ucsc_logo.png";
+                      e.currentTarget.src = "/ucsclogo.png";
                     }}
                   />
                   <div className="flex-1">

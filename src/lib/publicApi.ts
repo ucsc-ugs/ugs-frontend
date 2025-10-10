@@ -22,6 +22,7 @@ interface Organization {
 interface PublicExamData {
   id: number;
   name: string;
+  code_name?: string;
   description?: string;
   price: number;
   organization_id: number;
@@ -65,6 +66,10 @@ const publicApiRequest = async (endpoint: string, options: RequestInit = {}): Pr
 // Public API functions
 export const getPublicExams = async (): Promise<ApiResponse<PublicExamData[]>> => {
   return await publicApiRequest('/exams');
+};
+
+export const getExamByCodeName = async (codeName: string): Promise<ApiResponse<PublicExamData>> => {
+  return await publicApiRequest(`/exams/${codeName}`);
 };
 
 export type { PublicExamData, ExamDate, Organization, ApiResponse };

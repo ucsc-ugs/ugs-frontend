@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AnnouncementModal from '@/components/AnnouncementModal';
 import {
     Megaphone,
     Plus,
@@ -13,7 +14,6 @@ import {
     AlertCircle,
     Info,
     CheckSquare,
-    Send,
     Tag,
     Pin,
     Zap,
@@ -30,18 +30,18 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Toast } from '@/components/ui/toast';
+import axios from 'axios';
 
 // Types
 interface Announcement {
     id: string;
     title: string;
     message: string;
-    audience: 'all' | 'exam-specific' | 'department-specific' | 'year-specific';
+    audience: 'all' | 'exam-specific' | 'department-specific';
     examId?: string;
     examTitle?: string;
-    departmentId?: string;
-    departmentName?: string;
-    yearLevel?: string;
+    // departmentId and departmentName removed
+    // yearLevel removed
     expiryDate: string;
     publishDate?: string; // For scheduled publishing
     status: 'published' | 'draft' | 'expired' | 'scheduled';
@@ -52,10 +52,7 @@ interface Announcement {
     createdAt: string;
     updatedAt?: string;
     createdBy: string;
-    notificationsEnabled: boolean;
-    emailNotificationsEnabled: boolean;
-    smsNotificationsEnabled: boolean;
-    pushNotificationsEnabled: boolean;
+    // Notification settings removed for announcements
     viewCount: number;
     clickCount: number;
     attachments?: FileAttachment[];
@@ -72,117 +69,105 @@ interface FileAttachment {
 
 
 export default function SetAnnouncements() {
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+    // Add API_URL at the top of the component
+    const API_URL =
+        (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
+            ? import.meta.env.VITE_API_URL
+            : (typeof process !== 'undefined' && process.env.REACT_APP_API_URL)
+                ? process.env.REACT_APP_API_URL
+                : 'http://localhost:8000';
+
     const navigate = useNavigate();
 
     // State management
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    
+
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterCategory, setFilterCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([]);
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
 
-    // Mock data initialization
+    // Fetch announcements from backend
+    const fetchAnnouncements = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/announcements`);
+            setAnnouncements(response.data.map((a: any) => ({
+                id: a.id,
+                title: a.title,
+                message: a.message,
+                audience: a.audience,
+                examId: a.exam_id,
+                examTitle: a.examTitle || '',
+                // departmentId and departmentName removed
+                // yearLevel removed
+                expiryDate: a.expiry_date,
+                publishDate: a.publish_date,
+                status: a.status,
+                priority: a.priority,
+                category: a.category,
+                tags: Array.isArray(a.tags) ? a.tags : [],
+                isPinned: a.is_pinned,
+                createdAt: a.created_at,
+                updatedAt: a.updated_at,
+                createdBy: a.created_by ? String(a.created_by) : '',
+                // Notification settings removed for announcements
+                viewCount: a.view_count || 0,
+                clickCount: a.click_count || 0,
+                attachments: a.attachments || [],
+            })));
+        } catch (error) {
+            setNotification({ type: 'error', message: 'Failed to load announcements!' });
+            setTimeout(() => setNotification(null), 3000);
+        }
+    };
+
     useEffect(() => {
-        
-
-        // Mock announcements data
-        setAnnouncements([
-            {
-                id: '1',
-                title: 'Important: Exam Schedule Updated',
-                message: 'The exam schedule has been updated. Please check your individual timetables for any changes.',
-                audience: 'all',
-                expiryDate: '2025-08-30',
-                status: 'published',
-                priority: 'high',
-                category: 'exam',
-                tags: ['schedule', 'exam', 'important'],
-                isPinned: true,
-                createdAt: '2025-07-10',
-                createdBy: 'Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: true,
-                smsNotificationsEnabled: false,
-                pushNotificationsEnabled: true,
-                viewCount: 1250,
-                clickCount: 890
-            },
-            {
-                id: '2',
-                title: 'Computer Science Final - Additional Guidelines',
-                message: 'Please bring your student ID and calculator for the Computer Science final exam.',
-                audience: 'exam-specific',
-                examId: '1',
-                examTitle: 'Computer Science Final Exam',
-                expiryDate: '2025-08-15',
-                status: 'published',
-                priority: 'medium',
-                category: 'exam',
-                tags: ['computer-science', 'final-exam', 'guidelines'],
-                isPinned: false,
-                createdAt: '2025-07-12',
-                createdBy: 'Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: false,
-                smsNotificationsEnabled: true,
-                pushNotificationsEnabled: true,
-                viewCount: 456,
-                clickCount: 234
-            },
-            {
-                id: '3',
-                title: 'Draft: New Library Rules',
-                message: 'Updated library access rules will be implemented from next month.',
-                audience: 'all',
-                expiryDate: '2025-09-01',
-                status: 'draft',
-                priority: 'low',
-                category: 'administrative',
-                tags: ['library', 'rules', 'policy'],
-                isPinned: false,
-                createdAt: '2025-07-14',
-                createdBy: 'Admin',
-                notificationsEnabled: false,
-                emailNotificationsEnabled: false,
-                smsNotificationsEnabled: false,
-                pushNotificationsEnabled: false,
-                viewCount: 0,
-                clickCount: 0
-            }
-        ]);
+        fetchAnnouncements();
     }, []);
 
+    useEffect(() => {
+        // Fetch user id from backend
+        const token = localStorage.getItem('auth_token');
+        axios.get(
+            `${API_URL}/api/user`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        )
+            .then(res => setUserId(String(res.data.id)))
+            .catch(() => setUserId(null));
+    }, [API_URL]);
+
     // Filter announcements
-    const filteredAnnouncements = announcements.filter(announcement => {
-        const matchesStatus = filterStatus === 'all' ||
-            (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
-            (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
-            (filterStatus === 'scheduled' && announcement.status === 'scheduled') ||
-            announcement.status === filterStatus;
+    const filteredAnnouncements = announcements
+        .filter(a => !userId || a.createdBy === userId) // Only show announcements created by logged-in user
+        .filter(announcement => {
+            const matchesStatus = filterStatus === 'all' ||
+                (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
+                (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
+                (filterStatus === 'scheduled' && announcement.status === 'scheduled');
+            const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
+            const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
 
-        const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
+            const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                announcement.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
+            return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
+        }).sort((a, b) => {
+            // Sort by pinned first, then by priority, then by creation date
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
 
-        const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            announcement.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+            const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+            const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+            if (priorityDiff !== 0) return priorityDiff;
 
-        return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
-    }).sort((a, b) => {
-        // Sort by pinned first, then by priority, then by creation date
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-        if (priorityDiff !== 0) return priorityDiff;
-
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
 
     // Handle edit (navigate to edit page)
     const handleEdit = (announcement: Announcement) => {
@@ -191,11 +176,21 @@ export default function SetAnnouncements() {
     };
 
     // Handle delete
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Are you sure you want to delete this announcement?')) {
-            setAnnouncements(prev => prev.filter(a => a.id !== id));
-            setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
-            setTimeout(() => setNotification(null), 3000);
+            const token = localStorage.getItem('auth_token');
+            try {
+                await axios.delete(
+                    `${API_URL}/api/announcements/${id}`,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+                setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
+                fetchAnnouncements(); // Refresh table
+                setTimeout(() => setNotification(null), 3000);
+            } catch (error) {
+                setNotification({ type: 'error', message: 'Failed to delete announcement!' });
+                setTimeout(() => setNotification(null), 3000);
+            }
         }
     };
 
@@ -208,8 +203,9 @@ export default function SetAnnouncements() {
             low: { color: 'bg-gray-100 text-gray-600', icon: Info, label: 'Low' }
         };
         const { color, icon: Icon, label } = config[priority];
+        
         return (
-            <Badge className={`${color} flex items-center gap-1`}>
+            <Badge variant="outline" className={`${color} flex items-center gap-1`}>
                 <Icon className="w-3 h-3" />
                 {label}
             </Badge>
@@ -224,7 +220,7 @@ export default function SetAnnouncements() {
         if (announcement.status === 'draft') {
             return (
                 <div className="space-y-1">
-                    <Badge variant="secondary" className="text-gray-600">Draft</Badge>
+                    <Badge variant="outline" className="text-gray-600">Draft</Badge>
                     <div className="text-xs text-gray-500">
                         Expires: {expiryDate.toLocaleDateString()}
                     </div>
@@ -235,7 +231,7 @@ export default function SetAnnouncements() {
         if (announcement.status === 'scheduled') {
             return (
                 <div className="space-y-1">
-                    <Badge className="bg-yellow-100 text-yellow-800">Scheduled</Badge>
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Scheduled</Badge>
                     <div className="text-xs text-gray-500">
                         Expires: {expiryDate.toLocaleDateString()}
                     </div>
@@ -257,7 +253,7 @@ export default function SetAnnouncements() {
         if (announcement.status === 'published') {
             return (
                 <div className="space-y-1">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                    <Badge variant="outline" className="bg-green-100 text-green-800" style={{ cursor: 'default' }}>Active</Badge>
                     <div className="text-xs text-gray-500">
                         Expires: {expiryDate.toLocaleDateString()}
                     </div>
@@ -294,25 +290,29 @@ export default function SetAnnouncements() {
     };
 
     // Handle bulk operations
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (selectedAnnouncements.length === 0) return;
         if (confirm(`Are you sure you want to delete ${selectedAnnouncements.length} announcements?`)) {
-            setAnnouncements(prev => prev.filter(a => !selectedAnnouncements.includes(a.id)));
-            setSelectedAnnouncements([]);
-            setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
-            setTimeout(() => setNotification(null), 3000);
+            const token = localStorage.getItem('auth_token');
+            try {
+                // Delete each selected announcement
+                await Promise.all(selectedAnnouncements.map(id =>
+                    axios.delete(
+                        `${API_URL}/api/announcements/${id}`,
+                        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                    )
+                ));
+                setSelectedAnnouncements([]);
+                setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
+                fetchAnnouncements(); // Refresh table
+                setTimeout(() => setNotification(null), 3000);
+            } catch (error) {
+                setNotification({ type: 'error', message: 'Failed to delete selected announcements!' });
+                setTimeout(() => setNotification(null), 3000);
+            }
         }
     };
 
-    const handleBulkPublish = () => {
-        if (selectedAnnouncements.length === 0) return;
-        setAnnouncements(prev => prev.map(a =>
-            selectedAnnouncements.includes(a.id) ? { ...a, status: 'published' as const } : a
-        ));
-        setSelectedAnnouncements([]);
-        setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements published successfully!` });
-        setTimeout(() => setNotification(null), 3000);
-    };
 
     const handleSelectAll = () => {
         if (selectedAnnouncements.length === filteredAnnouncements.length) {
@@ -323,12 +323,38 @@ export default function SetAnnouncements() {
     };
 
     // Handle pin/unpin
-    const handleTogglePin = (id: string) => {
-        setAnnouncements(prev => prev.map(a =>
-            a.id === id ? { ...a, isPinned: !a.isPinned } : a
-        ));
-        setNotification({ type: 'success', message: 'Announcement pin status updated!' });
-        setTimeout(() => setNotification(null), 2000);
+    const handleTogglePin = async (id: string) => {
+        const announcement = announcements.find(a => a.id === id);
+        if (!announcement) return;
+        const token = localStorage.getItem('auth_token');
+        try {
+            await axios.put(
+                `${API_URL}/api/announcements/${id}`,
+                {
+                    title: announcement.title,
+                    message: announcement.message,
+                    audience: announcement.audience,
+                    exam_id: announcement.examId || null,
+                    // department_id removed
+                    // year_level removed
+                    expiry_date: announcement.expiryDate,
+                    publish_date: announcement.publishDate || null,
+                    status: announcement.status,
+                    priority: announcement.priority,
+                    category: announcement.category,
+                    tags: announcement.tags,
+                    is_pinned: !announcement.isPinned, // Toggle pin
+                    created_by: announcement.createdBy
+                },
+                token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+            );
+            setNotification({ type: 'success', message: 'Announcement pin status updated!' });
+            fetchAnnouncements(); // Refresh table
+            setTimeout(() => setNotification(null), 2000);
+        } catch (error) {
+            setNotification({ type: 'error', message: 'Failed to update pin status!' });
+            setTimeout(() => setNotification(null), 3000);
+        }
     };
 
     return (
@@ -452,15 +478,7 @@ export default function SetAnnouncements() {
                                         <span className="text-sm font-medium text-blue-900 mr-2">
                                             {selectedAnnouncements.length} selected:
                                         </span>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleBulkPublish}
-                                            className="h-8 px-3 text-xs"
-                                        >
-                                            <Send className="w-3 h-3 mr-1" />
-                                            Publish
-                                        </Button>
+
                                         <Button
                                             variant="destructive"
                                             size="sm"
@@ -506,11 +524,19 @@ export default function SetAnnouncements() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredAnnouncements.map((announcement) => (
-                                        <TableRow key={announcement.id} className={announcement.isPinned ? 'bg-yellow-50' : ''}>
+                                        <TableRow
+                                            key={announcement.id}
+                                            className={announcement.isPinned ? 'bg-yellow-50 cursor-pointer' : 'cursor-pointer'}
+                                            onClick={() => {
+                                                setSelectedAnnouncement(announcement);
+                                                setModalOpen(true);
+                                            }}
+                                        >
                                             <TableCell>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedAnnouncements.includes(announcement.id)}
+                                                    onClick={e => e.stopPropagation()}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
                                                             setSelectedAnnouncements(prev => [...prev, announcement.id]);
@@ -558,10 +584,8 @@ export default function SetAnnouncements() {
                                                     <Users className="w-4 h-4 text-gray-400" />
                                                     <span className="capitalize">
                                                         {announcement.audience === 'all' ? 'All Students' :
-                                                            announcement.audience === 'exam-specific' ? announcement.examTitle :
-                                                                announcement.audience === 'department-specific' ? announcement.departmentName :
-                                                                    announcement.audience === 'year-specific' ? `Year ${announcement.yearLevel}` :
-                                                                        announcement.audience}
+                                                            announcement.audience === 'exam-specific' ? (announcement.examTitle ? announcement.examTitle : 'Exam specific') :
+                                                                announcement.audience}
                                                     </span>
                                                 </div>
                                             </TableCell>
@@ -572,6 +596,7 @@ export default function SetAnnouncements() {
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
+                                                            onClick={e => e.stopPropagation()}
                                                         >
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
@@ -611,6 +636,16 @@ export default function SetAnnouncements() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+
+
+                                    <>
+                                        {/* ...existing JSX... */}
+                                        <AnnouncementModal
+                                            open={modalOpen}
+                                            onClose={() => setModalOpen(false)}
+                                            announcement={selectedAnnouncement}
+                                        />
+                                    </>
                                 </TableBody>
                             </Table>
                             {filteredAnnouncements.length === 0 && (
@@ -623,5 +658,5 @@ export default function SetAnnouncements() {
                 </Card>
             </div>
         </div>
-    );
+    )
 }
