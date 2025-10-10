@@ -14,6 +14,7 @@ interface ExamCardData {
   date: string;
   time: string;
   fee: string;
+  registrationDeadline?: string;
   image: string;
   description: string;
   duration: string;
@@ -41,6 +42,19 @@ const RegisterPage = () => {
           const firstDate = exam.exam_dates?.[0];
           const examDate = firstDate ? new Date(firstDate.date) : new Date();
           
+          // Format registration deadline if it exists
+          const registrationDeadline = exam.registration_deadline 
+            ? new Date(exam.registration_deadline).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+              }) + ' ' + new Date(exam.registration_deadline).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+            : undefined;
+          
           return {
             id: exam.id,
             testName: exam.name,
@@ -57,6 +71,7 @@ const RegisterPage = () => {
               hour12: true
             }),
             fee: `LKR ${Math.round(exam.price)}`,
+            registrationDeadline,
             image: exam.organization?.logo 
               ? `http://localhost:8000/storage${exam.organization.logo}` 
               : "../src/assets/ucsc_logo.png", // Fallback image
@@ -93,6 +108,19 @@ const RegisterPage = () => {
   };
 
   const handleRegister = () => {
+    if (!selectedExam) return;
+    
+    // Check if registration deadline has passed
+    if (selectedExam.registrationDeadline) {
+      const deadline = new Date(selectedExam.registrationDeadline);
+      const now = new Date();
+      
+      if (now > deadline) {
+        alert('Registration deadline has passed for this exam.');
+        return;
+      }
+    }
+    
     // TODO: Implement registration logic
     console.log('Registering for exam:', selectedExam);
     // For now, just close the modal
@@ -220,6 +248,14 @@ const RegisterPage = () => {
                                 </p>
                               </div>
 
+                              {exam.registrationDeadline && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-orange-600 font-medium">
+                                    📅 Registration Deadline: {exam.registrationDeadline}
+                                  </p>
+                                </div>
+                              )}
+
                               <div className="mb-3">
                                 <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                                   {exam.fee}
@@ -315,6 +351,13 @@ const RegisterPage = () => {
                     </div>
                   </div>
 
+                  {selectedExam.registrationDeadline && (
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">Registration Deadline</h3>
+                      <p className="text-orange-600 font-medium">{selectedExam.registrationDeadline}</p>
+                    </div>
+                  )}
+
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Registration Fee</h3>
                     <div className="inline-block">
@@ -333,12 +376,25 @@ const RegisterPage = () => {
                   >
                     Back
                   </button>
-                  <button
-                    onClick={handleRegister}
-                    className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Register
-                  </button>
+                  {(() => {
+                    const isDeadlinePassed = selectedExam.registrationDeadline 
+                      ? new Date() > new Date(selectedExam.registrationDeadline)
+                      : false;
+                    
+                    return (
+                      <button
+                        onClick={handleRegister}
+                        disabled={isDeadlinePassed}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                          isDeadlinePassed
+                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                      >
+                        {isDeadlinePassed ? 'Registration Closed' : 'Register'}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

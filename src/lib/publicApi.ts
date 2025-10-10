@@ -25,6 +25,7 @@ interface PublicExamData {
   description?: string;
   price: number;
   organization_id: number;
+  registration_deadline?: string;
   organization?: Organization;
   exam_dates?: ExamDate[];
   created_at: string;

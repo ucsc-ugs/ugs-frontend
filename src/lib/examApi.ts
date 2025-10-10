@@ -15,6 +15,7 @@ interface ExamData {
   description?: string;
   price: number;
   organization_id: number;
+  registration_deadline?: string;
   exam_dates?: ExamDate[];
   created_at?: string;
   updated_at?: string;
