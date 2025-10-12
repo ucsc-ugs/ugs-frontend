@@ -5,6 +5,7 @@ interface ExamDate {
   exam_id?: number;
   date: string;
   location?: string;
+  status?: 'upcoming' | 'completed' | 'cancelled';
   created_at?: string;
   updated_at?: string;
 }
@@ -12,6 +13,7 @@ interface ExamDate {
 interface ExamData {
   id?: number;
   name: string;
+  code_name?: string;
   description?: string;
   price: number;
   organization_id: number;
@@ -45,17 +47,65 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}): Promise<
     ...options,
   };
 
+  console.log('API Request:', `${API_BASE_URL}${endpoint}`, config);
+  
+  // For debugging: if this is an exam request and we have a token, check current user
+  if (endpoint.includes('/exam') && token) {
+    try {
+      const userCheckResponse = await fetch(`${API_BASE_URL}/user`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (userCheckResponse.ok) {
+        const currentUser = await userCheckResponse.json();
+        console.log('👤 Current authenticated user:', currentUser);
+      }
+    } catch (error) {
+      console.log('⚠️ User verification failed:', error);
+    }
+  }
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  const data = await response.json();
-
+  
+  console.log('Response status:', response.status);
+  console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+  
+  const responseText = await response.text();
+  console.log('Response text:', responseText.substring(0, 200) + '...');
+  
   if (!response.ok) {
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { message: `Server returned ${response.status}: ${responseText.substring(0, 100)}` };
+    }
+    
+    const errorMessage = data.message || `Request failed with status ${response.status}`;
+    
     throw {
       status: response.status,
-      message: data.message || 'An error occurred',
+      message: errorMessage,
       errors: data.errors || {},
     };
   }
 
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (e) {
+    console.error('JSON Parse Error:', e);
+    console.error('Response was:', responseText);
+    throw {
+      status: 500,
+      message: `Server returned invalid JSON. Response: ${responseText.substring(0, 100)}`,
+      errors: {},
+    };
+  }
+  
   return data;
 };
 
@@ -85,6 +135,26 @@ export const updateExam = async (id: number, examData: Partial<ExamData>): Promi
 export const deleteExam = async (id: number): Promise<ApiResponse> => {
   return await apiRequest(`/exam/delete/${id}`, {
     method: 'DELETE',
+  });
+};
+
+// Test function to verify API connectivity
+export const testConnection = async (): Promise<any> => {
+  return await apiRequest('/debug/user-context');
+};
+
+// Exam Date API functions
+export const updateExamDateStatus = async (examDateId: number, status: 'upcoming' | 'completed' | 'cancelled'): Promise<ApiResponse<ExamDate>> => {
+  return await apiRequest(`/exam-date/${examDateId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+};
+
+// Automatically update expired exam dates
+export const updateExpiredExamStatuses = async (): Promise<ApiResponse<{ updated_count: number }>> => {
+  return await apiRequest('/exam-dates/update-expired-statuses', {
+    method: 'POST',
   });
 };
 

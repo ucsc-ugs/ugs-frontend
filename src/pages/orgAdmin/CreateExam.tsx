@@ -1,5 +1,5 @@
 // src/pages/admin/CreateExam.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Save,
     Eye,
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { createExam } from "@/lib/examApi";
+import { orgAdminApi } from "@/lib/orgAdminApi";
 
 interface ExamFormData {
     name: string;
@@ -48,6 +49,8 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [orgId, setOrgId] = useState<number | null>(null);
+    const [orgError, setOrgError] = useState<string>("");
 
     const [formData, setFormData] = useState<ExamFormData>({
         name: "",
@@ -62,6 +65,20 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
         fee: 0,
         status: "draft"
     });
+
+    // Fetch current admin organization
+    useEffect(() => {
+        (async () => {
+            try {
+                const org = await orgAdminApi.getMyOrganization();
+                setOrgId(org?.id ?? org?.organization_id ?? null);
+                setOrgError("");
+            } catch (e: any) {
+                console.error("Failed to fetch organization:", e);
+                setOrgError(e?.message || "Failed to load your organization");
+            }
+        })();
+    }, []);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -133,6 +150,11 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
     const handleSubmit = async (action: "draft" | "published") => {
         if (!validateForm()) return;
 
+        if (!orgId) {
+            setErrors(prev => ({ ...prev, organization_id: "Your admin account isn't linked to an organization. Please contact support." } as any));
+            return;
+        }
+
         // Additional validation for past dates
         const now = new Date();
         
@@ -168,10 +190,12 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
                 formatDateTimeLocalForBackend(formData.registrationDeadline) : undefined;
             
             const examData = {
-                name: formData.name,
+                // Backend expects name (full name) and code_name (short code)
+                name: formData.fullName || formData.name,
+                code_name: formData.name,
                 description: formData.description,
                 price: formData.fee,
-                organization_id: 1, // This should come from logged-in org admin
+                organization_id: orgId,
                 registration_deadline: registrationDeadline,
                 exam_dates: [{
                     date: examDateTime,
@@ -199,6 +223,9 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
         } catch (error: any) {
             console.error("Error creating exam:", error);
             alert(`Error creating exam: ${error.message || "Please try again."}`);
+            if (error?.message?.includes("No organization")) {
+                setErrors(prev => ({ ...prev, organization_id: "Your admin account isn't linked to an organization." } as any));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -237,6 +264,11 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
     return (
         <div className="min-h-screen">
             <div className="max-w-4xl mx-auto p-4 lg:p-6">
+                {orgError && (
+                    <div className="mb-4 p-3 rounded border border-red-200 bg-red-50 text-red-700 text-sm">
+                        {orgError}
+                    </div>
+                )}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Form */}
                     <div className="lg:col-span-2">

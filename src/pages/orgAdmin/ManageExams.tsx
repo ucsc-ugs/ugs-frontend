@@ -27,20 +27,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import CreateExam from "./CreateExam";
-import { getExams, createExam, updateExam, deleteExam, type ExamData, type ExamDate } from "@/lib/examApi";
+import { orgAdminApi } from "@/lib/orgAdminApi";
+import { getExams, createExam, updateExam, deleteExam, updateExamDateStatus, updateExpiredExamStatuses, testConnection, type ExamData, type ExamDate } from "@/lib/examApi";
 
-interface Exam {
-    id: number;
-    name: string;
+interface ExamDateRow {
+    examId: number;
+    examDateId: number;
+    examName: string;
+    code_name?: string;
     university: string;
     date: string;
-    time: string;
-    duration: number; // in minutes
-    maxParticipants: number;
-    currentRegistrations: number;
-    status: "draft" | "published" | "active" | "completed" | "cancelled";
+    location: string;
+    status: "upcoming" | "completed" | "cancelled";
     resultsPublished: boolean;
     createdAt: string;
     updatedAt: string;
@@ -48,24 +49,21 @@ interface Exam {
     price: number;
     organization_id?: number;
     registration_deadline?: string;
-    exam_dates?: ExamDate[];
+    currentRegistrations: number;
+    maxParticipants: number;
 }
 
 const statusOptions = [
     { value: "all", label: "All Status" },
-    { value: "draft", label: "Draft" },
-    { value: "published", label: "Published" },
-    { value: "active", label: "Active" },
+    { value: "upcoming", label: "Upcoming" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" }
 ];
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case "draft": return "bg-gray-100 text-gray-800";
-        case "published": return "bg-blue-100 text-blue-800";
-        case "active": return "bg-green-100 text-green-800";
-        case "completed": return "bg-purple-100 text-purple-800";
+        case "upcoming": return "bg-blue-100 text-blue-800";
+        case "completed": return "bg-green-100 text-green-800";
         case "cancelled": return "bg-red-100 text-red-800";
         default: return "bg-gray-100 text-gray-800";
     }
@@ -73,9 +71,7 @@ const getStatusColor = (status: string) => {
 
 const getStatusIcon = (status: string) => {
     switch (status) {
-        case "draft": return <FileText className="w-3 h-3" />;
-        case "published": return <BookOpen className="w-3 h-3" />;
-        case "active": return <Clock className="w-3 h-3" />;
+        case "upcoming": return <Calendar className="w-3 h-3" />;
         case "completed": return <CheckCircle className="w-3 h-3" />;
         case "cancelled": return <XCircle className="w-3 h-3" />;
         default: return <FileText className="w-3 h-3" />;
@@ -85,17 +81,20 @@ const getStatusIcon = (status: string) => {
 export default function ManageExams() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
-    const [exams, setExams] = useState<Exam[]>([]);
+    const [examDates, setExamDates] = useState<ExamDateRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const [showCreateExam, setShowCreateExam] = useState(false);
-    const [editingExam, setEditingExam] = useState<Exam | null>(null);
+    const [editingExam, setEditingExam] = useState<ExamDateRow | null>(null);
     const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [orgId, setOrgId] = useState<number | null>(null);
+    const [orgError, setOrgError] = useState<string>("");
     
     // Form data for create/edit
     const [formData, setFormData] = useState({
         name: "",
+        code_name: "",
         description: "",
         price: 0,
         organization_id: 1, // This should come from current user's organization
@@ -139,39 +138,176 @@ export default function ManageExams() {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
+    // Function to automatically update expired exam statuses
+    const updateExpiredStatuses = async () => {
+        try {
+            console.log('Checking for expired exam dates...');
+            const result = await updateExpiredExamStatuses();
+            console.log('Auto-update result:', result);
+            
+            if (result.data?.updated_count > 0) {
+                console.log(`Updated ${result.data.updated_count} expired exam dates to completed status`);
+                // Reload exams to reflect the updated statuses
+                loadExams();
+            }
+        } catch (error) {
+            console.error('Failed to update expired exam statuses:', error);
+            // Don't show error to user as this is automatic background process
+        }
+    };
+
     // Load exams on component mount
     useEffect(() => {
         loadExams();
+        // Automatically update expired exam statuses
+        updateExpiredStatuses();
+        (async () => {
+            try {
+                console.log('Fetching organization for current user...');
+                const org = await orgAdminApi.getMyOrganization();
+                console.log('Organization response:', org);
+                
+                const orgIdValue = org?.id ?? org?.organization_id ?? null;
+                console.log('Extracted org ID:', orgIdValue);
+                
+                setOrgId(orgIdValue);
+                setOrgError("");
+                
+                if (!orgIdValue) {
+                    setOrgError("Your account is not linked to any organization. Please contact your administrator.");
+                }
+            } catch (e: any) {
+                console.error('Failed to fetch organization', e);
+                console.error('Error details:', {
+                    status: e.status,
+                    message: e.message,
+                    response: e
+                });
+                setOrgError(e?.message || 'Failed to load your organization');
+            }
+        })();
     }, []);
 
     const loadExams = async () => {
         try {
             setIsLoading(true);
+            
+            // Test connection first
+            console.log('Testing API connection...');
+            try {
+                const testResult = await testConnection();
+                console.log('Connection test successful:', testResult);
+                console.log('User context:', {
+                    user_id: testResult.user_id,
+                    user_name: testResult.user_name,
+                    roles: testResult.roles,
+                    org_admin: testResult.org_admin,
+                    is_org_admin: testResult.is_org_admin
+                });
+                
+                if (!testResult.org_admin) {
+                    setOrgError("Your user account is missing the organization admin relationship. Please contact your system administrator.");
+                    return;
+                }
+            } catch (testError) {
+                console.error('Connection test failed:', testError);
+            }
+            
             const response = await getExams();
-            // Convert API response to component format
-            const examData = response.data.map((exam: ExamData) => ({
-                id: exam.id!,
-                name: exam.name,
-                university: "Organization", // Placeholder
-                date: exam.exam_dates?.[0]?.date || "2025-08-01", // Use first exam date or placeholder
-                time: "10:00", // Placeholder
-                duration: 120, // Placeholder
-                maxParticipants: 100, // Placeholder
-                currentRegistrations: 0, // Placeholder
-                status: "draft" as const, // Default status
-                resultsPublished: false,
-                createdAt: exam.created_at!,
-                updatedAt: exam.updated_at!,
-                description: exam.description,
-                price: Number(exam.price) || 0,
-                organization_id: exam.organization_id,
-                registration_deadline: exam.registration_deadline,
-                exam_dates: exam.exam_dates
-            }));
-            setExams(examData);
+            console.log('getExams response:', response);
+            console.log('response.data:', response.data);
+            if (response.data?.length > 0) {
+                console.log('First exam structure:', response.data[0]);
+            }
+            
+            // Convert API response to exam date rows
+            const examDateRows: ExamDateRow[] = [];
+            
+            response.data.forEach((exam: ExamData) => {
+                console.log('Processing exam:', exam);
+                const codeNameValue = exam.code_name ?? (exam as any).codeName ?? null;
+                console.log('Code name for exam', exam.name, ':', codeNameValue);
+                
+                // If exam has dates, create a row for each date
+                if (exam.exam_dates && exam.exam_dates.length > 0) {
+                    exam.exam_dates.forEach((examDate) => {
+                        examDateRows.push({
+                            examId: exam.id!,
+                            examDateId: examDate.id!,
+                            examName: exam.name,
+                            code_name: codeNameValue,
+                            university: "Organization",
+                            date: examDate.date,
+                            location: examDate.location || "TBD",
+                            status: examDate.status || "upcoming",
+                            resultsPublished: false,
+                            createdAt: exam.created_at!,
+                            updatedAt: exam.updated_at!,
+                            description: exam.description,
+                            price: Number(exam.price) || 0,
+                            organization_id: exam.organization_id,
+                            registration_deadline: exam.registration_deadline,
+                            currentRegistrations: 0,
+                            maxParticipants: 100,
+                        });
+                    });
+                } else {
+                    // If no exam dates, create a single row with placeholder
+                    examDateRows.push({
+                        examId: exam.id!,
+                        examDateId: 0, // No date ID
+                        examName: exam.name,
+                        code_name: codeNameValue,
+                        university: "Organization",
+                        date: "2025-08-01", // Placeholder
+                        location: "TBD",
+                        status: "upcoming",
+                        resultsPublished: false,
+                        createdAt: exam.created_at!,
+                        updatedAt: exam.updated_at!,
+                        description: exam.description,
+                        price: Number(exam.price) || 0,
+                        organization_id: exam.organization_id,
+                        registration_deadline: exam.registration_deadline,
+                        currentRegistrations: 0,
+                        maxParticipants: 100,
+                    });
+                }
+            });
+            
+            setExamDates(examDateRows);
         } catch (err: any) {
             console.error('Load exams error:', err);
-            setError(err.message || 'Failed to load exams');
+            
+            if (err.message?.includes('No organization found for this user')) {
+                setError('Database Setup Required: Your user account is missing the organization admin relationship. Please run the database setup commands shown in the console.');
+                
+                // Show helpful database setup information in console
+                console.group('🔧 Database Setup Required');
+                console.log('Your user account has the org_admin role but is missing the org_admins table relationship.');
+                console.log('');
+                console.log('To fix this, you need to create an org_admins record. Here are the steps:');
+                console.log('');
+                console.log('1. First, identify your user ID and organization ID:');
+                console.log('   SELECT id, name, email FROM users WHERE email = "your-email@domain.com";');
+                console.log('   SELECT id, name FROM organizations LIMIT 5;');
+                console.log('');
+                console.log('2. Create the org_admins relationship:');
+                console.log('   INSERT INTO org_admins (name, user_id, organization_id, created_at, updated_at)');
+                console.log('   VALUES ("Your Name", YOUR_USER_ID, YOUR_ORG_ID, NOW(), NOW());');
+                console.log('');
+                console.log('3. Or use Laravel tinker:');
+                console.log('   $user = App\\Models\\User::where("email", "your-email@domain.com")->first();');
+                console.log('   $org = App\\Models\\Organization::first(); // or specific org');
+                console.log('   App\\Models\\OrgAdmin::create([');
+                console.log('       "name" => $user->name,');
+                console.log('       "user_id" => $user->id,');
+                console.log('       "organization_id" => $org->id');
+                console.log('   ]);');
+                console.groupEnd();
+            } else {
+                setError(err.message || 'Failed to load exams');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -180,6 +316,14 @@ export default function ManageExams() {
     const handleCreateExam = async () => {
         if (!formData.name.trim()) {
             setError("Exam name is required");
+            return;
+        }
+        if (!formData.code_name.trim()) {
+            setError("Exam code name is required");
+            return;
+        }
+        if (!orgId) {
+            setError("Your admin account isn't linked to an organization. Please contact support.");
             return;
         }
 
@@ -228,9 +372,10 @@ export default function ManageExams() {
             
             await createExam({
                 name: formData.name,
+                code_name: formData.code_name,
                 description: formData.description,
                 price: formData.price,
-                organization_id: formData.organization_id,
+                organization_id: orgId,
                 registration_deadline: formData.registration_deadline ? 
                     formatDateTimeForBackend(formData.registration_deadline) : undefined,
                 exam_dates: formData.exam_dates
@@ -244,7 +389,7 @@ export default function ManageExams() {
             // Reload exams after creating
             await loadExams();
             setShowCreateExam(false);
-            setFormData({ name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Create exam error:', err);
@@ -257,6 +402,10 @@ export default function ManageExams() {
     const handleUpdateExam = async () => {
         if (!editingExam || !formData.name.trim()) {
             setError("Exam name is required");
+            return;
+        }
+        if (!formData.code_name.trim()) {
+            setError("Exam code name is required");
             return;
         }
 
@@ -303,8 +452,10 @@ export default function ManageExams() {
                     date: formatDateTimeForBackend(date.date)
                 })));
             
-            await updateExam(editingExam.id, {
+            // TODO: Update to work with exam dates
+            /* await updateExam(editingExam.examId, {
                 name: formData.name,
+                code_name: formData.code_name,
                 description: formData.description,
                 price: formData.price,
                 registration_deadline: formData.registration_deadline ? 
@@ -315,12 +466,12 @@ export default function ManageExams() {
                         ...date,
                         date: formatDateTimeForBackend(date.date)
                     }))
-            });
+            }); */
             
             // Reload exams after updating
             await loadExams();
             setEditingExam(null);
-            setFormData({ name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Update exam error:', err);
@@ -349,18 +500,19 @@ export default function ManageExams() {
         }
     };
 
-    const openEditModal = (exam: Exam) => {
-        setEditingExam(exam);
+    const openEditModal = (examDate: ExamDateRow) => {
+        setEditingExam(examDate);
         setFormData({
-            name: exam.name,
-            description: exam.description || "",
-            price: Number(exam.price) || 0,
-            organization_id: exam.organization_id || 1,
-            registration_deadline: formatDateTimeForInput(exam.registration_deadline || ""),
-            exam_dates: exam.exam_dates?.map(d => ({ 
-                date: formatDateTimeForInput(d.date), 
-                location: d.location || "" 
-            })) || [{ date: "", location: "" }]
+            name: examDate.examName,
+            code_name: examDate.code_name || "",
+            description: examDate.description || "",
+            price: Number(examDate.price) || 0,
+            organization_id: examDate.organization_id || 1,
+            registration_deadline: formatDateTimeForInput(examDate.registration_deadline || ""),
+            exam_dates: [{ 
+                date: formatDateTimeForInput(examDate.date), 
+                location: examDate.location || "" 
+            }]
         });
         setError("");
     };
@@ -369,33 +521,73 @@ export default function ManageExams() {
         setShowCreateExam(false);
         setEditingExam(null);
         setDeleteExamId(null);
-        setFormData({ name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
+        setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
         setError("");
     };
 
-    const filteredExams = useMemo(() => {
-        return exams.filter(exam => {
-            const matchesSearch = exam.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = selectedStatus === "all" || exam.status === selectedStatus;
-
+    const filteredAndGroupedExamDates = useMemo(() => {
+        // First filter the exam dates
+        const filtered = examDates.filter(examDate => {
+            const matchesSearch = examDate.examName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                examDate.code_name?.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = selectedStatus === "all" || examDate.status === selectedStatus;
             return matchesSearch && matchesStatus;
         });
-    }, [exams, searchTerm, selectedStatus]);
+
+        // Group by exam ID and sort by exam name, then by date
+        const grouped = filtered.reduce((acc, examDate) => {
+            const key = examDate.examId;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(examDate);
+            return acc;
+        }, {} as Record<number, ExamDateRow[]>);
+
+        // Sort groups by exam name and sort dates within each group
+        const sortedGroups = Object.entries(grouped)
+            .sort(([, a], [, b]) => a[0].examName.localeCompare(b[0].examName))
+            .map(([examId, dates]) => ({
+                examId: Number(examId),
+                examName: dates[0].examName,
+                code_name: dates[0].code_name,
+                dates: dates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            }));
+
+        return sortedGroups;
+    }, [examDates, searchTerm, selectedStatus]);
 
     const stats = useMemo(() => {
-        const total = exams.length;
-        const published = exams.filter(e => e.status === "published").length;
-        const active = exams.filter(e => e.status === "active").length;
-        const completed = exams.filter(e => e.status === "completed").length;
-        const totalRegistrations = exams.reduce((sum, e) => sum + e.currentRegistrations, 0);
+        const total = examDates.length;
+        const upcoming = examDates.filter(e => e.status === "upcoming").length;
+        const completed = examDates.filter(e => e.status === "completed").length;
+        const totalRegistrations = examDates.reduce((sum, e) => sum + e.currentRegistrations, 0);
 
-        return { total, published, active, completed, totalRegistrations };
-    }, [exams]);
+        return { total, upcoming, completed, totalRegistrations };
+    }, [examDates]);
 
-    const handlePublishResults = (id: number) => {
-        setExams(prev => prev.map(exam =>
-            exam.id === id ? { ...exam, resultsPublished: true } : exam
+    const handlePublishResults = (examDateId: number) => {
+        setExamDates(prev => prev.map(examDate =>
+            examDate.examDateId === examDateId ? { ...examDate, resultsPublished: true } : examDate
         ));
+    };
+
+    const handleStatusChange = async (examDateId: number, newStatus: 'upcoming' | 'completed' | 'cancelled') => {
+        try {
+            setIsSubmitting(true);
+            await updateExamDateStatus(examDateId, newStatus);
+            
+            // Refresh the exams list to get updated data
+            await loadExams();
+            
+            // Show success message (you can add toast notification here)
+            console.log(`Exam date status updated to: ${newStatus}`);
+        } catch (error) {
+            console.error('Failed to update exam date status:', error);
+            setError('Failed to update exam date status');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -427,21 +619,60 @@ export default function ManageExams() {
                             <p className="text-gray-600 text-sm">Create, edit, and manage examination schedules</p>
                         </div>
                     </div>
-                    <Button
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={() => setShowCreateExam(true)}
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create New Exam
-                    </Button>
+                    {orgError && (
+                        <div className="ml-4 p-3 text-sm rounded border border-red-200 bg-red-50 text-red-700">
+                            <div className="font-medium mb-1">Organization Access Required</div>
+                            <div>{orgError}</div>
+                            {orgError.includes('not linked') && (
+                                <div className="mt-2 text-xs">
+                                    Your admin account needs to be associated with an organization to manage exams.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <div className="flex gap-2">
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setShowCreateExam(true)}
+                            disabled={!orgId}
+                            title={!orgId ? "Organization access required to create exams" : "Create New Exam"}
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create New Exam
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={updateExpiredStatuses}
+                            disabled={isLoading}
+                            title="Manually update expired exam dates to completed status"
+                        >
+                            <Clock className="w-4 h-4 mr-2" />
+                            Update Expired Status
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Error Display */}
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                            <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                            <p className="text-red-700 text-sm">{error}</p>
+                        <div className="flex items-start gap-3">
+                            <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="text-red-700 text-sm font-medium mb-1">
+                                    {error.includes('Database Setup Required') ? 'Database Setup Required' : 'Error Loading Exams'}
+                                </p>
+                                <p className="text-red-600 text-sm">
+                                    {error}
+                                </p>
+                                {error.includes('Database Setup Required') && (
+                                    <div className="mt-3 p-3 bg-red-100 rounded border text-xs text-red-800">
+                                        <p className="font-medium mb-1">Quick Fix:</p>
+                                        <p>1. Open browser console (F12) for detailed database setup commands</p>
+                                        <p>2. Run the SQL commands or Laravel tinker commands shown</p>
+                                        <p>3. Refresh this page after creating the database relationship</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -475,7 +706,7 @@ export default function ManageExams() {
                         ) : (
                             <>
                                 {/* Stats Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <Card>
                                 <CardContent className="p-4">
                                     <div className="flex items-center justify-between">
@@ -491,21 +722,10 @@ export default function ManageExams() {
                                 <CardContent className="p-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm text-gray-600">Published</p>
-                                            <p className="text-2xl font-bold text-blue-600">{stats.published}</p>
+                                            <p className="text-sm text-gray-600">Upcoming</p>
+                                            <p className="text-2xl font-bold text-blue-600">{stats.upcoming}</p>
                                         </div>
-                                        <FileText className="w-8 h-8 text-blue-600" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardContent className="p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-gray-600">Active</p>
-                                            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                                        </div>
-                                        <Clock className="w-8 h-8 text-green-600" />
+                                        <Calendar className="w-8 h-8 text-blue-600" />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -567,7 +787,7 @@ export default function ManageExams() {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <FileText className="w-5 h-5" />
-                                    Exams ({filteredExams.length})
+                                    Exam Dates ({filteredAndGroupedExamDates.reduce((total, group) => total + group.dates.length, 0)})
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -575,54 +795,53 @@ export default function ManageExams() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Exam Name</TableHead>
-                                                <TableHead>Date & Time</TableHead>
-                                                <TableHead>Registration Deadline</TableHead>
-                                                <TableHead>Duration</TableHead>
-                                                <TableHead>Price</TableHead>
-                                                <TableHead>Registrations</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>Results</TableHead>
+                                                <TableHead className="text-left">Exam</TableHead>
+                                                <TableHead className="text-left">Date & Location</TableHead>
+                                                <TableHead className="text-left">Registration Deadline</TableHead>
+                                                <TableHead className="text-center">Price</TableHead>
+                                                <TableHead className="text-center">Registrations</TableHead>
+                                                <TableHead className="text-center">Status</TableHead>
                                                 <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {filteredExams.map((exam) => {
-                                                const regStatus = getRegistrationStatus(exam.currentRegistrations, exam.maxParticipants);
-                                                return (
-                                                    <TableRow key={exam.id}>
-                                                        <TableCell>
-                                                            <div className="font-medium">{exam.name}</div>
-                                                            <div className="text-sm text-gray-500">
-                                                                Created: {formatDate(exam.createdAt)}
-                                                            </div>
+                                            {filteredAndGroupedExamDates.map((group) => 
+                                                group.dates.map((examDate, dateIndex) => {
+                                                    const regStatus = getRegistrationStatus(examDate.currentRegistrations, examDate.maxParticipants);
+                                                    const isFirstInGroup = dateIndex === 0;
+                                                    return (
+                                                        <TableRow key={`${examDate.examId}-${examDate.examDateId}`} className={isFirstInGroup && dateIndex > 0 ? "border-t-2 border-gray-200" : ""}>
+                                                        <TableCell className={isFirstInGroup ? "" : "border-l-4 border-gray-100"}>
+                                                            {isFirstInGroup ? (
+                                                                <div>
+                                                                    <div className="font-medium flex items-center gap-2">
+                                                                        <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-800">{examDate.code_name || '-'}</span>
+                                                                        <span>{examDate.examName}</span>
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-500">
+                                                                        Created: {formatDate(examDate.createdAt)}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="pl-4">
+                                                                    {/* Empty for grouped rows */}
+                                                                </div>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="flex items-center gap-2">
                                                                 <Calendar className="w-4 h-4 text-gray-400" />
                                                                 <div>
-                                                                    {exam.exam_dates && exam.exam_dates.length > 0 ? (
-                                                                        <div>
-                                                                            <div className="font-medium">{formatDate(exam.exam_dates[0].date)}</div>
-                                                                            <div className="text-sm text-gray-500">
-                                                                                {new Date(exam.exam_dates[0].date).toLocaleTimeString('en-US', { 
-                                                                                    hour: '2-digit', 
-                                                                                    minute: '2-digit', 
-                                                                                    hour12: true 
-                                                                                })}
-                                                                            </div>
-                                                                            {exam.exam_dates[0].location && (
-                                                                                <div className="text-xs text-gray-500">{exam.exam_dates[0].location}</div>
-                                                                            )}
-                                                                            {exam.exam_dates.length > 1 && (
-                                                                                <div className="text-xs text-blue-600">+{exam.exam_dates.length - 1} more</div>
-                                                                            )}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div>
-                                                                            <div className="font-medium">{formatDate(exam.date)}</div>
-                                                                            <div className="text-sm text-gray-500">{exam.time}</div>
-                                                                        </div>
+                                                                    <div className="font-medium">{formatDate(examDate.date)}</div>
+                                                                    <div className="text-sm text-gray-500">
+                                                                        {new Date(examDate.date).toLocaleTimeString('en-US', { 
+                                                                            hour: '2-digit', 
+                                                                            minute: '2-digit', 
+                                                                            hour12: true 
+                                                                        })}
+                                                                    </div>
+                                                                    {examDate.location && examDate.location !== "TBD" && (
+                                                                        <div className="text-xs text-gray-500">📍 {examDate.location}</div>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -631,13 +850,13 @@ export default function ManageExams() {
                                                             <div className="flex items-center gap-2">
                                                                 <Clock className="w-4 h-4 text-gray-400" />
                                                                 <div>
-                                                                    {exam.registration_deadline ? (
+                                                                    {examDate.registration_deadline ? (
                                                                         <div>
                                                                             <div className="font-medium text-sm">
-                                                                                {formatDate(exam.registration_deadline)}
+                                                                                {formatDate(examDate.registration_deadline)}
                                                                             </div>
                                                                             <div className="text-xs text-gray-500">
-                                                                                {new Date(exam.registration_deadline).toLocaleTimeString('en-US', { 
+                                                                                {new Date(examDate.registration_deadline).toLocaleTimeString('en-US', { 
                                                                                     hour: '2-digit', 
                                                                                     minute: '2-digit', 
                                                                                     hour12: true 
@@ -650,43 +869,29 @@ export default function ManageExams() {
                                                                 </div>
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <div className="text-sm">{exam.duration} min</div>
-                                                        </TableCell>
-                                                        <TableCell>
+                                                        <TableCell className="text-center">
                                                             <div className="text-sm font-medium">
-                                                                ${exam.price.toFixed(2)}
+                                                                Rs. {examDate.price.toFixed(2)}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <div className={`flex items-center gap-1 ${regStatus.color}`}>
+                                                        <TableCell className="text-center">
+                                                            <div className={`flex items-center justify-center gap-1 ${regStatus.color}`}>
                                                                 {regStatus.icon}
                                                                 <span className="font-medium">
-                                                                    {exam.currentRegistrations}/{exam.maxParticipants}
+                                                                    {examDate.currentRegistrations}/{examDate.maxParticipants}
                                                                 </span>
                                                             </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                {Math.round((exam.currentRegistrations / exam.maxParticipants) * 100)}% filled
+                                                            <div className="text-xs text-gray-500 text-center">
+                                                                {Math.round((examDate.currentRegistrations / examDate.maxParticipants) * 100)}% filled
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <Badge className={`${getStatusColor(exam.status)} flex items-center gap-1`}>
-                                                                {getStatusIcon(exam.status)}
-                                                                <span className="capitalize">{exam.status}</span>
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {exam.resultsPublished ? (
-                                                                <Badge className="bg-green-100 text-green-800">
-                                                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                                                    Published
+                                                        <TableCell className="text-center">
+                                                            <div className="flex justify-center">
+                                                                <Badge className={`${getStatusColor(examDate.status)} flex items-center gap-1`}>
+                                                                    {getStatusIcon(examDate.status)}
+                                                                    <span className="capitalize">{examDate.status}</span>
                                                                 </Badge>
-                                                            ) : (
-                                                                <Badge className="bg-gray-100 text-gray-800">
-                                                                    <XCircle className="w-3 h-3 mr-1" />
-                                                                    Pending
-                                                                </Badge>
-                                                            )}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <Popover>
@@ -695,8 +900,30 @@ export default function ManageExams() {
                                                                         <MoreVertical className="w-4 h-4" />
                                                                     </Button>
                                                                 </PopoverTrigger>
-                                                                <PopoverContent className="w-48" align="end">
-                                                                    <div className="flex flex-col space-y-1">
+                                                                <PopoverContent className="w-56" align="end">
+                                                                    <div className="flex flex-col space-y-3">
+                                                                        <div>
+                                                                            <label className="text-sm font-medium text-gray-700 mb-1 block">Change Status</label>
+                                                                            <Select 
+                                                                                value={examDate.status} 
+                                                                                onValueChange={(value) => 
+                                                                                    handleStatusChange(examDate.examDateId, value as 'upcoming' | 'completed' | 'cancelled')
+                                                                                }
+                                                                            >
+                                                                                <SelectTrigger className="w-full">
+                                                                                    <SelectValue />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <SelectItem value="upcoming">📅 Upcoming</SelectItem>
+
+                                                                                    <SelectItem value="completed">✅ Completed</SelectItem>
+                                                                                    <SelectItem value="cancelled">❌ Cancelled</SelectItem>
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </div>
+                                                                        
+                                                                        <hr className="border-gray-200" />
+                                                                        
                                                                         <Button variant="ghost" size="sm" className="justify-start">
                                                                             <Eye className="w-4 h-4 mr-2" />
                                                                             View Details
@@ -705,7 +932,7 @@ export default function ManageExams() {
                                                                             variant="ghost" 
                                                                             size="sm" 
                                                                             className="justify-start"
-                                                                            onClick={() => openEditModal(exam)}
+                                                                            onClick={() => openEditModal(examDate)}
                                                                         >
                                                                             <Edit className="w-4 h-4 mr-2" />
                                                                             Edit Exam
@@ -718,12 +945,12 @@ export default function ManageExams() {
                                                                             <Download className="w-4 h-4 mr-2" />
                                                                             Export Data
                                                                         </Button>
-                                                                        {exam.status === "completed" && !exam.resultsPublished && (
+                                                                        {examDate.status === "completed" && !examDate.resultsPublished && (
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="sm"
                                                                                 className="justify-start text-green-600"
-                                                                                onClick={() => handlePublishResults(exam.id)}
+                                                                                onClick={() => handlePublishResults(examDate.examDateId)}
                                                                             >
                                                                                 <CheckCircle className="w-4 h-4 mr-2" />
                                                                                 Publish Results
@@ -733,7 +960,7 @@ export default function ManageExams() {
                                                                             variant="ghost"
                                                                             size="sm"
                                                                             className="justify-start text-red-600"
-                                                                            onClick={() => setDeleteExamId(exam.id)}
+                                                                            onClick={() => setDeleteExamId(examDate.examDateId)}
                                                                         >
                                                                             <Trash2 className="w-4 h-4 mr-2" />
                                                                             Delete Exam
@@ -744,7 +971,8 @@ export default function ManageExams() {
                                                         </TableCell>
                                                     </TableRow>
                                                 );
-                                            })}
+                                                })
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </div>
@@ -752,7 +980,7 @@ export default function ManageExams() {
                         </Card>
 
                         {/* Empty State */}
-                        {filteredExams.length === 0 && (
+                        {filteredAndGroupedExamDates.length === 0 && (
                             <Card className="mt-6">
                                 <CardContent className="text-center py-12">
                                     <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -800,6 +1028,17 @@ export default function ManageExams() {
                                             value={formData.name}
                                             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                                             placeholder="Enter exam name"
+                                            className="mt-1"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="examCodeName">Exam Code Name</Label>
+                                        <Input
+                                            id="examCodeName"
+                                            value={formData.code_name}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, code_name: e.target.value }))}
+                                            placeholder="e.g., GCAT, GCCT"
                                             className="mt-1"
                                         />
                                     </div>
