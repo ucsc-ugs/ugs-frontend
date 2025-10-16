@@ -93,6 +93,7 @@ export default function SetAnnouncements() {
     const [userId, setUserId] = useState<string | null>(null);
 
     // Fetch announcements from backend
+    
     const fetchAnnouncements = async () => {
         try {
             const response = await axios.get(`${API_URL}/api/announcements`);
