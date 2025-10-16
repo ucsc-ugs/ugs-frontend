@@ -38,7 +38,7 @@ export default function ManageOrganizations() {
     try {
       setIsLoading(true);
       const response = await getOrganizations();
-      setOrganizations(response.data || []);
+  setOrganizations(response.data as any || []);
     } catch (err: any) {
       console.error('Load organizations error:', err);
       setError(err.message || 'Failed to load organizations');
