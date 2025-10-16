@@ -1,5 +1,5 @@
 // src/pages/orgAdmin/FinanceDashboard.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     DollarSign,
     TrendingUp,
@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PieChart } from "@/components/ui/charts/pie-chart";
 import { BarChart } from "@/components/ui/charts/bar-chart";
+import { getAuthToken } from "@/lib/api";
+import axios from "axios";
 
 interface FinanceData {
     id: number;
@@ -32,114 +34,75 @@ interface FinanceData {
     university: string;
 }
 
-const mockFinanceData: FinanceData[] = [
-    {
-        id: 1,
-        examName: "General Certificate of Competency Test (GCCT)",
-        examDate: "2025-07-15",
-        totalRegistrations: 423,
-        paidRegistrations: 387,
-        unpaidRegistrations: 36,
-        examFee: 2500,
-        totalRevenue: 1057500,
-        paidRevenue: 967500,
-        unpaidRevenue: 90000,
-        university: "University of Colombo School of Computing"
-    },
-    {
-        id: 2,
-        examName: "BIT Aptitude Test",
-        examDate: "2025-07-20",
-        totalRegistrations: 190,
-        paidRegistrations: 175,
-        unpaidRegistrations: 15,
-        examFee: 3000,
-        totalRevenue: 570000,
-        paidRevenue: 525000,
-        unpaidRevenue: 45000,
-        university: "University of Colombo School of Computing"
-    },
-    {
-        id: 3,
-        examName: "Software Engineering Assessment",
-        examDate: "2025-07-25",
-        totalRegistrations: 87,
-        paidRegistrations: 82,
-        unpaidRegistrations: 5,
-        examFee: 4500,
-        totalRevenue: 391500,
-        paidRevenue: 369000,
-        unpaidRevenue: 22500,
-        university: "University of Colombo School of Computing"
-    },
-    {
-        id: 4,
-        examName: "Computer Science Entrance Exam",
-        examDate: "2025-06-30",
-        totalRegistrations: 298,
-        paidRegistrations: 298,
-        unpaidRegistrations: 0,
-        examFee: 2000,
-        totalRevenue: 596000,
-        paidRevenue: 596000,
-        unpaidRevenue: 0,
-        university: "University of Colombo School of Computing"
-    },
-    {
-        id: 5,
-        examName: "Information Systems Aptitude Test",
-        examDate: "2025-08-10",
-        totalRegistrations: 45,
-        paidRegistrations: 38,
-        unpaidRegistrations: 7,
-        examFee: 3500,
-        totalRevenue: 157500,
-        paidRevenue: 133000,
-        unpaidRevenue: 24500,
-        university: "University of Colombo School of Computing"
-    },
-    {
-        id: 6,
-        examName: "Data Science Certification Exam",
-        examDate: "2025-08-05",
-        totalRegistrations: 312,
-        paidRegistrations: 289,
-        unpaidRegistrations: 23,
-        examFee: 5000,
-        totalRevenue: 1560000,
-        paidRevenue: 1445000,
-        unpaidRevenue: 115000,
-        university: "University of Colombo School of Computing"
-    }
-];
+const API_BASE_URL = 'http://localhost:8000/api';
 
-const examOptions = [
-    { value: "all", label: "All Exams" },
-    ...mockFinanceData.map(exam => ({
-        value: exam.id.toString(),
-        label: exam.examName
-    }))
-];
+const useFinanceData = (examId: string, month: string) => {
+    const [data, setData] = useState<FinanceData[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const token = getAuthToken();
+                const params: any = {};
+                if (examId && examId !== 'all') params.exam_id = examId;
+                if (month) params.month = month;
+
+                const res = await axios.get(`${API_BASE_URL}/finance/overview`, {
+                    headers: {
+                        Accept: 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    params,
+                });
+                setData(res.data?.data ?? []);
+            } catch (e: any) {
+                setError(e.response?.data?.message || e.message || 'Failed to load finance data');
+                setData([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [examId, month]);
+
+    return { data, loading, error };
+};
+
+const useExamOptions = (data: FinanceData[]) => {
+    return useMemo(() => {
+        return [
+            { value: 'all', label: 'All Exams' },
+            ...data.map(exam => ({ value: exam.id.toString(), label: exam.examName }))
+        ];
+    }, [data]);
+};
 
 export default function FinanceDashboard() {
     const [selectedExam, setSelectedExam] = useState("all");
     const [selectedMonth, setSelectedMonth] = useState("");
     const [chartType, setChartType] = useState<"pie" | "bar">("bar");
 
-    const filteredData = useMemo(() => {
-        return mockFinanceData.filter(exam => {
-            const matchesExam = selectedExam === "all" || exam.id.toString() === selectedExam;
+    const { data: financeData, loading, error } = useFinanceData(selectedExam, selectedMonth);
+    const examOptions = useExamOptions(financeData);
 
+    const filteredData = useMemo(() => {
+        // Backend already applies filters; this is a safety net if needed.
+        return financeData.filter(exam => {
+            const matchesExam = selectedExam === 'all' || exam.id.toString() === selectedExam;
             let matchesMonth = true;
             if (selectedMonth) {
-                const examDate = new Date(exam.examDate);
-                const examMonth = examDate.toISOString().slice(0, 7); // YYYY-MM format
+                const examDate = exam.examDate ? new Date(exam.examDate) : null;
+                const examMonth = examDate ? examDate.toISOString().slice(0, 7) : '';
                 matchesMonth = examMonth === selectedMonth;
             }
-
             return matchesExam && matchesMonth;
         });
-    }, [selectedExam, selectedMonth]);
+    }, [financeData, selectedExam, selectedMonth]);
 
     const summary = useMemo(() => {
         const totalExams = filteredData.length;
@@ -320,7 +283,7 @@ export default function FinanceDashboard() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600">Total Exams</p>
-                                    <p className="text-2xl font-bold text-gray-900">{summary.totalExams}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{loading ? '...' : summary.totalExams}</p>
                                 </div>
                                 <BookOpen className="w-8 h-8 text-blue-600" />
                             </div>
@@ -332,7 +295,7 @@ export default function FinanceDashboard() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600">Total Students</p>
-                                    <p className="text-2xl font-bold text-gray-900">{summary.totalStudents.toLocaleString()}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{loading ? '...' : summary.totalStudents.toLocaleString()}</p>
                                     <p className="text-xs text-green-600">{summary.paymentRate}% paid</p>
                                 </div>
                                 <Users className="w-8 h-8 text-purple-600" />
@@ -345,7 +308,7 @@ export default function FinanceDashboard() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600">Total Revenue</p>
-                                    <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalRevenue)}</p>
+                                    <p className="text-2xl font-bold text-green-600">{loading ? '...' : formatCurrency(summary.totalRevenue)}</p>
                                     <p className="text-xs text-gray-500">Collected</p>
                                 </div>
                                 <DollarSign className="w-8 h-8 text-green-600" />
@@ -358,7 +321,7 @@ export default function FinanceDashboard() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600">Pending Revenue</p>
-                                    <p className="text-2xl font-bold text-orange-600">{formatCurrency(summary.pendingRevenue)}</p>
+                                    <p className="text-2xl font-bold text-orange-600">{loading ? '...' : formatCurrency(summary.pendingRevenue)}</p>
                                     <p className="text-xs text-gray-500">{summary.totalUnpaid} unpaid</p>
                                 </div>
                                 <TrendingUp className="w-8 h-8 text-orange-600" />
@@ -496,7 +459,13 @@ export default function FinanceDashboard() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredData.map((exam) => {
+                                    {error ? (
+                                        <TableRow><TableCell colSpan={8} className="text-center text-red-600">{error}</TableCell></TableRow>
+                                    ) : loading ? (
+                                        <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
+                                    ) : filteredData.length === 0 ? (
+                                        <TableRow><TableCell colSpan={8} className="text-center">No data</TableCell></TableRow>
+                                    ) : filteredData.map((exam) => {
                                         const paymentRate = (exam.paidRegistrations / exam.totalRegistrations) * 100;
                                         return (
                                             <TableRow key={exam.id}>
