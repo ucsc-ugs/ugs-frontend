@@ -3,24 +3,18 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import {
     Search,
-    Plus,
-    Edit,
-    Trash2,
     Eye,
     Users,
-    MoreVertical,
     ChevronLeft,
     ChevronRight,
     BookUser,
     Globe,
     Flag,
-    University,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // --- STEP 1: Define TypeScript interfaces to match the API response ---
 // These types describe the structure of the data coming from your Laravel backend.
@@ -88,6 +82,13 @@ export default function ManageStudents() {
     const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(1);
 
+    // Detail modal state
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<StudentUser | null>(null);
+    const [detailData, setDetailData] = useState<any | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
+
     // --- STEP 3: Create a function to fetch data from the API ---
     // useCallback ensures this function is not recreated on every render, which is good practice.
     const fetchStudents = useCallback(async (currentPage: number, query: string) => {
@@ -124,22 +125,26 @@ export default function ManageStudents() {
         fetchStudents(page, searchTerm);
     }, [page, searchTerm, fetchStudents]);
 
-    // --- Functions for actions (delete, edit, etc.) ---
-    const handleDeleteStudent = async (id: number) => {
-        if (window.confirm("Are you sure you want to delete this student? This action is permanent.")) {
-            try {
-                await apiClient.delete(`/students/${id}`);
-                // Refresh the list after successful deletion
-                fetchStudents(page, searchTerm);
-            } catch (err: any) {
-                console.error("Failed to delete student:", err);
-                alert(err.response?.data?.message || "Failed to delete student.");
-            }
+    // --- Actions: Org Admin is view-only ---
+    const handleViewStudent = async (student: StudentUser) => {
+        setSelectedStudent(student);
+        setDetailOpen(true);
+        setDetailLoading(true);
+        setDetailError(null);
+        setDetailData(null);
+        try {
+            const res = await apiClient.get(`/students/${student.id}`);
+            // API returns { message, data }
+            const data = res.data?.data ?? student;
+            setDetailData(data);
+        } catch (e: any) {
+            console.error('Failed to fetch student detail', e);
+            setDetailError(e.response?.data?.message || e.message || 'Failed to load student details');
+            // fallback to row data so modal still shows something
+            setDetailData(student);
+        } finally {
+            setDetailLoading(false);
         }
-    };
-
-    const handleEditStudent = (student: StudentUser) => {
-        console.log("TODO: Open edit modal for student:", student);
     };
     
     const formatDate = (dateString: string) => {
@@ -171,14 +176,10 @@ export default function ManageStudents() {
                             <Users className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Manage Students</h1>
-                            <p className="text-gray-600 text-sm">View, add, and manage students in the organization</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+                            <p className="text-gray-600 text-sm">View students registered for exams in your organization</p>
                         </div>
                     </div>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add New Student
-                    </Button>
                 </div>
 
                 {/* Stats Cards - Updated for Students */}
@@ -231,7 +232,7 @@ export default function ManageStudents() {
                     </CardContent>
                 </Card>
 
-                {/* Students Table - STEP 4: Update table to display student data */}
+                {/* Students Table - View-only for Org Admin */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -247,8 +248,8 @@ export default function ManageStudents() {
                                         <TableHead>Student</TableHead>
                                         <TableHead>Passport / NIC</TableHead>
                                         <TableHead>Type</TableHead>
-                                        <TableHead>Organization</TableHead>
                                         <TableHead>Exams</TableHead>
+                                        <TableHead>Joined</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -281,27 +282,16 @@ export default function ManageStudents() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <University className="w-4 h-4 text-gray-400" />
-                                                        {typeof user.organization === 'string' ? (user.organization || 'N/A') : (user.organization?.name ?? 'N/A')}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
                                                     <div className="text-sm">{user.exams_count ?? user.exams?.length ?? 0} Registered</div>
                                                 </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm">{formatDate(user.created_at)}</div>
+                                                </TableCell>
                                                 <TableCell className="text-right">
-                                                   <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="ghost" size="sm"><MoreVertical className="w-4 h-4" /></Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-48" align="end">
-                                                            <div className="flex flex-col space-y-1">
-                                                                <Button variant="ghost" size="sm" className="justify-start"><Eye className="w-4 h-4 mr-2" />View Profile</Button>
-                                                                <Button variant="ghost" size="sm" className="justify-start" onClick={() => handleEditStudent(user)}><Edit className="w-4 h-4 mr-2" />Edit Student</Button>
-                                                                <Button variant="ghost" size="sm" className="justify-start text-red-600" onClick={() => handleDeleteStudent(user.id)}><Trash2 className="w-4 h-4 mr-2" />Delete Student</Button>
-                                                            </div>
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <Button variant="outline" size="sm" onClick={() => handleViewStudent(user)}>
+                                                        <Eye className="w-4 h-4 mr-2" />
+                                                        View
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -329,6 +319,97 @@ export default function ManageStudents() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Student Detail Modal */}
+                {detailOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden">
+                            <div className="px-6 py-4 border-b">
+                                <h3 className="text-lg font-semibold">Student Details</h3>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                {detailLoading ? (
+                                    <div className="text-center text-gray-600">Loading details...</div>
+                                ) : detailError ? (
+                                    <div className="text-center text-red-600">{detailError}</div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <div className="text-sm text-gray-500">Name</div>
+                                                <div className="font-medium">{detailData?.name}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Email</div>
+                                                <div className="font-medium">{detailData?.email}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Passport / NIC</div>
+                                                <div className="font-medium">{detailData?.student?.passport_nic ?? detailData?.nic ?? '—'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Type</div>
+                                                <div>
+                                                    {((detailData?.local ?? detailData?.student?.local) !== undefined) ? (
+                                                        <Badge className={(detailData?.local ?? detailData?.student?.local) ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}>
+                                                            {(detailData?.local ?? detailData?.student?.local) ? 'Local' : 'Foreign'}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-gray-100 text-gray-700">N/A</Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Joined</div>
+                                                <div className="font-medium">{detailData?.created_at ? formatDate(detailData.created_at) : '—'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Exam Registrations</div>
+                                                <div className="font-medium">{detailData?.exams_count ?? detailData?.exams?.length ?? 0}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Exams list from API with status */}
+                                        {Array.isArray(detailData?.exam_registrations) && detailData.exam_registrations.length > 0 && (
+                                            <div className="pt-2">
+                                                <div className="text-sm text-gray-500 mb-2">Registered Exams</div>
+                                                <div className="border rounded-md overflow-hidden">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Exam</TableHead>
+                                                                <TableHead>Code</TableHead>
+                                                                <TableHead>Exam Date</TableHead>
+                                                                <TableHead>Status</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {detailData.exam_registrations.map((ex: any, idx: number) => (
+                                                                <TableRow key={ex.id ?? idx}>
+                                                                    <TableCell className="whitespace-nowrap">{ex.name ?? ex.title ?? `Exam #${ex.id ?? idx + 1}`}</TableCell>
+                                                                    <TableCell className="whitespace-nowrap text-gray-700">{ex.code ?? '—'}</TableCell>
+                                                                    <TableCell className="whitespace-nowrap text-gray-700">{ex.exam_date ? new Date(ex.exam_date).toLocaleDateString() : '—'}</TableCell>
+                                                                    <TableCell>
+                                                                        <Badge className={ex.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                                                            {ex.completed ? 'Completed' : 'Upcoming'}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <div className="px-6 py-4 border-t flex justify-end">
+                                <Button variant="outline" onClick={() => { setDetailOpen(false); setSelectedStudent(null); setDetailData(null); }}>Close</Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
