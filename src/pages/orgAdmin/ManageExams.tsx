@@ -47,6 +47,7 @@ interface Exam {
     description?: string;
     price: number;
     organization_id?: number;
+    registration_deadline?: string;
     exam_dates?: ExamDate[];
 }
 
@@ -98,8 +99,45 @@ export default function ManageExams() {
         description: "",
         price: 0,
         organization_id: 1, // This should come from current user's organization
+        registration_deadline: "",
         exam_dates: [{ date: "", location: "" }]
     });
+
+    // Helper function to format datetime-local value for backend (Y-m-d\TH:i format)
+    const formatDateTimeForBackend = (datetimeLocal: string): string => {
+        // Remove seconds if present (datetime-local might include them)
+        // Format: YYYY-MM-DDTHH:mm:ss -> YYYY-MM-DDTHH:mm
+        return datetimeLocal.substring(0, 16);
+    };
+
+    // Helper function to convert backend datetime to datetime-local format
+    const formatDateTimeForInput = (backendDateTime: string): string => {
+        if (!backendDateTime) return "";
+        
+        // Convert ISO string or backend format to datetime-local format
+        const date = new Date(backendDateTime);
+        
+        // Format as YYYY-MM-DDTHH:mm for datetime-local input
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    // Helper function to get current datetime in local format for min attribute
+    const getCurrentDateTimeLocal = (): string => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
 
     // Load exams on component mount
     useEffect(() => {
@@ -127,6 +165,7 @@ export default function ManageExams() {
                 description: exam.description,
                 price: Number(exam.price) || 0,
                 organization_id: exam.organization_id,
+                registration_deadline: exam.registration_deadline,
                 exam_dates: exam.exam_dates
             }));
             setExams(examData);
@@ -144,20 +183,68 @@ export default function ManageExams() {
             return;
         }
 
+        // Validate that exam dates are not in the past
+        const now = new Date();
+        for (const examDate of formData.exam_dates) {
+            if (examDate.date.trim() !== "") {
+                const examDateTime = new Date(examDate.date);
+                if (examDateTime <= now) {
+                    setError("Exam dates cannot be in the past");
+                    return;
+                }
+            }
+        }
+
+        // Validate that registration deadline is not in the past
+        if (formData.registration_deadline) {
+            const deadlineDate = new Date(formData.registration_deadline);
+            if (deadlineDate <= now) {
+                setError("Registration deadline cannot be in the past");
+                return;
+            }
+        }
+
+        // Validate registration deadline against exam dates
+        if (formData.registration_deadline && formData.exam_dates.length > 0) {
+            const deadlineDate = new Date(formData.registration_deadline);
+            const firstExamDate = new Date(formData.exam_dates[0].date);
+            
+            if (deadlineDate >= firstExamDate) {
+                setError("Registration deadline must be before the first exam date");
+                return;
+            }
+        }
+
         try {
             setIsSubmitting(true);
+            console.log("Creating exam with data:", formData);
+            console.log("Registration deadline format:", formData.registration_deadline ? formatDateTimeForBackend(formData.registration_deadline) : undefined);
+            console.log("Exam dates format:", formData.exam_dates
+                .filter(date => date.date.trim() !== "")
+                .map(date => ({
+                    ...date,
+                    date: formatDateTimeForBackend(date.date)
+                })));
+            
             await createExam({
                 name: formData.name,
                 description: formData.description,
                 price: formData.price,
                 organization_id: formData.organization_id,
-                exam_dates: formData.exam_dates.filter(date => date.date.trim() !== "")
+                registration_deadline: formData.registration_deadline ? 
+                    formatDateTimeForBackend(formData.registration_deadline) : undefined,
+                exam_dates: formData.exam_dates
+                    .filter(date => date.date.trim() !== "")
+                    .map(date => ({
+                        ...date,
+                        date: formatDateTimeForBackend(date.date)
+                    }))
             });
             
             // Reload exams after creating
             await loadExams();
             setShowCreateExam(false);
-            setFormData({ name: "", description: "", price: 0, organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Create exam error:', err);
@@ -173,19 +260,67 @@ export default function ManageExams() {
             return;
         }
 
+        // Validate that exam dates are not in the past
+        const now = new Date();
+        for (const examDate of formData.exam_dates) {
+            if (examDate.date.trim() !== "") {
+                const examDateTime = new Date(examDate.date);
+                if (examDateTime <= now) {
+                    setError("Exam dates cannot be in the past");
+                    return;
+                }
+            }
+        }
+
+        // Validate that registration deadline is not in the past
+        if (formData.registration_deadline) {
+            const deadlineDate = new Date(formData.registration_deadline);
+            if (deadlineDate <= now) {
+                setError("Registration deadline cannot be in the past");
+                return;
+            }
+        }
+
+        // Validate registration deadline against exam dates
+        if (formData.registration_deadline && formData.exam_dates.length > 0) {
+            const deadlineDate = new Date(formData.registration_deadline);
+            const firstExamDate = new Date(formData.exam_dates[0].date);
+            
+            if (deadlineDate >= firstExamDate) {
+                setError("Registration deadline must be before the first exam date");
+                return;
+            }
+        }
+
         try {
             setIsSubmitting(true);
+            console.log("Updating exam with data:", formData);
+            console.log("Registration deadline format:", formData.registration_deadline ? formatDateTimeForBackend(formData.registration_deadline) : undefined);
+            console.log("Exam dates format:", formData.exam_dates
+                .filter(date => date.date.trim() !== "")
+                .map(date => ({
+                    ...date,
+                    date: formatDateTimeForBackend(date.date)
+                })));
+            
             await updateExam(editingExam.id, {
                 name: formData.name,
                 description: formData.description,
                 price: formData.price,
-                exam_dates: formData.exam_dates.filter(date => date.date.trim() !== "")
+                registration_deadline: formData.registration_deadline ? 
+                    formatDateTimeForBackend(formData.registration_deadline) : undefined,
+                exam_dates: formData.exam_dates
+                    .filter(date => date.date.trim() !== "")
+                    .map(date => ({
+                        ...date,
+                        date: formatDateTimeForBackend(date.date)
+                    }))
             });
             
             // Reload exams after updating
             await loadExams();
             setEditingExam(null);
-            setFormData({ name: "", description: "", price: 0, organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Update exam error:', err);
@@ -221,7 +356,11 @@ export default function ManageExams() {
             description: exam.description || "",
             price: Number(exam.price) || 0,
             organization_id: exam.organization_id || 1,
-            exam_dates: exam.exam_dates?.map(d => ({ date: d.date, location: d.location || "" })) || [{ date: "", location: "" }]
+            registration_deadline: formatDateTimeForInput(exam.registration_deadline || ""),
+            exam_dates: exam.exam_dates?.map(d => ({ 
+                date: formatDateTimeForInput(d.date), 
+                location: d.location || "" 
+            })) || [{ date: "", location: "" }]
         });
         setError("");
     };
@@ -230,7 +369,7 @@ export default function ManageExams() {
         setShowCreateExam(false);
         setEditingExam(null);
         setDeleteExamId(null);
-        setFormData({ name: "", description: "", price: 0, organization_id: 1, exam_dates: [{ date: "", location: "" }] });
+        setFormData({ name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
         setError("");
     };
 
@@ -438,6 +577,7 @@ export default function ManageExams() {
                                             <TableRow>
                                                 <TableHead>Exam Name</TableHead>
                                                 <TableHead>Date & Time</TableHead>
+                                                <TableHead>Registration Deadline</TableHead>
                                                 <TableHead>Duration</TableHead>
                                                 <TableHead>Price</TableHead>
                                                 <TableHead>Registrations</TableHead>
@@ -464,8 +604,15 @@ export default function ManageExams() {
                                                                     {exam.exam_dates && exam.exam_dates.length > 0 ? (
                                                                         <div>
                                                                             <div className="font-medium">{formatDate(exam.exam_dates[0].date)}</div>
+                                                                            <div className="text-sm text-gray-500">
+                                                                                {new Date(exam.exam_dates[0].date).toLocaleTimeString('en-US', { 
+                                                                                    hour: '2-digit', 
+                                                                                    minute: '2-digit', 
+                                                                                    hour12: true 
+                                                                                })}
+                                                                            </div>
                                                                             {exam.exam_dates[0].location && (
-                                                                                <div className="text-sm text-gray-500">{exam.exam_dates[0].location}</div>
+                                                                                <div className="text-xs text-gray-500">{exam.exam_dates[0].location}</div>
                                                                             )}
                                                                             {exam.exam_dates.length > 1 && (
                                                                                 <div className="text-xs text-blue-600">+{exam.exam_dates.length - 1} more</div>
@@ -476,6 +623,29 @@ export default function ManageExams() {
                                                                             <div className="font-medium">{formatDate(exam.date)}</div>
                                                                             <div className="text-sm text-gray-500">{exam.time}</div>
                                                                         </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="w-4 h-4 text-gray-400" />
+                                                                <div>
+                                                                    {exam.registration_deadline ? (
+                                                                        <div>
+                                                                            <div className="font-medium text-sm">
+                                                                                {formatDate(exam.registration_deadline)}
+                                                                            </div>
+                                                                            <div className="text-xs text-gray-500">
+                                                                                {new Date(exam.registration_deadline).toLocaleTimeString('en-US', { 
+                                                                                    hour: '2-digit', 
+                                                                                    minute: '2-digit', 
+                                                                                    hour12: true 
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-sm text-gray-400">Not set</div>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -660,6 +830,20 @@ export default function ManageExams() {
                                         />
                                     </div>
 
+                                    <div>
+                                        <Label htmlFor="registrationDeadline">Registration Deadline</Label>
+                                        <Input
+                                            id="registrationDeadline"
+                                            type="datetime-local"
+                                            value={formData.registration_deadline}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, registration_deadline: e.target.value }))}
+                                            min={getCurrentDateTimeLocal()}
+                                            max={formData.exam_dates.length > 0 && formData.exam_dates[0].date ? formData.exam_dates[0].date : undefined}
+                                            className="mt-1"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Must be before the exam date and cannot be in the past</p>
+                                    </div>
+
                                     {/* Exam Dates Section */}
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
@@ -689,6 +873,7 @@ export default function ManageExams() {
                                                             newExamDates[index] = { ...newExamDates[index], date: e.target.value };
                                                             setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
                                                         }}
+                                                        min={getCurrentDateTimeLocal()}
                                                         className="text-sm"
                                                     />
                                                 </div>
