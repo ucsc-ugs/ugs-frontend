@@ -14,6 +14,24 @@ interface Announcement {
 }
 
 const Announcements: React.FC = () => {
+    useEffect(() => {
+        const fetchAnnouncements = async () => {
+            try {
+                const response = await fetch("http://localhost:8000/api/announcements");
+                const data = await response.json();
+                const filtered = data.filter((a: Announcement) => a.audience === "all");
+                setAnnouncements(filtered);
+                setError(null);
+            } catch {
+                setError("Failed to fetch announcements.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAnnouncements();
+        const interval = setInterval(fetchAnnouncements, 30000); // every 30 seconds
+        return () => clearInterval(interval);
+    }, []);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -25,6 +43,7 @@ const Announcements: React.FC = () => {
                 const data = await response.json();
                 const filtered = data.filter((a: Announcement) => a.audience === "all");
                 setAnnouncements(filtered);
+                setError(null);
             } catch {
                 setError("Failed to fetch announcements.");
             } finally {
@@ -32,6 +51,8 @@ const Announcements: React.FC = () => {
             }
         };
         fetchAnnouncements();
+        const interval = setInterval(fetchAnnouncements, 60000); // Poll every 60 seconds
+        return () => clearInterval(interval);
     }, []);
 
     return (
