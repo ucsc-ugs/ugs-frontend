@@ -16,6 +16,10 @@ type AnnouncementModalProps = {
         expiryDate: string;
         publishDate?: string;
         tags?: string[];
+        exam_title?: string;
+        exam_code?: string;
+        exam_id?: number;
+        is_pinned?: boolean;
     } | null;
 };
 
@@ -33,9 +37,8 @@ export default function AnnouncementModal({ open, onClose, announcement }: Annou
                             <DialogTitle className="whitespace-normal break-words text-2xl font-bold text-gray-900 flex-1">
                                 {announcement.title}
                             </DialogTitle>
-                            {/* Only one close button is needed, keep the DialogClose below if present elsewhere */}
                         </div>
-                        <p className="text-gray-600 text-sm pl-10">Announcement Details</p>
+                        <p className="text-gray-600 text-sm pl-10">Notification Details</p>
                     </div>
                 </DialogHeader>
                 <div className="space-y-6 px-6 pb-8">
@@ -50,6 +53,10 @@ export default function AnnouncementModal({ open, onClose, announcement }: Annou
                         <div className="flex flex-col"><span className="font-semibold">Status:</span> {announcement.status}</div>
                         <div className="flex flex-col"><span className="font-semibold">Expiry Date:</span> {announcement.expiryDate}</div>
                         {announcement.publishDate && <div className="flex flex-col"><span className="font-semibold">Publish Date:</span> {announcement.publishDate}</div>}
+                        {announcement.exam_title && <div className="flex flex-col"><span className="font-semibold">Exam Title:</span> {announcement.exam_title}</div>}
+                        {announcement.exam_code && <div className="flex flex-col"><span className="font-semibold">Exam Code:</span> {announcement.exam_code}</div>}
+                        {typeof announcement.exam_id !== 'undefined' && <div className="flex flex-col"><span className="font-semibold">Exam ID:</span> {announcement.exam_id}</div>}
+                        {typeof announcement.is_pinned !== 'undefined' && <div className="flex flex-col"><span className="font-semibold">Pinned:</span> {announcement.is_pinned ? 'Yes' : 'No'}</div>}
                     </div>
                     {announcement.tags && announcement.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 pt-2 items-center">
