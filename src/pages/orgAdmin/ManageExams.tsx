@@ -17,7 +17,8 @@ import {
     AlertCircle,
     Download,
     ArrowLeft,
-    Loader2
+    Loader2,
+    Building
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -32,7 +33,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExamDateDetailsModal } from "@/components/ExamDateDetailsModal";
 import CreateExam from "./CreateExam";
 import { orgAdminApi, type Location } from "@/lib/orgAdminApi";
-import { getExams, createExam, updateExam, deleteExam, updateExamDateStatus, updateExpiredExamStatuses, testConnection, type ExamData, type ExamDate } from "@/lib/examApi";
+import { getExams, createExam, updateExam, deleteExam, updateExamDateStatus, updateExpiredExamStatuses, testConnection, addExamDate, type ExamData } from "@/lib/examApi";
 
 interface ExamDateRow {
     examId: number;
@@ -42,6 +43,15 @@ interface ExamDateRow {
     university: string;
     date: string;
     location: string;
+    locations?: Array<{
+        id: number;
+        location_name: string;
+        capacity: number;
+        pivot: {
+            priority: number;
+            current_registrations: number;
+        };
+    }>;
     status: "upcoming" | "completed" | "cancelled";
     resultsPublished: boolean;
     createdAt: string;
@@ -102,6 +112,15 @@ export default function ManageExams() {
     const [selectedExamName, setSelectedExamName] = useState<string>("");
     const [showExamDateDetails, setShowExamDateDetails] = useState(false);
     
+    // Add exam date modal state
+    const [showAddExamDate, setShowAddExamDate] = useState(false);
+    const [addDateExamId, setAddDateExamId] = useState<number | null>(null);
+    const [addDateExamName, setAddDateExamName] = useState<string>("");
+    const [addDateFormData, setAddDateFormData] = useState({
+        date: "",
+        location_ids: [] as number[]
+    });
+    
     // Form data for create/edit
     const [formData, setFormData] = useState({
         name: "",
@@ -110,7 +129,12 @@ export default function ManageExams() {
         price: 0,
         organization_id: 1, // This should come from current user's organization
         registration_deadline: "",
-        exam_dates: [{ date: "", location: "", location_id: "" as number | "" }]
+        exam_dates: [{ 
+            date: "", 
+            location: "", 
+            location_id: "" as number | "",
+            location_ids: [] as number[]  // Support multiple locations
+        }]
     });
 
     // Helper function to format datetime-local value for backend (Y-m-d\TH:i format)
@@ -261,6 +285,18 @@ export default function ManageExams() {
                 // If exam has dates, create a row for each date
                 if (exam.exam_dates && exam.exam_dates.length > 0) {
                     exam.exam_dates.forEach((examDate) => {
+                        // Generate location display string from multiple locations
+                        let locationDisplay = "TBD";
+                        
+                        if (examDate.locations && Array.isArray(examDate.locations) && examDate.locations.length > 0) {
+                            locationDisplay = examDate.locations
+                                .sort((a, b) => (a.pivot?.priority || 0) - (b.pivot?.priority || 0))
+                                .map(loc => loc.location_name)
+                                .join(", ");
+                        } else if (examDate.location) {
+                            locationDisplay = examDate.location;
+                        }
+
                         examDateRows.push({
                             examId: exam.id!,
                             examDateId: examDate.id!,
@@ -268,7 +304,8 @@ export default function ManageExams() {
                             code_name: codeNameValue,
                             university: "Organization",
                             date: examDate.date,
-                            location: examDate.location || "TBD",
+                            location: locationDisplay,
+                            locations: examDate.locations,
                             status: examDate.status || "upcoming",
                             resultsPublished: false,
                             createdAt: exam.created_at!,
@@ -389,6 +426,15 @@ export default function ManageExams() {
             }
         }
 
+        // Validate that each exam date has at least one location selected
+        for (let i = 0; i < formData.exam_dates.length; i++) {
+            const examDate = formData.exam_dates[i];
+            if (examDate.date.trim() && examDate.location_ids.length === 0) {
+                setError(`Exam date ${i + 1} must have at least one hall selected`);
+                return;
+            }
+        }
+
         try {
             setIsSubmitting(true);
             console.log("Creating exam with data:", formData);
@@ -411,15 +457,17 @@ export default function ManageExams() {
                 exam_dates: formData.exam_dates
                     .filter(date => date.date.trim() !== "")
                     .map(date => ({
-                        ...date,
-                        date: formatDateTimeForBackend(date.date)
+                        date: formatDateTimeForBackend(date.date),
+                        location_ids: date.location_ids.length > 0 ? date.location_ids : undefined,
+                        // Keep backward compatibility with old single location_id
+                        location_id: date.location_id || undefined
                     }))
             });
             
             // Reload exams after creating
             await loadExams();
             setShowCreateExam(false);
-            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "" }] });
+            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
             setError("");
         } catch (err: any) {
             console.error('Create exam error:', err);
@@ -471,6 +519,15 @@ export default function ManageExams() {
             }
         }
 
+        // Validate that each exam date has at least one location selected
+        for (let i = 0; i < formData.exam_dates.length; i++) {
+            const examDate = formData.exam_dates[i];
+            if (examDate.date.trim() && examDate.location_ids.length === 0) {
+                setError(`Exam date ${i + 1} must have at least one hall selected`);
+                return;
+            }
+        }
+
         try {
             setIsSubmitting(true);
             console.log("Updating exam with data:", formData);
@@ -482,8 +539,7 @@ export default function ManageExams() {
                     date: formatDateTimeForBackend(date.date)
                 })));
             
-            // TODO: Update to work with exam dates
-            /* await updateExam(editingExam.examId, {
+            await updateExam(editingExam.examId, {
                 name: formData.name,
                 code_name: formData.code_name,
                 description: formData.description,
@@ -493,15 +549,17 @@ export default function ManageExams() {
                 exam_dates: formData.exam_dates
                     .filter(date => date.date.trim() !== "")
                     .map(date => ({
-                        ...date,
-                        date: formatDateTimeForBackend(date.date)
+                        date: formatDateTimeForBackend(date.date),
+                        location_ids: date.location_ids.length > 0 ? date.location_ids : undefined,
+                        // Keep backward compatibility with old single location_id
+                        location_id: date.location_id || undefined
                     }))
-            }); */
+            });
             
             // Reload exams after updating
             await loadExams();
             setEditingExam(null);
-            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "" }] });
+            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
             setError("");
         } catch (err: any) {
             console.error('Update exam error:', err);
@@ -566,12 +624,23 @@ export default function ManageExams() {
     const openEditModal = (examDate: ExamDateRow) => {
         setEditingExam(examDate);
         
-        // Find location_id from location name
-        const locationId = examDate.location ? 
-            locations.find(loc => loc.location_name === examDate.location)?.id || "" : "";
+        // Extract location_ids from the locations relationship data
+        let locationIds: number[] = [];
+        let fallbackLocationId: number | "" = "";
         
-        console.log('Opening edit modal for exam date:', examDate);
-        console.log('Found location_id:', locationId, 'for location:', examDate.location);
+        if (examDate.locations && Array.isArray(examDate.locations) && examDate.locations.length > 0) {
+            // Use the locations from the relationship
+            locationIds = examDate.locations
+                .sort((a, b) => (a.pivot?.priority || 0) - (b.pivot?.priority || 0)) // Sort by priority
+                .map(loc => loc.id);
+        } else if (examDate.location && examDate.location !== "TBD") {
+            // Fallback: try to find location by name
+            const foundLocation = locations.find(loc => loc.location_name === examDate.location);
+            if (foundLocation) {
+                fallbackLocationId = foundLocation.id;
+                locationIds = [foundLocation.id];
+            }
+        }
         
         setFormData({
             name: examDate.examName,
@@ -583,7 +652,8 @@ export default function ManageExams() {
             exam_dates: [{ 
                 date: formatDateTimeForInput(examDate.date), 
                 location: examDate.location || "",
-                location_id: locationId
+                location_id: fallbackLocationId,
+                location_ids: locationIds  // Use the extracted location IDs
             }]
         });
         setError("");
@@ -593,7 +663,7 @@ export default function ManageExams() {
         setShowCreateExam(false);
         setEditingExam(null);
         setDeleteExamId(null);
-        setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "" }] });
+        setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
         setError("");
     };
 
@@ -657,6 +727,65 @@ export default function ManageExams() {
         } catch (error) {
             console.error('Failed to update exam date status:', error);
             setError('Failed to update exam date status');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const openAddExamDateModal = (examId: number, examName: string) => {
+        setAddDateExamId(examId);
+        setAddDateExamName(examName);
+        setAddDateFormData({
+            date: "",
+            location_ids: []
+        });
+        setShowAddExamDate(true);
+        setError("");
+    };
+
+    const handleAddExamDate = async () => {
+        if (!addDateExamId || !addDateFormData.date.trim()) {
+            setError("Exam date is required");
+            return;
+        }
+
+        // Validate that the date is in the future
+        const examDateTime = new Date(addDateFormData.date);
+        const now = new Date();
+        if (examDateTime <= now) {
+            setError("Exam date must be in the future");
+            return;
+        }
+
+        // Validate that at least one location is selected
+        if (addDateFormData.location_ids.length === 0) {
+            setError("At least one hall must be selected");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            
+            await addExamDate(addDateExamId, {
+                date: formatDateTimeForBackend(addDateFormData.date),
+                location_ids: addDateFormData.location_ids
+            });
+
+            // Reload exams to show the new date
+            await loadExams();
+            
+            // Close modal and reset form
+            setShowAddExamDate(false);
+            setAddDateExamId(null);
+            setAddDateExamName("");
+            setAddDateFormData({
+                date: "",
+                location_ids: []
+            });
+            setError("");
+        } catch (err: any) {
+            console.error('Add exam date error:', err);
+            setError(err.message || 'Failed to add exam date');
         } finally {
             setIsSubmitting(false);
         }
@@ -880,7 +1009,8 @@ export default function ManageExams() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead className="text-left">Exam</TableHead>
-                                                <TableHead className="text-left">Date & Location</TableHead>
+                                                <TableHead className="text-left">Date</TableHead>
+                                                <TableHead className="text-left">Halls</TableHead>
                                                 <TableHead className="text-left">Registration Deadline</TableHead>
                                                 <TableHead className="text-center">Price</TableHead>
                                                 <TableHead className="text-center">Registrations</TableHead>
@@ -897,14 +1027,25 @@ export default function ManageExams() {
                                                         <TableRow key={`${examDate.examId}-${examDate.examDateId}`} className={isFirstInGroup && dateIndex > 0 ? "border-t-2 border-gray-200" : ""}>
                                                         <TableCell className={isFirstInGroup ? "" : "border-l-4 border-gray-100"}>
                                                             {isFirstInGroup ? (
-                                                                <div>
-                                                                    <div className="font-medium flex items-center gap-2">
-                                                                        <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-800">{examDate.code_name || '-'}</span>
-                                                                        <span>{examDate.examName}</span>
+                                                                <div className="flex items-center justify-between">
+                                                                    <div>
+                                                                        <div className="font-medium flex items-center gap-2">
+                                                                            <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-800">{examDate.code_name || '-'}</span>
+                                                                            <span>{examDate.examName}</span>
+                                                                        </div>
+                                                                        <div className="text-sm text-gray-500">
+                                                                            Created: {formatDate(examDate.createdAt)}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="text-sm text-gray-500">
-                                                                        Created: {formatDate(examDate.createdAt)}
-                                                                    </div>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => openAddExamDateModal(examDate.examId, examDate.examName)}
+                                                                        className="ml-2"
+                                                                    >
+                                                                        <Plus className="w-3 h-3 mr-1" />
+                                                                        Add Date
+                                                                    </Button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="pl-4">
@@ -924,10 +1065,47 @@ export default function ManageExams() {
                                                                             hour12: true 
                                                                         })}
                                                                     </div>
-                                                                    {examDate.location && examDate.location !== "TBD" && (
-                                                                        <div className="text-xs text-gray-500">📍 {examDate.location}</div>
-                                                                    )}
                                                                 </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-start gap-1">
+                                                                {examDate.locations && Array.isArray(examDate.locations) && examDate.locations.length > 0 ? (
+                                                                    <div className="space-y-1">
+                                                                        <div className="flex items-center gap-1 mb-1">
+                                                                            <Building className="w-3 h-3 text-blue-500" />
+                                                                            <span className="text-xs text-gray-600 font-medium">
+                                                                                {examDate.locations.length} Hall{examDate.locations.length > 1 ? 's' : ''}
+                                                                            </span>
+                                                                        </div>
+                                                                        {examDate.locations
+                                                                            .sort((a, b) => (a.pivot?.priority || 0) - (b.pivot?.priority || 0))
+                                                                            .map((location, idx) => (
+                                                                                <div key={location.id} className="flex items-center gap-1.5">
+                                                                                    <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium">
+                                                                                        #{idx + 1}
+                                                                                    </span>
+                                                                                    <span className="text-sm">{location.location_name}</span>
+                                                                                    <span className="text-xs text-gray-500">({location.capacity})</span>
+                                                                                </div>
+                                                                            ))
+                                                                        }
+                                                                        <div className="text-xs text-green-600 mt-1 font-medium">
+                                                                            Total: {examDate.locations.reduce((sum, loc) => sum + loc.capacity, 0)} seats
+                                                                        </div>
+                                                                    </div>
+                                                                ) : examDate.location && examDate.location !== "TBD" ? (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Building className="w-3 h-3 text-gray-400" />
+                                                                        <span className="text-sm text-gray-600">{examDate.location}</span>
+                                                                        <span className="text-xs text-orange-500">(Legacy format)</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <Building className="w-3 h-3 text-gray-300" />
+                                                                        <span className="text-xs text-gray-400 italic">No halls assigned</span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
@@ -1188,7 +1366,7 @@ export default function ManageExams() {
                                                 size="sm"
                                                 onClick={() => setFormData(prev => ({
                                                     ...prev,
-                                                    exam_dates: [...prev.exam_dates, { date: "", location: "", location_id: "" }]
+                                                    exam_dates: [...prev.exam_dates, { date: "", location: "", location_id: "", location_ids: [] }]
                                                 }))}
                                             >
                                                 <Plus className="w-4 h-4 mr-1" />
@@ -1212,54 +1390,69 @@ export default function ManageExams() {
                                                     />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <Select
-                                                        key={`location-select-${index}-${examDate.location_id || 'empty'}-${locations.length}`}
-                                                        value={examDate.location_id ? examDate.location_id.toString() : ""}
-                                                        onValueChange={(value) => {
-                                                            if (locationsLoading) return;
-                                                            const newExamDates = [...formData.exam_dates];
-                                                            if (value === "") {
-                                                                // User selected "Select location" (empty option)
-                                                                newExamDates[index] = {
-                                                                    ...newExamDates[index],
-                                                                    location_id: "",
-                                                                    location: ""
-                                                                };
-                                                            } else {
-                                                                // User selected a specific location
-                                                                const selectedLocation = locations.find(loc => loc.id === parseInt(value));
-                                                                newExamDates[index] = {
-                                                                    ...newExamDates[index],
-                                                                    location_id: parseInt(value),
-                                                                    location: selectedLocation ? selectedLocation.location_name : ""
-                                                                };
-                                                            }
-                                                            setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
-                                                        }}
-                                                    >
-                                                        <SelectTrigger className="text-sm">
-                                                            <SelectValue 
-                                                                key={`select-value-${examDate.location_id || 'none'}`}
-                                                                placeholder="Select location" 
-                                                            />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="">Select location</SelectItem>
-                                                            {locations.map(location => (
-                                                                <SelectItem key={location.id} value={location.id.toString()}>
-                                                                    {location.location_name}
-                                                                </SelectItem>
-                                                            ))}
-                                                            {locations.length === 0 && !locationsLoading && (
-                                                                <div className="px-2 py-1 text-sm text-gray-500">
-                                                                    No locations available. Create locations first.
+                                                    <div className="border rounded-lg p-3 space-y-2">
+                                                        <label className="text-sm font-medium text-gray-700">
+                                                            Select Halls (Multiple halls allowed)
+                                                        </label>
+                                                        {locationsLoading ? (
+                                                            <div className="text-sm text-gray-500">Loading locations...</div>
+                                                        ) : locations.length === 0 ? (
+                                                            <div className="text-sm text-gray-500">No locations available. Create locations first.</div>
+                                                        ) : (
+                                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                                {locations.map(location => (
+                                                                    <label key={location.id} className="flex items-center space-x-2 cursor-pointer">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={examDate.location_ids.includes(location.id)}
+                                                                            onChange={(e) => {
+                                                                                const newExamDates = [...formData.exam_dates];
+                                                                                if (e.target.checked) {
+                                                                                    // Add location
+                                                                                    newExamDates[index] = {
+                                                                                        ...newExamDates[index],
+                                                                                        location_ids: [...examDate.location_ids, location.id]
+                                                                                    };
+                                                                                } else {
+                                                                                    // Remove location
+                                                                                    newExamDates[index] = {
+                                                                                        ...newExamDates[index],
+                                                                                        location_ids: examDate.location_ids.filter(id => id !== location.id)
+                                                                                    };
+                                                                                }
+                                                                                setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                                            }}
+                                                                            className="rounded border-gray-300"
+                                                                        />
+                                                                        <span className="text-sm">
+                                                                            {location.location_name} 
+                                                                            <span className="text-gray-500 ml-1">(Capacity: {location.capacity})</span>
+                                                                        </span>
+                                                                    </label>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {examDate.location_ids.length > 0 && (
+                                                            <div className="mt-2">
+                                                                <div className="text-xs text-blue-600 mb-1">
+                                                                    {examDate.location_ids.length} hall{examDate.location_ids.length > 1 ? 's' : ''} selected:
                                                                 </div>
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {locationsError && (
-                                                        <p className="text-red-500 text-xs mt-1">{locationsError}</p>
-                                                    )}
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {examDate.location_ids.map((locationId, idx) => {
+                                                                        const location = locations.find(loc => loc.id === locationId);
+                                                                        return location ? (
+                                                                            <span key={locationId} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                                                                                #{idx + 1} {location.location_name}
+                                                                            </span>
+                                                                        ) : null;
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {locationsError && (
+                                                            <p className="text-red-500 text-xs mt-1">{locationsError}</p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {formData.exam_dates.length > 1 && (
                                                     <Button
@@ -1313,6 +1506,111 @@ export default function ManageExams() {
                         onConfirm={handleDeleteExam}
                         onCancel={() => setDeleteExamId(null)}
                     />
+                )}
+
+                {/* Add Exam Date Modal */}
+                {showAddExamDate && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold">Add New Date to {addDateExamName}</h3>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowAddExamDate(false)}
+                                >
+                                    <XCircle className="w-4 h-4" />
+                                </Button>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                {/* Date/Time Input */}
+                                <div>
+                                    <Label htmlFor="examDate">Exam Date & Time</Label>
+                                    <Input
+                                        id="examDate"
+                                        type="datetime-local"
+                                        value={addDateFormData.date}
+                                        onChange={(e) => setAddDateFormData(prev => ({ ...prev, date: e.target.value }))}
+                                        min={getCurrentDateTimeLocal()}
+                                        className="mt-1"
+                                    />
+                                </div>
+
+                                {/* Location Selection */}
+                                <div>
+                                    <Label>Select Halls</Label>
+                                    <div className="border rounded-lg p-3 space-y-2 mt-1">
+                                        {locationsLoading ? (
+                                            <div className="text-sm text-gray-500">Loading locations...</div>
+                                        ) : locations.length === 0 ? (
+                                            <div className="text-sm text-gray-500">No locations available. Create locations first.</div>
+                                        ) : (
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {locations.map(location => (
+                                                    <label key={location.id} className="flex items-center space-x-2 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={addDateFormData.location_ids.includes(location.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setAddDateFormData(prev => ({
+                                                                        ...prev,
+                                                                        location_ids: [...prev.location_ids, location.id]
+                                                                    }));
+                                                                } else {
+                                                                    setAddDateFormData(prev => ({
+                                                                        ...prev,
+                                                                        location_ids: prev.location_ids.filter(id => id !== location.id)
+                                                                    }));
+                                                                }
+                                                            }}
+                                                            className="rounded border-gray-300"
+                                                        />
+                                                        <span className="text-sm">
+                                                            {location.location_name} 
+                                                            <span className="text-gray-500 ml-1">(Capacity: {location.capacity})</span>
+                                                        </span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {addDateFormData.location_ids.length > 0 && (
+                                            <div className="text-xs text-blue-600 mt-2">
+                                                {addDateFormData.location_ids.length} hall{addDateFormData.location_ids.length > 1 ? 's' : ''} selected
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Actions */}
+                            <div className="flex gap-2 mt-6">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowAddExamDate(false)}
+                                    disabled={isSubmitting}
+                                    className="flex-1"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleAddExamDate}
+                                    disabled={isSubmitting || !addDateFormData.date.trim() || addDateFormData.location_ids.length === 0}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                    {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                    Add Date
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* Exam Date Details Modal */}

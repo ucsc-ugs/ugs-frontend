@@ -5,6 +5,15 @@ interface ExamDate {
   exam_id?: number;
   date: string;
   location?: string;
+  locations?: Array<{
+    id: number;
+    location_name: string;
+    capacity: number;
+    pivot: {
+      priority: number;
+      current_registrations: number;
+    };
+  }>;
   status?: 'upcoming' | 'completed' | 'cancelled';
   created_at?: string;
   updated_at?: string;
@@ -149,6 +158,34 @@ export const updateExamDateStatus = async (examDateId: number, status: 'upcoming
   return await apiRequest(`/exam-date/${examDateId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+};
+
+// Add single exam date to existing exam
+export const addExamDate = async (examId: number, examDateData: {
+  date: string;
+  location?: string;
+  location_id?: number;
+  location_ids?: number[];
+}): Promise<ApiResponse<ExamDate>> => {
+  return await apiRequest(`/exam/${examId}/exam-dates`, {
+    method: 'POST',
+    body: JSON.stringify(examDateData),
+  });
+};
+
+// Add multiple exam dates to existing exam (bulk)
+export const addMultipleExamDates = async (examId: number, examDatesData: {
+  exam_dates: Array<{
+    date: string;
+    location?: string;
+    location_id?: number;
+    location_ids?: number[];
+  }>;
+}): Promise<ApiResponse<ExamDate[]>> => {
+  return await apiRequest(`/exam/${examId}/exam-dates/bulk`, {
+    method: 'POST',
+    body: JSON.stringify(examDatesData),
   });
 };
 
