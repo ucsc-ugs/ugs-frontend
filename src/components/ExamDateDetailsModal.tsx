@@ -14,7 +14,8 @@ import {
   Phone,
   Hash,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react";
 import axios from 'axios';
 
@@ -44,6 +45,7 @@ interface ExamDateDetails {
   id: number;
   exam_id: number;
   date: string;
+  registration_deadline?: string;
   location?: string;
   status: string;
   exam: {
@@ -52,12 +54,15 @@ interface ExamDateDetails {
     code_name?: string;
     price: number;
   };
-  location_details?: {
+  locations: Array<{
     id: number;
     location_name: string;
     capacity: number;
     current_registrations: number;
-  };
+    priority: number;
+  }>;
+  total_capacity: number;
+  total_registrations: number;
   registrations: StudentRegistration[];
 }
 
@@ -141,6 +146,81 @@ export const ExamDateDetailsModal = ({
       : 'bg-gray-100 text-gray-800';
   };
 
+  const handleDownloadHallList = async (examDateId: number, locationId: number, hallName: string) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      console.log('Downloading hall list for:', { examDateId, locationId, hallName });
+      
+      const response = await fetch(`/api/admin/exam-dates/${examDateId}/halls/${locationId}/student-list`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'text/csv',
+        },
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        console.log('CSV blob size:', blob.size);
+        
+        if (blob.size === 0) {
+          alert('Received empty CSV from server');
+          return;
+        }
+        
+        // Create download link for CSV
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${hallName}_StudentList_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        URL.revokeObjectURL(url);
+      } else {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          alert('Failed to download hall list: ' + errorData.message);
+        } catch {
+          alert('Failed to download hall list: ' + errorText);
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading hall list:', error);
+      alert('Error downloading hall list. Please try again.');
+    }
+  };
+
+  const handleCreateSampleStudents = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/admin/test/create-sample-students', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(result.message);
+      } else {
+        const errorData = await response.json();
+        alert('Failed to create sample students: ' + errorData.message);
+      }
+    } catch (error) {
+      console.error('Error creating sample students:', error);
+      alert('Error creating sample students. Please try again.');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -199,27 +279,56 @@ export const ExamDateDetailsModal = ({
                     Location Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {examDetails.location_details ? (
+                <CardContent className="space-y-4">
+                  {examDetails.locations && examDetails.locations.length > 0 ? (
                     <>
-                      <div>
-                        <strong>Location:</strong> {examDetails.location_details.location_name}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <strong>Total Capacity:</strong> {examDetails.total_capacity} students
+                        </div>
+                        <div>
+                          <strong>Total Registrations:</strong> {examDetails.total_registrations}
+                        </div>
                       </div>
+                      
                       <div>
-                        <strong>Capacity:</strong> {examDetails.location_details.capacity} students
-                      </div>
-                      <div>
-                        <strong>Current Registrations:</strong> {examDetails.location_details.current_registrations}
-                      </div>
-                      <div>
-                        <strong>Availability:</strong>
-                        <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                          examDetails.location_details.current_registrations >= examDetails.location_details.capacity
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {examDetails.location_details.capacity - examDetails.location_details.current_registrations} slots available
-                        </span>
+                        <strong>Halls ({examDetails.locations.length}):</strong>
+                        <div className="mt-2 space-y-2">
+                          {examDetails.locations
+                            .sort((a, b) => a.priority - b.priority)
+                            .map((location, index) => (
+                              <div key={location.id} className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                      #{index + 1}
+                                    </span>
+                                    <span className="font-medium">{location.location_name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      location.current_registrations >= location.capacity
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {location.current_registrations}/{location.capacity}
+                                    </span>
+                                    <button
+                                      onClick={() => handleDownloadHallList(examDetails.id, location.id, location.location_name)}
+                                      className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
+                                      title="Download student list CSV for this hall"
+                                    >
+                                      <Download className="w-3 h-3" />
+                                      CSV
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  {location.capacity - location.current_registrations} slots available
+                                </div>
+                              </div>
+                            ))}
+                        </div>
                       </div>
                     </>
                   ) : (
@@ -231,6 +340,24 @@ export const ExamDateDetailsModal = ({
                 </CardContent>
               </Card>
             </div>
+
+            {/* Test Controls (for development) */}
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleCreateSampleStudents}
+                    size="sm"
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                  >
+                    Create Sample Students
+                  </Button>
+                  <span className="text-sm text-yellow-700">
+                    For testing purposes - creates 10 sample students
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Registered Students */}
             <Card>

@@ -196,4 +196,29 @@ export const updateExpiredExamStatuses = async (): Promise<ApiResponse<{ updated
   });
 };
 
+// Update exam type details only (name, code, description, price)
+export const updateExamType = async (examId: number, examTypeData: {
+  name: string;
+  code_name: string;
+  description?: string;
+  price: number;
+}): Promise<ApiResponse<ExamData>> => {
+  return await apiRequest(`/exam/${examId}/type`, {
+    method: 'PUT',
+    body: JSON.stringify(examTypeData),
+  });
+};
+
+// Update exam date details only (date, registration_deadline, locations)
+export const updateExamDate = async (examDateId: number, examDateData: {
+  date: string;
+  registration_deadline?: string;
+  location_ids: number[];
+}): Promise<ApiResponse<ExamDate>> => {
+  return await apiRequest(`/exam-date/${examDateId}`, {
+    method: 'PUT',
+    body: JSON.stringify(examDateData),
+  });
+};
+
 export type { ExamData, ExamDate, ApiResponse };
