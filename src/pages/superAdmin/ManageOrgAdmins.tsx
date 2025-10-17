@@ -62,8 +62,8 @@ export default function ManageOrgAdmins() {
         getOrgAdmins(),
         getOrganizations()
       ]);
-      setOrgAdmins(adminsResponse.data || []);
-      setOrganizations(orgsResponse.data || []);
+  setOrgAdmins(adminsResponse.data as any || []);
+  setOrganizations(orgsResponse.data as any || []);
     } catch (err: any) {
       console.error('Load data error:', err);
       setError(err.message || 'Failed to load data');
