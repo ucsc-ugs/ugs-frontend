@@ -35,6 +35,10 @@ interface StudentUser {
     local?: boolean;
     exams?: any[]; // list when nested
     exams_count?: number; // when returned from resource
+    last_exam_name?: string;
+    last_registered_at?: string;
+    paid_exam_names?: string[];
+    paid_exam_count?: number;
 }
 
 interface PaginationMeta {
@@ -239,8 +243,8 @@ export default function ManageStudents() {
                                         <TableHead>Student</TableHead>
                                         <TableHead>Passport / NIC</TableHead>
                                         <TableHead>Type</TableHead>
-                                        <TableHead>Exams</TableHead>
-                                        <TableHead>Joined</TableHead>
+                                        <TableHead>Exam Name</TableHead>
+                                        <TableHead>Date of Registration</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -273,10 +277,21 @@ export default function ManageStudents() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="text-sm">{user.exams_count ?? user.exams?.length ?? 0} Registered</div>
+                                                    <div className="text-sm flex items-center gap-1 flex-wrap">
+                                                        {Array.isArray(user.paid_exam_names) && user.paid_exam_names.length > 0 ? (
+                                                            <>
+                                                                <span>{user.paid_exam_names.slice(0,2).join(', ')}</span>
+                                                                {(user.paid_exam_count && user.paid_exam_count > 2) && (
+                                                                    <span className="text-xs text-gray-500">+{user.paid_exam_count - 2} more</span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span>—</span>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="text-sm">{formatDate(user.created_at)}</div>
+                                                    <div className="text-sm">{user.last_registered_at ? formatDate(user.last_registered_at) : '—'}</div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button variant="outline" size="sm" onClick={() => handleViewStudent(user)}>
