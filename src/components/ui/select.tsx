@@ -33,6 +33,7 @@ interface SelectItemProps {
   value: string
   onSelect?: (value: string) => void
   isSelected?: boolean
+  disabled?: boolean
 }
 
 const Select: React.FC<SelectProps> = ({ value, onValueChange, children, className, ...props }) => {
@@ -132,15 +133,17 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
 SelectContent.displayName = "SelectContent"
 
 const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ className, children, value, onSelect, isSelected, ...props }, ref) => (
+  ({ className, children, value, onSelect, isSelected, disabled = false, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+        "relative flex w-full select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none",
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-accent hover:text-accent-foreground",
         isSelected && "bg-accent text-accent-foreground",
         className
       )}
-      onClick={() => onSelect?.(value)}
+      onClick={() => { if (!disabled) onSelect?.(value) }}
+      aria-disabled={disabled}
       {...props}
     >
       {children}

@@ -134,7 +134,7 @@ export default function CreateAnnouncement() {
                 audience: editingAnnouncement.audience === 'department-specific' ? 'all' : editingAnnouncement.audience,
                 examId: editingAnnouncement.examId || '',
                 // departmentId removed
-                yearLevel: editingAnnouncement.yearLevel || '',
+                // yearLevel removed
                 expiryDate: editingAnnouncement.expiryDate,
                 publishDate: editingAnnouncement.publishDate || '',
                 status: editingAnnouncement.status === 'expired' || editingAnnouncement.status === 'scheduled' ? 'published' : editingAnnouncement.status,
@@ -251,7 +251,7 @@ export default function CreateAnnouncement() {
             audience: 'all',
             examId: '',
             // departmentId removed
-            yearLevel: '',
+            // yearLevel removed
             expiryDate: '',
             publishDate: '',
             status: 'published',
