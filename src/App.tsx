@@ -54,7 +54,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/contact" element={<ContactUsForm />} />
+            <Route path="/contact-us" element={<ContactUsForm />} />
             <Route path="/universities" element={<UniversitiesPage />} />
             <Route path="/exams/:codeName" element={<ExamDetails />} />
 

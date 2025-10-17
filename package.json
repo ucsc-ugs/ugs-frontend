@@ -16,7 +16,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.11",
     "@types/papaparse": "^5.3.16",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
