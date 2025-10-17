@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { createExam } from "@/lib/examApi";
-import { orgAdminApi } from "@/lib/orgAdminApi";
+import { orgAdminApi, type Location } from "@/lib/orgAdminApi";
 
 interface ExamFormData {
     name: string;
@@ -30,6 +30,7 @@ interface ExamFormData {
     maxParticipants: number;
     fee: number;
     status: "draft" | "published";
+    location_id: number | "";
 }
 
 const durationOptions = [
@@ -51,6 +52,9 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [orgId, setOrgId] = useState<number | null>(null);
     const [orgError, setOrgError] = useState<string>("");
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [locationsLoading, setLocationsLoading] = useState(false);
+    const [locationsError, setLocationsError] = useState<string>("");
 
     const [formData, setFormData] = useState<ExamFormData>({
         name: "",
@@ -63,7 +67,8 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
         questionCount: 50,
         maxParticipants: 100,
         fee: 0,
-        status: "draft"
+        status: "draft",
+        location_id: ""
     });
 
     // Fetch current admin organization
@@ -79,6 +84,25 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
             }
         })();
     }, []);
+
+    // Fetch locations when organization ID is available
+    useEffect(() => {
+        if (!orgId) return;
+
+        (async () => {
+            setLocationsLoading(true);
+            setLocationsError("");
+            try {
+                const locationsData = await orgAdminApi.getLocations();
+                setLocations(locationsData);
+            } catch (e: any) {
+                console.error("Failed to fetch locations:", e);
+                setLocationsError(e?.message || "Failed to load locations");
+            } finally {
+                setLocationsLoading(false);
+            }
+        })();
+    }, [orgId]);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -114,6 +138,11 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
             else if (deadlineDate >= examDate) {
                 newErrors.registrationDeadline = "Registration deadline must be before the exam date and time";
             }
+        }
+
+        // Location validation
+        if (!formData.location_id) {
+            newErrors.location_id = "Location is required";
         }
 
         setErrors(newErrors);
@@ -199,7 +228,7 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
                 registration_deadline: registrationDeadline,
                 exam_dates: [{
                     date: examDateTime,
-                    location: "TBD" // You may want to add location field to the form
+                    location_id: formData.location_id
                 }]
             };
 
@@ -243,7 +272,8 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
             questionCount: 50,
             maxParticipants: 100,
             fee: 0,
-            status: "draft"
+            status: "draft",
+            location_id: ""
         });
         setErrors({});
     };
@@ -384,6 +414,37 @@ export default function CreateExam({ onBack }: CreateExamProps = {}) {
                                                     </option>
                                                 ))}
                                             </select>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Location field in a separate row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Location <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                value={formData.location_id}
+                                                onChange={(e) => handleInputChange("location_id", e.target.value ? parseInt(e.target.value) : "")}
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.location_id ? "border-red-500" : "border-gray-300"}`}
+                                                disabled={locationsLoading}
+                                            >
+                                                <option value="">
+                                                    {locationsLoading ? "Loading locations..." : "Select a location"}
+                                                </option>
+                                                {locations.map(location => (
+                                                    <option key={location.id} value={location.id}>
+                                                        {location.location_name} (Capacity: {location.capacity})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {errors.location_id && <p className="text-red-500 text-sm mt-1">{errors.location_id}</p>}
+                                            {locationsError && <p className="text-red-500 text-sm mt-1">{locationsError}</p>}
+                                            {locations.length === 0 && !locationsLoading && !locationsError && (
+                                                <p className="text-amber-600 text-sm mt-1">
+                                                    No locations available. Please create locations first in the Locations section.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

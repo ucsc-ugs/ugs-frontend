@@ -12,6 +12,7 @@ import {
   Megaphone,
   ChevronDown,
   ChevronRight,
+  MapPin,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -23,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const mockAdmin = {
   name: "Admin User",
   role: "University Admin",
+  email: "admin@example.com",
   avatar: profileSample,
   university: "University of Colombo",
 };
@@ -30,12 +32,12 @@ const mockAdmin = {
 export function OrgAdminSidebar() {
   const [isExamsOpen, setIsExamsOpen] = useState(false);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
-  const [user, setUser] = useState<{ id: string; name: string; role: string; university?: string; avatar?: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; role: string; email?: string; university?: string; avatar?: string } | null>(null);
   const location = useLocation();
 
   // Close dropdowns when navigating to non-related routes
   useEffect(() => {
-    const examPaths = ["/admin/manage-exams", "/admin/publish-results"];
+    const examPaths = ["/admin/manage-exams", "/admin/locations", "/admin/publish-results"];
     const userPaths = ["/admin/student-management", "/admin/manage-users"];
 
     if (!examPaths.includes(location.pathname)) {
@@ -53,22 +55,44 @@ export function OrgAdminSidebar() {
   };
 
   useEffect(() => {
-    // Fetch user info from backend (adjust endpoint as needed)
+    // Fetch user info from admin API to get proper organization data
     const token = localStorage.getItem('auth_token');
-    axios.get(
-      (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
-        ? import.meta.env.VITE_API_URL
-        : 'http://localhost:8000') + '/api/user',
-      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
-    )
-      .then(res => {
-        setUser({
-          id: String(res.data.id),
-          name: res.data.name,
-          role: res.data.role || 'University Admin',
-          university: res.data.university || 'University of Colombo',
-          avatar: res.data.avatar || profileSample
-        });
+    const apiUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL
+      : 'http://localhost:8000');
+    
+    // First get user info from admin endpoint
+    axios.get(`${apiUrl}/api/admin/user`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async (userRes) => {
+        const userData = userRes.data;
+        
+        // Then get organization info
+        try {
+          const orgRes = await axios.get(`${apiUrl}/api/admin/my-organization`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          setUser({
+            id: String(userData.id),
+            name: userData.data?.name || userData.name,
+            email: userData.data?.email || userData.email,
+            role: userData.role || 'Org Admin',
+            university: orgRes.data.data?.name || 'Unknown Organization',
+            avatar: orgRes.data.data?.logo ? `${apiUrl}/storage${orgRes.data.data.logo}` : profileSample
+          });
+        } catch (orgError) {
+          // Fallback if org data fails
+          setUser({
+            id: String(userData.id),
+            name: userData.data?.name || userData.name,
+            email: userData.data?.email || userData.email,
+            role: userData.role || 'Org Admin',
+            university: 'Unknown Organization',
+            avatar: profileSample
+          });
+        }
       })
       .catch(() => setUser(null));
   }, []);
@@ -83,6 +107,7 @@ export function OrgAdminSidebar() {
 
   const examLinks = [
     { name: "Manage Exams", path: "/admin/manage-exams", icon: BookOpen },
+    { name: "Locations", path: "/admin/locations", icon: MapPin },
     { name: "Publish Results", path: "/admin/publish-results", icon: Target },
   ];
 
@@ -266,11 +291,9 @@ export function OrgAdminSidebar() {
           </Avatar>
           <div className="hidden lg:flex flex-col text-xs xl:text-sm text-center leading-tight">
             <span className="font-medium text-blue-800 truncate max-w-full">{user?.name || mockAdmin.name}</span>
-            <span className="text-gray-500 truncate max-w-full">{user?.role || mockAdmin.role}</span>
+            <span className="text-gray-500 truncate max-w-full">Org Admin</span>
+            <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{user?.email || mockAdmin.email}</span>
             <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{user?.university || mockAdmin.university}</span>
-            {user?.id && (
-              <span className="text-gray-400 text-xs mt-1 truncate max-w-full">ID: {user.id}</span>
-            )}
           </div>
         </div>
 

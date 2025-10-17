@@ -99,6 +99,7 @@ export default function SuperAdminSidebar() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{user?.name}</p>
+                <p className="text-xs text-slate-400 truncate">Super Admin</p>
                 <p className="text-xs text-slate-400 truncate">{user?.email}</p>
               </div>
             </div>

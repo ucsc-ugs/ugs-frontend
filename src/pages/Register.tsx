@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { motion } from "framer-motion";
 import { Search, Filter, UserPlus as UserPlusIcon, Loader2, AlertCircle } from "lucide-react";
 import { getPublicExams, type PublicExamData } from "@/lib/publicApi";
+import { useAuth } from "@/contexts/AuthContext";
+import axios from "axios";
 
 interface ExamCardData {
   id: number;
@@ -25,6 +27,7 @@ interface ExamCardData {
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState('all');
   const [exams, setExams] = useState<ExamCardData[]>([]);
@@ -33,57 +36,86 @@ const RegisterPage = () => {
   const [selectedExam, setSelectedExam] = useState<ExamCardData | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // Fetch registered exam IDs for current user
+  const getRegisteredExamIds = async (): Promise<number[]> => {
+    if (!isAuthenticated) return [];
+    
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) return [];
+
+      const response = await axios.get("http://localhost:8000/api/my-exams", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      return response.data.map((exam: any) => exam.id);
+    } catch (error) {
+      console.error("Failed to fetch registered exams:", error);
+      return [];
+    }
+  };
+
   // Load exams from API
   useEffect(() => {
     const loadExams = async () => {
       try {
         setIsLoading(true);
-        const response = await getPublicExams();
         
-        // Convert API data to component format
-        const examData: ExamCardData[] = response.data.map((exam: PublicExamData) => {
-          const firstDate = exam.exam_dates?.[0];
-          const examDate = firstDate ? new Date(firstDate.date) : new Date();
-          
-          // Format registration deadline if it exists
-          const registrationDeadline = exam.registration_deadline 
-            ? new Date(exam.registration_deadline).toLocaleDateString('en-US', {
+        // Fetch both public exams and registered exam IDs
+        const [examResponse, registeredExamIds] = await Promise.all([
+          getPublicExams(),
+          getRegisteredExamIds()
+        ]);
+        
+        // Convert API data to component format and filter out registered exams
+        const examData: ExamCardData[] = examResponse.data
+          .filter((exam: PublicExamData) => !registeredExamIds.includes(exam.id))
+          .map((exam: PublicExamData) => {
+            const firstDate = exam.exam_dates?.[0];
+            const examDate = firstDate ? new Date(firstDate.date) : new Date();
+            
+            // Format registration deadline if it exists
+            const registrationDeadline = exam.registration_deadline 
+              ? new Date(exam.registration_deadline).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                }) + ' ' + new Date(exam.registration_deadline).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                })
+              : undefined;
+            
+            return {
+              id: exam.id,
+              testName: exam.name,
+              fullName: exam.description || exam.name,
+              university: exam.organization?.name || 'Unknown Organization',
+              date: examDate.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit'
-              }) + ' ' + new Date(exam.registration_deadline).toLocaleTimeString('en-US', {
+              }),
+              time: examDate.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: true
-              })
-            : undefined;
-          
-          return {
-            id: exam.id,
-            testName: exam.name,
-            fullName: exam.description || exam.name,
-            university: exam.organization?.name || 'Unknown Organization',
-            date: examDate.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit'
-            }),
-            time: examDate.toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            }),
-            fee: `LKR ${Math.round(exam.price)}`,
-            registrationDeadline,
-            image: exam.organization?.logo 
-              ? `http://localhost:8000/storage${exam.organization.logo}` 
-              : "/ucsclogo.png", // Fallback image
-            description: exam.description || 'No description available',
-            duration: "2 hours", // Default duration (could be added to database later)
-            questions: 50, // Default questions (could be added to database later)
-            codeName: exam.code_name
-          };
-        });
+              }),
+              fee: `LKR ${Math.round(exam.price)}`,
+              registrationDeadline,
+              image: exam.organization?.logo 
+                ? `http://localhost:8000/storage${exam.organization.logo}` 
+                : "/ucsclogo.png", // Fallback image
+              description: exam.description || 'No description available',
+              duration: "2 hours", // Default duration (could be added to database later)
+              questions: 50, // Default questions (could be added to database later)
+              codeName: exam.code_name
+            };
+          });
         
         setExams(examData);
       } catch (err: any) {
@@ -95,7 +127,7 @@ const RegisterPage = () => {
     };
 
     loadExams();
-  }, []);
+  }, [isAuthenticated]);
 
   // Get unique universities for filter
   const universities = [...new Set(exams.map(exam => exam.university))];

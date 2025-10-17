@@ -133,6 +133,7 @@ export const updateExam = async (id: number, examData: Partial<ExamData>): Promi
 };
 
 export const deleteExam = async (id: number): Promise<ApiResponse> => {
+  console.log('🗑️ deleteExam called with ID:', id, 'Type:', typeof id);
   return await apiRequest(`/exam/delete/${id}`, {
     method: 'DELETE',
   });

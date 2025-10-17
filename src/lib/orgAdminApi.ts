@@ -52,6 +52,18 @@ export interface UpdateOrgAdminData {
   email: string;
 }
 
+export interface Location {
+  id: number;
+  organization_id: number;
+  location_name: string;
+  capacity: number;
+  current_registrations?: number;
+  organization?: {
+    id: number;
+    name: string;
+  };
+}
+
 export const orgAdminApi = {
   // Get all admins in the current admin's organization
   getOrgAdmins: async (): Promise<OrgAdmin[]> => {
@@ -125,6 +137,12 @@ export const orgAdminApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    return response.data;
+  },
+
+  // Get locations for the current organization
+  getLocations: async (): Promise<Location[]> => {
+    const response = await apiRequest('/locations');
     return response.data;
   },
 };

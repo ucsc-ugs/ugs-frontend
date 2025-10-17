@@ -29,8 +29,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ExamDateDetailsModal } from "@/components/ExamDateDetailsModal";
 import CreateExam from "./CreateExam";
-import { orgAdminApi } from "@/lib/orgAdminApi";
+import { orgAdminApi, type Location } from "@/lib/orgAdminApi";
 import { getExams, createExam, updateExam, deleteExam, updateExamDateStatus, updateExpiredExamStatuses, testConnection, type ExamData, type ExamDate } from "@/lib/examApi";
 
 interface ExamDateRow {
@@ -91,6 +92,16 @@ export default function ManageExams() {
     const [orgId, setOrgId] = useState<number | null>(null);
     const [orgError, setOrgError] = useState<string>("");
     
+    // Location state management
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [locationsLoading, setLocationsLoading] = useState(false);
+    const [locationsError, setLocationsError] = useState<string>("");
+    
+    // Exam date details modal state
+    const [selectedExamDateId, setSelectedExamDateId] = useState<number | null>(null);
+    const [selectedExamName, setSelectedExamName] = useState<string>("");
+    const [showExamDateDetails, setShowExamDateDetails] = useState(false);
+    
     // Form data for create/edit
     const [formData, setFormData] = useState({
         name: "",
@@ -99,7 +110,7 @@ export default function ManageExams() {
         price: 0,
         organization_id: 1, // This should come from current user's organization
         registration_deadline: "",
-        exam_dates: [{ date: "", location: "" }]
+        exam_dates: [{ date: "", location: "", location_id: "" as number | "" }]
     });
 
     // Helper function to format datetime-local value for backend (Y-m-d\TH:i format)
@@ -187,6 +198,25 @@ export default function ManageExams() {
             }
         })();
     }, []);
+
+    // Fetch locations when organization ID is available
+    useEffect(() => {
+        if (!orgId) return;
+
+        (async () => {
+            setLocationsLoading(true);
+            setLocationsError("");
+            try {
+                const locationsData = await orgAdminApi.getLocations();
+                setLocations(locationsData);
+            } catch (e: any) {
+                console.error("Failed to fetch locations:", e);
+                setLocationsError(e?.message || "Failed to load locations");
+            } finally {
+                setLocationsLoading(false);
+            }
+        })();
+    }, [orgId]);
 
     const loadExams = async () => {
         try {
@@ -389,7 +419,7 @@ export default function ManageExams() {
             // Reload exams after creating
             await loadExams();
             setShowCreateExam(false);
-            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Create exam error:', err);
@@ -471,7 +501,7 @@ export default function ManageExams() {
             // Reload exams after updating
             await loadExams();
             setEditingExam(null);
-            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
+            setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "" }] });
             setError("");
         } catch (err: any) {
             console.error('Update exam error:', err);
@@ -482,11 +512,19 @@ export default function ManageExams() {
     };
 
     const handleDeleteExam = async () => {
-        if (!deleteExamId) return;
+        if (!deleteExamId) {
+            console.error('No deleteExamId provided');
+            setError('No exam selected for deletion');
+            return;
+        }
+
+        console.log('Attempting to delete exam with ID:', deleteExamId);
+        console.log('Type of deleteExamId:', typeof deleteExamId);
 
         try {
             setIsSubmitting(true);
-            await deleteExam(deleteExamId);
+            const result = await deleteExam(deleteExamId);
+            console.log('Delete result:', result);
             
             // Reload exams after deleting
             await loadExams();
@@ -494,7 +532,32 @@ export default function ManageExams() {
             setError("");
         } catch (err: any) {
             console.error('Delete exam error:', err);
-            setError(err.message || 'Failed to delete exam');
+            console.error('Error type:', typeof err);
+            console.error('Error constructor:', err.constructor.name);
+            console.error('Error response:', err.response?.data);
+            console.error('Error status:', err.response?.status);
+            console.error('Error message:', err.message);
+            console.error('Direct err.status:', err.status);
+            console.error('Direct err.errors:', err.errors);
+            
+            // Show more detailed error message
+            let errorMessage = 'Failed to delete exam';
+            
+            // Handle both axios-style errors and custom thrown objects
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.message) {
+                errorMessage = err.message;
+            } else if (err.status && err.message) {
+                // Handle custom thrown object from apiRequest
+                errorMessage = `${err.message} (Status: ${err.status})`;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            } else {
+                errorMessage = 'An unknown error occurred while deleting the exam';
+            }
+            
+            setError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -502,6 +565,14 @@ export default function ManageExams() {
 
     const openEditModal = (examDate: ExamDateRow) => {
         setEditingExam(examDate);
+        
+        // Find location_id from location name
+        const locationId = examDate.location ? 
+            locations.find(loc => loc.location_name === examDate.location)?.id || "" : "";
+        
+        console.log('Opening edit modal for exam date:', examDate);
+        console.log('Found location_id:', locationId, 'for location:', examDate.location);
+        
         setFormData({
             name: examDate.examName,
             code_name: examDate.code_name || "",
@@ -511,7 +582,8 @@ export default function ManageExams() {
             registration_deadline: formatDateTimeForInput(examDate.registration_deadline || ""),
             exam_dates: [{ 
                 date: formatDateTimeForInput(examDate.date), 
-                location: examDate.location || "" 
+                location: examDate.location || "",
+                location_id: locationId
             }]
         });
         setError("");
@@ -521,7 +593,7 @@ export default function ManageExams() {
         setShowCreateExam(false);
         setEditingExam(null);
         setDeleteExamId(null);
-        setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "" }] });
+        setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "" }] });
         setError("");
     };
 
@@ -603,6 +675,18 @@ export default function ManageExams() {
         if (percentage >= 90) return { color: "text-red-600", icon: <AlertCircle className="w-3 h-3" /> };
         if (percentage >= 70) return { color: "text-orange-600", icon: <Clock className="w-3 h-3" /> };
         return { color: "text-green-600", icon: <CheckCircle className="w-3 h-3" /> };
+    };
+
+    const handleViewRegistrations = (examDateId: number, examName: string) => {
+        setSelectedExamDateId(examDateId);
+        setSelectedExamName(examName);
+        setShowExamDateDetails(true);
+    };
+
+    const handleCloseExamDateDetails = () => {
+        setShowExamDateDetails(false);
+        setSelectedExamDateId(null);
+        setSelectedExamName("");
     };
 
     return (
@@ -937,7 +1021,12 @@ export default function ManageExams() {
                                                                             <Edit className="w-4 h-4 mr-2" />
                                                                             Edit Exam
                                                                         </Button>
-                                                                        <Button variant="ghost" size="sm" className="justify-start">
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="sm" 
+                                                                            className="justify-start"
+                                                                            onClick={() => handleViewRegistrations(examDate.examDateId, examDate.examName)}
+                                                                        >
                                                                             <Users className="w-4 h-4 mr-2" />
                                                                             View Registrations
                                                                         </Button>
@@ -960,7 +1049,13 @@ export default function ManageExams() {
                                                                             variant="ghost"
                                                                             size="sm"
                                                                             className="justify-start text-red-600"
-                                                                            onClick={() => setDeleteExamId(examDate.examDateId)}
+                                                                            onClick={() => {
+                                                                                console.log('Delete button clicked for exam:', examDate.examName);
+                                                                                console.log('Exam ID being set:', examDate.examId);
+                                                                                console.log('Exam Date ID:', examDate.examDateId);
+                                                                                console.log('Full exam object:', examDate);
+                                                                                setDeleteExamId(examDate.examId);
+                                                                            }}
                                                                         >
                                                                             <Trash2 className="w-4 h-4 mr-2" />
                                                                             Delete Exam
@@ -1093,7 +1188,7 @@ export default function ManageExams() {
                                                 size="sm"
                                                 onClick={() => setFormData(prev => ({
                                                     ...prev,
-                                                    exam_dates: [...prev.exam_dates, { date: "", location: "" }]
+                                                    exam_dates: [...prev.exam_dates, { date: "", location: "", location_id: "" }]
                                                 }))}
                                             >
                                                 <Plus className="w-4 h-4 mr-1" />
@@ -1117,16 +1212,54 @@ export default function ManageExams() {
                                                     />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <Input
-                                                        placeholder="Location (optional)"
-                                                        value={examDate.location}
-                                                        onChange={(e) => {
+                                                    <Select
+                                                        key={`location-select-${index}-${examDate.location_id || 'empty'}-${locations.length}`}
+                                                        value={examDate.location_id ? examDate.location_id.toString() : ""}
+                                                        onValueChange={(value) => {
+                                                            if (locationsLoading) return;
                                                             const newExamDates = [...formData.exam_dates];
-                                                            newExamDates[index] = { ...newExamDates[index], location: e.target.value };
+                                                            if (value === "") {
+                                                                // User selected "Select location" (empty option)
+                                                                newExamDates[index] = {
+                                                                    ...newExamDates[index],
+                                                                    location_id: "",
+                                                                    location: ""
+                                                                };
+                                                            } else {
+                                                                // User selected a specific location
+                                                                const selectedLocation = locations.find(loc => loc.id === parseInt(value));
+                                                                newExamDates[index] = {
+                                                                    ...newExamDates[index],
+                                                                    location_id: parseInt(value),
+                                                                    location: selectedLocation ? selectedLocation.location_name : ""
+                                                                };
+                                                            }
                                                             setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
                                                         }}
-                                                        className="text-sm"
-                                                    />
+                                                    >
+                                                        <SelectTrigger className="text-sm">
+                                                            <SelectValue 
+                                                                key={`select-value-${examDate.location_id || 'none'}`}
+                                                                placeholder="Select location" 
+                                                            />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="">Select location</SelectItem>
+                                                            {locations.map(location => (
+                                                                <SelectItem key={location.id} value={location.id.toString()}>
+                                                                    {location.location_name}
+                                                                </SelectItem>
+                                                            ))}
+                                                            {locations.length === 0 && !locationsLoading && (
+                                                                <div className="px-2 py-1 text-sm text-gray-500">
+                                                                    No locations available. Create locations first.
+                                                                </div>
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {locationsError && (
+                                                        <p className="text-red-500 text-xs mt-1">{locationsError}</p>
+                                                    )}
                                                 </div>
                                                 {formData.exam_dates.length > 1 && (
                                                     <Button
@@ -1181,6 +1314,14 @@ export default function ManageExams() {
                         onCancel={() => setDeleteExamId(null)}
                     />
                 )}
+
+                {/* Exam Date Details Modal */}
+                <ExamDateDetailsModal
+                    isOpen={showExamDateDetails}
+                    onClose={handleCloseExamDateDetails}
+                    examDateId={selectedExamDateId}
+                    examName={selectedExamName}
+                />
             </div>
         </div>
     );
