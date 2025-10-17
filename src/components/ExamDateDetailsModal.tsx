@@ -151,7 +151,7 @@ export const ExamDateDetailsModal = ({
       const token = localStorage.getItem('auth_token');
       console.log('Downloading hall list for:', { examDateId, locationId, hallName });
       
-      const response = await fetch(`/api/admin/exam-dates/${examDateId}/halls/${locationId}/student-list`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/exam-dates/${examDateId}/halls/${locationId}/student-list`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -223,10 +223,17 @@ export const ExamDateDetailsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-h-[90vh] overflow-y-auto sm:!max-w-none" 
+        style={{ 
+          maxWidth: '1200px', 
+          width: '90vw',
+          minWidth: '800px'
+        }}
+      >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Calendar className="w-6 h-6" />
             Exam Date Details - {examName}
           </DialogTitle>
         </DialogHeader>
@@ -242,17 +249,17 @@ export const ExamDateDetailsModal = ({
             {error}
           </div>
         ) : examDetails ? (
-          <div className="space-y-6">
+          <div className="space-y-8 p-4">
             {/* Exam Info Header */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <Calendar className="w-5 h-5" />
                     Exam Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4 text-base">
                   <div>
                     <strong>Date:</strong> {formatDate(examDetails.date)}
                   </div>
@@ -273,40 +280,40 @@ export const ExamDateDetailsModal = ({
 
               {/* Location Information */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <MapPin className="w-5 h-5" />
                     Location Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6 p-6">
                   {examDetails.locations && examDetails.locations.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="text-base">
                           <strong>Total Capacity:</strong> {examDetails.total_capacity} students
                         </div>
-                        <div>
+                        <div className="text-base">
                           <strong>Total Registrations:</strong> {examDetails.total_registrations}
                         </div>
                       </div>
                       
-                      <div>
-                        <strong>Halls ({examDetails.locations.length}):</strong>
-                        <div className="mt-2 space-y-2">
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-4">Halls ({examDetails.locations.length}):</h3>
+                        <div className="space-y-4">
                           {examDetails.locations
                             .sort((a, b) => a.priority - b.priority)
                             .map((location, index) => (
-                              <div key={location.id} className="bg-gray-50 p-3 rounded-lg">
+                              <div key={location.id} className="bg-gray-50 p-6 rounded-lg border">
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                  <div className="flex items-center gap-3">
+                                    <span className="bg-blue-100 text-blue-800 px-3 py-2 rounded text-sm font-medium">
                                       #{index + 1}
                                     </span>
-                                    <span className="font-medium">{location.location_name}</span>
+                                    <span className="font-semibold text-lg">{location.location_name}</span>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  <div className="flex items-center gap-3">
+                                    <span className={`px-4 py-2 rounded text-sm font-medium ${
                                       location.current_registrations >= location.capacity
                                         ? 'bg-red-100 text-red-800'
                                         : 'bg-green-100 text-green-800'
@@ -315,15 +322,15 @@ export const ExamDateDetailsModal = ({
                                     </span>
                                     <button
                                       onClick={() => handleDownloadHallList(examDetails.id, location.id, location.location_name)}
-                                      className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2"
                                       title="Download student list CSV for this hall"
                                     >
-                                      <Download className="w-3 h-3" />
+                                      <Download className="w-4 h-4" />
                                       CSV
                                     </button>
                                   </div>
                                 </div>
-                                <div className="text-sm text-gray-600 mt-1">
+                                <div className="text-base text-gray-600 mt-3">
                                   {location.capacity - location.current_registrations} slots available
                                 </div>
                               </div>
@@ -361,71 +368,71 @@ export const ExamDateDetailsModal = ({
 
             {/* Registered Students */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
+              <CardHeader className="pb-6">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <Users className="w-5 h-5" />
                   Registered Students ({examDetails.registrations.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {examDetails.registrations.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="w-full table-fixed">
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Student</TableHead>
-                          <TableHead>Index Number</TableHead>
-                          <TableHead>Contact</TableHead>
-                          <TableHead>Assigned Location</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Attendance</TableHead>
-                          <TableHead>Result</TableHead>
-                          <TableHead>Registration Date</TableHead>
+                        <TableRow className="text-sm">
+                          <TableHead className="w-[200px] py-3 px-4 font-semibold">Student</TableHead>
+                          <TableHead className="w-[140px] py-3 px-4 font-semibold">Index</TableHead>
+                          <TableHead className="w-[250px] py-3 px-4 font-semibold">Contact</TableHead>
+                          <TableHead className="w-[140px] py-3 px-4 font-semibold">Hall</TableHead>
+                          <TableHead className="w-[100px] py-3 px-4 font-semibold">Status</TableHead>
+                          <TableHead className="w-[100px] py-3 px-4 font-semibold">Attendance</TableHead>
+                          <TableHead className="w-[100px] py-3 px-4 font-semibold">Result</TableHead>
+                          <TableHead className="w-[130px] py-3 px-4 font-semibold">Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {examDetails.registrations.map((registration) => (
-                          <TableRow key={registration.id}>
-                            <TableCell>
+                          <TableRow key={registration.id} className="hover:bg-gray-50">
+                            <TableCell className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-gray-400" />
-                                <div>
-                                  <div className="font-medium">{registration.student.name}</div>
-                                  <div className="text-sm text-gray-500">ID: {registration.student.id}</div>
+                                <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm">{registration.student.name}</div>
+                                  <div className="text-xs text-gray-500">ID: {registration.student.id}</div>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3 px-4">
                               <div className="flex items-center gap-1">
-                                <Hash className="w-3 h-3 text-gray-400" />
+                                <Hash className="w-3 h-3 text-gray-400 flex-shrink-0" />
                                 <span className="font-mono text-sm">{registration.index_number}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3 px-4">
                               <div className="space-y-1">
-                                <div className="flex items-center gap-1 text-sm">
-                                  <Mail className="w-3 h-3 text-gray-400" />
-                                  <span>{registration.student.email}</span>
+                                <div className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-xs">{registration.student.email}</span>
                                 </div>
                                 {registration.student.phone && (
-                                  <div className="flex items-center gap-1 text-sm">
-                                    <Phone className="w-3 h-3 text-gray-400" />
-                                    <span>{registration.student.phone}</span>
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                    <span className="text-xs">{registration.student.phone}</span>
                                   </div>
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3 px-4">
                               {registration.assigned_location ? (
                                 <div className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3 text-green-600" />
+                                  <MapPin className="w-3 h-3 text-green-600 flex-shrink-0" />
                                   <span className="text-sm">{registration.assigned_location.location_name}</span>
                                 </div>
                               ) : (
-                                <span className="text-gray-500 text-sm">Not assigned</span>
+                                <span className="text-gray-500 text-xs">Not assigned</span>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3 px-4">
                               <Badge className={getStatusColor(registration.status)}>
                                 {registration.status.charAt(0).toUpperCase() + registration.status.slice(1)}
                               </Badge>
