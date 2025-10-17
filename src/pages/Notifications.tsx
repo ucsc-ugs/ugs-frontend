@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NotificationCard } from "@/components/ui/NotificationCard";
 import { CompactCalendar } from "@/components/ui/CompactCalendar";
 import { Bell, AlertTriangle } from "lucide-react";
-import AnnouncementModal from "@/components/AnnouncementModal";
+import NotificationModal from "@/components/NotificationModal";
 
 interface Announcement {
   id: number;
@@ -30,7 +30,7 @@ function getType(a: Announcement): "info" | "success" | "alert" {
 }
 
 function NotificationsPage() {
-  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
+  const [generalAnnouncements, setGeneralAnnouncements] = useState<Announcement[]>([]);
   const [examAnnouncements, setExamAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,21 +41,64 @@ function NotificationsPage() {
       setLoading(true);
       setError(null);
       try {
-        const resAll = await fetch("http://localhost:8000/api/announcements");
-        if (!resAll.ok) throw new Error("Failed to fetch announcements");
-        const allData: Announcement[] = await resAll.json();
-        setAllAnnouncements(allData.filter(a => a.audience === "all" && a.status === "published"));
+        // Get auth token for authenticated requests
+        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+        
+        if (!token) {
+          console.warn("No auth token found - user may not be logged in");
+          throw new Error("Please log in to view all notifications");
+        }
 
-        const studentId = localStorage.getItem("student_id");
-        let examUrl = "http://localhost:8000/api/student/notifications";
-        if (studentId) examUrl += `?student_id=${studentId}`;
-        const resExam = await fetch(examUrl);
-        if (!resExam.ok) throw new Error("Failed to fetch exam notifications");
-        const examData: Announcement[] = await resExam.json();
-        setExamAnnouncements(examData.filter(a => a.audience === "exam-specific" && a.status === "published"));
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        };
+
+        // First, get the authenticated user info to find student_id
+        const userRes = await fetch("http://localhost:8000/api/user", { headers });
+        
+        if (!userRes.ok) {
+          throw new Error("Failed to authenticate user");
+        }
+        
+        const userData = await userRes.json();
+        console.log("User data:", userData);
+        
+        // Extract student_id from user data
+        const studentId = userData.student_id || userData.id;
+        console.log("Student ID from auth:", studentId);
+        
+        if (!studentId) {
+          throw new Error("Could not determine student ID");
+        }
+
+        // Now fetch notifications with student_id
+        const url = `http://localhost:8000/api/student/notifications?student_id=${studentId}`;
+        const res = await fetch(url, { headers });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error || "Failed to fetch notifications");
+        }
+        
+        const data: Announcement[] = await res.json();
+        
+        console.log("Received notifications:", data);
+        
+        // Separate general and exam-specific announcements
+        const general = data.filter(a => a.audience === "all");
+        const examSpecific = data.filter(a => a.audience === "exam-specific");
+        
+        setGeneralAnnouncements(general);
+        setExamAnnouncements(examSpecific);
+        
+        console.log("General announcements:", general.length);
+        console.log("Exam-specific announcements:", examSpecific.length);
+        
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "Could not load notifications.";
         setError(message);
+        console.error("Error fetching notifications:", e);
       } finally {
         setLoading(false);
       }
@@ -92,13 +135,13 @@ function NotificationsPage() {
               ) : error ? (
                 <div className="text-center py-8">
                   <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-2" />
-                  <div>{error}</div>
+                  <div className="text-red-600">{error}</div>
                 </div>
-              ) : allAnnouncements.length === 0 ? (
+              ) : generalAnnouncements.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No general announcements.</div>
               ) : (
                 <div className="space-y-3">
-                  {allAnnouncements.map(a => (
+                  {generalAnnouncements.map(a => (
                     <div key={a.id} onClick={() => setSelected(a)} className="cursor-pointer">
                       <NotificationCard
                         notification={{
@@ -127,7 +170,7 @@ function NotificationsPage() {
               ) : error ? (
                 <div className="text-center py-8">
                   <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-2" />
-                  <div>{error}</div>
+                  <div className="text-red-600">{error}</div>
                 </div>
               ) : examAnnouncements.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No exam-specific announcements.</div>
@@ -161,25 +204,9 @@ function NotificationsPage() {
         </div>
       </div>
       {/* Modal for full details */}
-      <AnnouncementModal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        announcement={selected ? {
-          title: selected.title,
-          message: selected.message,
-          audience: selected.audience,
-          priority: selected.priority || "",
-          category: selected.category || "",
-          status: selected.status || "",
-          expiryDate: selected.expiry_date || "",
-          publishDate: selected.publish_date || selected.created_at || "",
-          tags: selected.tags || [],
-          exam_title: selected.exam_title,
-          exam_code: selected.exam_code,
-          exam_id: selected.exam_id,
-          is_pinned: selected.is_pinned,
-        } : null}
-      />
+      {selected && (
+        <NotificationModal notification={selected} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }
