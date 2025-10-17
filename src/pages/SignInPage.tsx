@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft, Loader2, CheckCircle, XCircle, Coffee, Zap, Star } from "lucide-react";
 import { login } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignInPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login: authLogin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -18,6 +19,9 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Get redirect URL from query parameters
+  const redirectUrl = searchParams.get('redirect');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,26 +68,17 @@ export default function SignInPage() {
       authLogin(userData, () => {
         // Small delay to ensure state is fully updated
         setTimeout(() => {
-          navigate("/portal/", { replace: true });
+          // Redirect to the specified URL or default to portal
+          const destination = redirectUrl || "/portal/";
+          navigate(destination, { replace: true });
         }, 100);
       });
       
     } catch (err: any) {
       console.error('Login error:', err);
       
-      // Creative error messages
-      const errorMessages = [
-        "🤔 Hmm, those credentials seem to be playing hide and seek!",
-        "🔐 Your password and our records are having a disagreement...",
-        "📧 Double-check that email - typos happen to the best of us!",
-        "🎯 Close, but not quite! Try again with the right combo.",
-        "🔑 The digital keys don't match our lock. Give it another shot!",
-        "📱 Maybe your fingers got excited? Check those details again!",
-        "🎪 Error 401: Credentials not found in our magic hat!"
-      ];
-      
-      const randomError = errorMessages[Math.floor(Math.random() * errorMessages.length)];
-      setError(err.message || randomError);
+      // Show the actual error message from the backend
+      setError(err.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -135,7 +130,7 @@ export default function SignInPage() {
           
           <div className="flex items-center justify-center gap-3 mb-6">
             <img 
-              src="../src/assets/ucsc_logo.png" 
+              src="/ucsclogo.png" 
               alt="UCSC Logo" 
               width={50} 
               height={35} 

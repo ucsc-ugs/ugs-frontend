@@ -151,7 +151,7 @@ const Home = () => {
                       <img
                         src={exam.image}
                         alt={`${exam.university} logo`}
-                        className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
+                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                       />
                     </div>
                   </CardContent>
@@ -228,7 +228,7 @@ const Home = () => {
                       <img
                         src={exam.image}
                         alt={`${exam.university} logo`}
-                        className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
+                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                       />
                     </div>
                   </CardContent>

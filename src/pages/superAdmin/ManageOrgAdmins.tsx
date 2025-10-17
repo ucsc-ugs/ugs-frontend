@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Plus, Edit, Trash2, Search, Building2 } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Search, Building2, UserPlus } from 'lucide-react';
 import { getOrgAdmins, createOrgAdmin, updateOrgAdmin, deleteOrgAdmin, getOrganizations } from "@/lib/superAdminApi";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
@@ -75,7 +76,6 @@ export default function ManageOrgAdmins() {
     e.preventDefault();
     setIsSubmitting(true);
     setFormErrors({});
-
     try {
       if (editingAdmin) {
         await updateOrgAdmin(editingAdmin.id, {
@@ -91,7 +91,7 @@ export default function ManageOrgAdmins() {
           organization_id: parseInt(formData.organization_id)
         });
       }
-      
+            
       await loadData();
       resetForm();
     } catch (err: any) {
@@ -119,7 +119,6 @@ export default function ManageOrgAdmins() {
 
   const handleDelete = async () => {
     if (!deleteAdminId) return;
-
     try {
       await deleteOrgAdmin(deleteAdminId);
       await loadData();
@@ -145,7 +144,7 @@ export default function ManageOrgAdmins() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-6 bg-gray-50 min-h-screen">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-32 bg-gray-200 rounded"></div>
@@ -155,7 +154,7 @@ export default function ManageOrgAdmins() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -182,101 +181,133 @@ export default function ManageOrgAdmins() {
 
       {/* Form */}
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingAdmin ? 'Edit Org Admin' : 'Create Org Admin'}</CardTitle>
-            <CardDescription>
-              {editingAdmin ? 'Update org admin details' : 'Add a new organizational administrator'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {formErrors.general && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                  {formErrors.general}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-white p-4 rounded-lg max-w-md w-full">
+            <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="text-center space-y-4 pb-8">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                  <UserPlus className="w-8 h-8 text-white" />
                 </div>
-              )}
-              
-              <div>
-                <Input
-                  placeholder="Full Name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className={formErrors.name ? 'border-red-300' : ''}
-                />
-                {formErrors.name && (
-                  <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>
-                )}
-              </div>
-
-              <div>
-                <Input
-                  type="email"
-                  placeholder="Email Address"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className={formErrors.email ? 'border-red-300' : ''}
-                />
-                {formErrors.email && (
-                  <p className="text-red-600 text-sm mt-1">{formErrors.email}</p>
-                )}
-              </div>
-
-              {!editingAdmin && (
                 <div>
-                  <Input
-                    type="password"
-                    placeholder="Password"
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    className={formErrors.password ? 'border-red-300' : ''}
-                  />
-                  {formErrors.password && (
-                    <p className="text-red-600 text-sm mt-1">{formErrors.password}</p>
-                  )}
+                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    {editingAdmin ? "Edit Org Admin" : "Create Org Admin"}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-2">
+                    {editingAdmin ? "Update org admin details" : "Add a new organizational administrator"}
+                  </CardDescription>
                 </div>
-              )}
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {formErrors.general && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                      {formErrors.general}
+                    </div>
+                  )}
 
-              <div>
-                <Select
-                  value={formData.organization_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, organization_id: value }))}
-                >
-                  <SelectTrigger className={formErrors.organization_id ? 'border-red-300' : ''}>
-                    <SelectValue placeholder="Select Organization" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id.toString()}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formErrors.organization_id && (
-                  <p className="text-red-600 text-sm mt-1">{formErrors.organization_id}</p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="fullName"
+                      placeholder="Full Name"
+                      value={formData.name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                      className={`border-gray-200 focus:border-purple-400 focus:ring-purple-400/20 transition-colors ${
+                        formErrors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                      }`}
+                    />
+                    {formErrors.name && <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>}
+                  </div>
 
-              <div className="flex gap-2">
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isSubmitting ? 'Saving...' : (editingAdmin ? 'Update' : 'Create')}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={resetForm}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Email Address"
+                      value={formData.email}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                      className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                        formErrors.email ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                      }`}
+                    />
+                    {formErrors.email && <p className="text-red-600 text-sm mt-1">{formErrors.email}</p>}
+                  </div>
+
+                  {!editingAdmin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                        Password
+                      </Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Password"
+                        value={formData.password}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                        className={`border-gray-200 focus:border-purple-400 focus:ring-purple-400/20 transition-colors ${
+                          formErrors.password ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                        }`}
+                      />
+                      {formErrors.password && <p className="text-red-600 text-sm mt-1">{formErrors.password}</p>}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="organisation" className="text-sm font-medium text-gray-700">
+                      Organisation
+                    </Label>
+                    <Select
+                      value={formData.organization_id}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, organization_id: value }))}
+                    >
+                      <SelectTrigger
+                        className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                          formErrors.organization_id ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-gray-400" />
+                          <SelectValue placeholder="Select Organization" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {organizations.map((org) => (
+                          <SelectItem key={org.id} value={org.id.toString()}>
+                            {org.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.organization_id && <p className="text-red-600 text-sm mt-1">{formErrors.organization_id}</p>}
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:transform-none"
+                    >
+                      {isSubmitting ? "Saving..." : editingAdmin ? "Update" : "Create"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={resetForm}
+                      className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors bg-transparent"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Search */}
@@ -295,10 +326,10 @@ export default function ManageOrgAdmins() {
       </Card>
 
       {/* Org Admins List */}
-      <Card>
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Users className="h-5 w-5 text-gray-600" />
             Organizational Admins ({filteredOrgAdmins.length})
           </CardTitle>
         </CardHeader>

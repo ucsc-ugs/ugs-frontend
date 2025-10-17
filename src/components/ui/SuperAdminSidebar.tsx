@@ -8,7 +8,9 @@ import {
   Menu, 
   X, 
   Shield,
-  Settings
+  Settings,
+  BookOpen,
+  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSuperAdminAuth } from "@/contexts/SuperAdminAuthContext";
@@ -46,6 +48,16 @@ export default function SuperAdminSidebar() {
       to: "/super-admin/org-admins",
       icon: Users,
       label: "Manage Org Admins"
+    },
+    {
+      to: "/super-admin/exams",
+      icon: BookOpen,
+      label: "Manage Exams"
+    },
+    {
+      to: "/super-admin/revenue",
+      icon: DollarSign,
+      label: "Revenue"
     }
   ];
 

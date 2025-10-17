@@ -4,10 +4,8 @@ import {
     ArrowLeft,
     Eye,
     EyeOff,
-    Bell,
-    Mail,
-    Send,
-    Pin
+    Pin,
+    Loader2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Toast } from '@/components/ui/toast';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 // Interfaces
 interface Exam {
@@ -24,11 +23,7 @@ interface Exam {
     department: string;
 }
 
-interface Department {
-    id: string;
-    name: string;
-    code: string;
-}
+// Department interface removed (not used)
 
 interface AnnouncementTemplate {
     id: string;
@@ -40,23 +35,66 @@ interface AnnouncementTemplate {
 }
 
 export default function CreateAnnouncement() {
+    const API_URL =
+        (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
+            ? import.meta.env.VITE_API_URL
+            : (typeof process !== 'undefined' && process.env.REACT_APP_API_URL)
+                ? process.env.REACT_APP_API_URL
+                : 'http://localhost:8000';
+
     const navigate = useNavigate();
     const location = useLocation();
     const editingAnnouncement = location.state?.editingAnnouncement || null;
 
     // State management
-    const [exams] = useState<Exam[]>([
-        { id: '1', title: 'Final Year Exam', date: '2024-01-15', department: 'Computer Science' },
-        { id: '2', title: 'Mid Term Exam', date: '2024-01-20', department: 'Mathematics' },
-        { id: '3', title: 'Practical Test', date: '2024-01-25', department: 'Physics' }
-    ]);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [userOrgId, setUserOrgId] = useState<number | null>(null);
 
-    const [departments] = useState<Department[]>([
-        { id: '1', name: 'Computer Science', code: 'CS' },
-        { id: '2', name: 'Mathematics', code: 'MATH' },
-        { id: '3', name: 'Physics', code: 'PHY' },
-        { id: '4', name: 'Chemistry', code: 'CHEM' }
-    ]);
+    // Fetch logged-in user's organization_id
+    useEffect(() => {
+        const token = localStorage.getItem('auth_token');
+        axios.get(
+            `${API_URL}/api/user`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        )
+            .then(res => {
+                setUserOrgId(res.data.organization_id || null);
+            })
+            .catch(() => setUserOrgId(null));
+    }, [API_URL]);
+
+    // Fetch exams for logged-in org admin, filter by user's organization_id
+    useEffect(() => {
+        if (userOrgId === null) {
+            setExams([]);
+            return;
+        }
+        const fetchExams = async () => {
+            const token = localStorage.getItem('auth_token');
+            try {
+                const response = await axios.get(
+                    `${API_URL}/api/exams`,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+                const examsData = response.data.data || response.data;
+                setExams(
+                    examsData
+                        .filter((exam: any) => exam.organization_id === userOrgId)
+                        .map((exam: any) => ({
+                            id: exam.id,
+                            title: exam.name,
+                            date: exam.exam_dates?.[0]?.date || '',
+                            department: exam.organization?.name || ''
+                        }))
+                );
+            } catch (err) {
+                setExams([]);
+            }
+        };
+        fetchExams();
+    }, [API_URL, userOrgId]);
+
+    // Department-specific audience removed; departments variable not needed
 
     const [templates] = useState<AnnouncementTemplate[]>([
         { id: '1', name: 'Exam Reminder', title: 'Exam Reminder: [Exam Name]', message: 'This is a reminder about your upcoming exam...', category: 'exam', priority: 'high' },
@@ -65,15 +103,17 @@ export default function CreateAnnouncement() {
     ]);
 
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false); // Add this state
+    const [userId, setUserId] = useState<string | null>(null);
 
     // Form state
     const [formData, setFormData] = useState({
         title: '',
         message: '',
-        audience: 'all' as 'all' | 'exam-specific' | 'department-specific' | 'year-specific',
+        audience: 'all' as 'all' | 'exam-specific',
         examId: '',
-        departmentId: '',
-        yearLevel: '',
+        // departmentId removed
+        // yearLevel removed
         expiryDate: '',
         publishDate: '',
         status: 'published' as 'published' | 'draft' | 'scheduled',
@@ -81,10 +121,7 @@ export default function CreateAnnouncement() {
         category: 'general' as 'general' | 'exam' | 'academic' | 'administrative' | 'emergency',
         tags: [] as string[],
         isPinned: false,
-        notificationsEnabled: true,
-        emailNotificationsEnabled: true,
-        smsNotificationsEnabled: false,
-        pushNotificationsEnabled: true,
+        // Notification settings removed for announcements
         selectedTemplate: ''
     });
 
@@ -94,9 +131,9 @@ export default function CreateAnnouncement() {
             setFormData({
                 title: editingAnnouncement.title,
                 message: editingAnnouncement.message,
-                audience: editingAnnouncement.audience,
+                audience: editingAnnouncement.audience === 'department-specific' ? 'all' : editingAnnouncement.audience,
                 examId: editingAnnouncement.examId || '',
-                departmentId: editingAnnouncement.departmentId || '',
+                // departmentId removed
                 yearLevel: editingAnnouncement.yearLevel || '',
                 expiryDate: editingAnnouncement.expiryDate,
                 publishDate: editingAnnouncement.publishDate || '',
@@ -105,23 +142,33 @@ export default function CreateAnnouncement() {
                 category: editingAnnouncement.category,
                 tags: editingAnnouncement.tags || [],
                 isPinned: editingAnnouncement.isPinned,
-                notificationsEnabled: editingAnnouncement.notificationsEnabled,
-                emailNotificationsEnabled: editingAnnouncement.emailNotificationsEnabled,
-                smsNotificationsEnabled: editingAnnouncement.smsNotificationsEnabled || false,
-                pushNotificationsEnabled: editingAnnouncement.pushNotificationsEnabled || true,
+                // Notification settings removed for announcements
                 selectedTemplate: ''
             });
         }
     }, [editingAnnouncement]);
 
+    useEffect(() => {
+        // Fetch user id from backend
+        const token = localStorage.getItem('auth_token');
+        axios.get(
+            `${API_URL}/api/user`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        )
+            .then(res => setUserId(String(res.data.id)))
+            .catch(() => setUserId(null));
+    }, [API_URL]);
+
     // Handle form submission
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true); // Start loading
 
         // Validation
         if (!formData.title.trim() || !formData.message.trim() || !formData.expiryDate) {
             setNotification({ type: 'error', message: 'Please fill in all required fields!' });
             setTimeout(() => setNotification(null), 3000);
+            setIsSubmitting(false); // Stop loading
             return;
         }
 
@@ -129,61 +176,71 @@ export default function CreateAnnouncement() {
         if (formData.audience === 'exam-specific' && !formData.examId) {
             setNotification({ type: 'error', message: 'Please select an exam for exam-specific announcements!' });
             setTimeout(() => setNotification(null), 3000);
+            setIsSubmitting(false); // Stop loading
             return;
         }
 
-        if (formData.audience === 'department-specific' && !formData.departmentId) {
-            setNotification({ type: 'error', message: 'Please select a department for department-specific announcements!' });
-            setTimeout(() => setNotification(null), 3000);
-            return;
-        }
+        // Department-specific audience removed
 
-        if (formData.audience === 'year-specific' && !formData.yearLevel) {
-            setNotification({ type: 'error', message: 'Please select a year level for year-specific announcements!' });
-            setTimeout(() => setNotification(null), 3000);
-            return;
-        }
+        // year-specific audience removed
 
-        // Create new announcement (would be sent to API)
-        const exam = exams.find(e => e.id === formData.examId);
-        const department = departments.find(d => d.id === formData.departmentId);
-
-        // In real implementation, this would be sent to backend
-        console.log('Creating announcement:', {
+        // Prepare payload for backend
+        const payload = {
             title: formData.title,
             message: formData.message,
             audience: formData.audience,
-            examId: formData.examId || undefined,
-            examTitle: exam?.title,
-            departmentId: formData.departmentId || undefined,
-            departmentName: department?.name,
-            yearLevel: formData.yearLevel || undefined,
-            expiryDate: formData.expiryDate,
-            publishDate: formData.publishDate || undefined,
+            exam_id: formData.examId || null,
+            // department_id removed
+            // year_level removed
+            expiry_date: formData.expiryDate,
+            publish_date: formData.publishDate || null,
             status: formData.status,
             priority: formData.priority,
             category: formData.category,
             tags: formData.tags,
-            isPinned: formData.isPinned,
-            notificationsEnabled: formData.notificationsEnabled,
-            emailNotificationsEnabled: formData.emailNotificationsEnabled,
-            smsNotificationsEnabled: formData.smsNotificationsEnabled,
-            pushNotificationsEnabled: formData.pushNotificationsEnabled
-        });
+            is_pinned: formData.isPinned,
+            // Notification settings removed for announcements
+            created_by: userId // Use logged-in user's id
+        };
 
-        // Show success message
-        setNotification({
-            type: 'success',
-            message: `Announcement ${formData.status === 'draft' ? 'saved as draft' : formData.status === 'scheduled' ? 'scheduled' : 'published'} successfully!`
-        });
-
-        // Reset form after a delay
-        setTimeout(() => {
-            setNotification(null);
-            resetForm();
-            // Navigate back to announcements list
-            navigate('/admin/set-announcements');
-        }, 2000);
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (editingAnnouncement && editingAnnouncement.id) {
+                // Edit mode: update existing announcement
+                await axios.put(
+                    `${API_URL}/api/announcements/${editingAnnouncement.id}`,
+                    payload,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+            } else {
+                // Create mode: create new announcement
+                await axios.post(
+                    `${API_URL}/api/announcements`,
+                    payload,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+            }
+            setNotification({
+                type: 'success',
+                message: editingAnnouncement
+                    ? `Announcement updated successfully!`
+                    : `Announcement ${formData.status === 'draft' ? 'saved as draft' : formData.status === 'scheduled' ? 'scheduled' : 'published'} successfully!`
+            });
+            setTimeout(() => {
+                setNotification(null);
+                resetForm();
+                navigate('/admin/set-announcements');
+            }, 2000);
+        } catch (error: any) {
+            console.error('Announcement error:', error.response?.data || error.message);
+            setNotification({
+                type: 'error',
+                message: error.response?.data?.message || 'Failed to save announcement!'
+            });
+            setTimeout(() => setNotification(null), 3000);
+        } finally {
+            setIsSubmitting(false); // Stop loading
+        }
     };
 
     // Reset form helper
@@ -193,7 +250,7 @@ export default function CreateAnnouncement() {
             message: '',
             audience: 'all',
             examId: '',
-            departmentId: '',
+            // departmentId removed
             yearLevel: '',
             expiryDate: '',
             publishDate: '',
@@ -202,10 +259,7 @@ export default function CreateAnnouncement() {
             category: 'general',
             tags: [],
             isPinned: false,
-            notificationsEnabled: true,
-            emailNotificationsEnabled: true,
-            smsNotificationsEnabled: false,
-            pushNotificationsEnabled: true,
+            // Notification settings removed for announcements
             selectedTemplate: ''
         });
     };
@@ -321,7 +375,7 @@ export default function CreateAnnouncement() {
                                         }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue />
+                                            <SelectValue placeholder={formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1)} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="low">Low</SelectItem>
@@ -343,7 +397,7 @@ export default function CreateAnnouncement() {
                                         }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue />
+                                            <SelectValue placeholder={formData.category.charAt(0).toUpperCase() + formData.category.slice(1)} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="general">General</SelectItem>
@@ -395,21 +449,23 @@ export default function CreateAnnouncement() {
                                     onValueChange={(value) =>
                                         setFormData(prev => ({
                                             ...prev,
-                                            audience: value as 'all' | 'exam-specific' | 'department-specific' | 'year-specific',
-                                            examId: '',
-                                            departmentId: '',
-                                            yearLevel: ''
+                                            audience: value as 'all' | 'exam-specific',
+                                            examId: ''
                                         }))
                                     }
                                 >
                                     <SelectTrigger>
-                                        <SelectValue />
+                                        <SelectValue
+                                            placeholder={{
+                                                'all': 'All Students',
+                                                'exam-specific': 'Exam-specific',
+                                                'year-specific': 'Year-specific'
+                                            }[formData.audience]}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Students</SelectItem>
                                         <SelectItem value="exam-specific">Exam-specific</SelectItem>
-                                        <SelectItem value="department-specific">Department-specific</SelectItem>
-                                        <SelectItem value="year-specific">Year-specific</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -425,66 +481,31 @@ export default function CreateAnnouncement() {
                                         onValueChange={(value) => setFormData(prev => ({ ...prev, examId: value }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Choose an exam" />
+                                            <SelectValue
+                                                placeholder={
+                                                    exams.find(e => e.id === formData.examId)
+                                                        ? exams.find(e => e.id === formData.examId)!.title
+                                                        : 'Choose an exam'
+                                                }
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {exams.map(exam => (
-                                                <SelectItem key={exam.id} value={exam.id}>
-                                                    {exam.title} - {exam.department}
-                                                </SelectItem>
-                                            ))}
+                                            {exams.length === 0 ? (
+                                                <SelectItem value="" disabled>No exams available</SelectItem>
+                                            ) : (
+                                                exams.map(exam => (
+                                                    <SelectItem key={exam.id} value={exam.id}>
+                                                        {exam.title}
+                                                    </SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             )}
 
-                            {/* Department Selection (if department-specific) */}
-                            {formData.audience === 'department-specific' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Select Department <span className="text-red-500">*</span>
-                                    </label>
-                                    <Select
-                                        value={formData.departmentId}
-                                        onValueChange={(value) => setFormData(prev => ({ ...prev, departmentId: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Choose a department" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {departments.map(dept => (
-                                                <SelectItem key={dept.id} value={dept.id}>
-                                                    {dept.name} ({dept.code})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-                            {/* Year Level Selection (if year-specific) */}
-                            {formData.audience === 'year-specific' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Select Year Level <span className="text-red-500">*</span>
-                                    </label>
-                                    <Select
-                                        value={formData.yearLevel}
-                                        onValueChange={(value) => setFormData(prev => ({ ...prev, yearLevel: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Choose year level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="1">Year 1</SelectItem>
-                                            <SelectItem value="2">Year 2</SelectItem>
-                                            <SelectItem value="3">Year 3</SelectItem>
-                                            <SelectItem value="4">Year 4</SelectItem>
-                                            <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
+                            {/* Department-specific audience and selection removed */}
+                            
 
                             {/* Dates Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -531,72 +552,7 @@ export default function CreateAnnouncement() {
                                 </label>
                             </div>
 
-                            {/* Notification Options */}
-                            <div className="space-y-4">
-                                <h3 className="font-medium">Notification Settings</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.notificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                notificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Bell className="w-4 h-4 text-blue-500" />
-                                            <span>In-app notifications</span>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.emailNotificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                emailNotificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Mail className="w-4 h-4 text-green-500" />
-                                            <span>Email notifications</span>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.smsNotificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                smsNotificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Send className="w-4 h-4 text-purple-500" />
-                                            <span>SMS notifications</span>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.pushNotificationsEnabled}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                pushNotificationsEnabled: e.target.checked
-                                            }))}
-                                            className="rounded"
-                                        />
-                                        <div className="flex items-center gap-2">
-                                            <Bell className="w-4 h-4 text-indigo-500" />
-                                            <span>Push notifications</span>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
+                            {/* Notification settings removed for announcements */}
 
                             {/* Form Actions */}
                             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
@@ -609,24 +565,18 @@ export default function CreateAnnouncement() {
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Cancel
                                 </Button>
-                                <Button
-                                    type="button"
-                                    onClick={(e) => {
-                                        setFormData(prev => ({ ...prev, status: 'draft' }));
-                                        handleSubmit(e as React.FormEvent);
-                                    }}
-                                    variant="outline"
-                                    className="flex-1"
-                                >
-                                    <EyeOff className="w-4 h-4 mr-2" />
-                                    Save as Draft
-                                </Button>
+                                {/* Save as Draft button removed */}
                                 <Button
                                     type="submit"
                                     onClick={() => setFormData(prev => ({ ...prev, status: formData.publishDate ? 'scheduled' : 'published' }))}
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+                                    disabled={isSubmitting}
                                 >
-                                    <Eye className="w-4 h-4 mr-2" />
+                                    {isSubmitting ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Eye className="w-4 h-4 mr-2" />
+                                    )}
                                     {editingAnnouncement ?
                                         (formData.publishDate ? 'Update & Schedule' : 'Update Announcement') :
                                         (formData.publishDate ? 'Schedule' : 'Publish Now')
@@ -637,6 +587,6 @@ export default function CreateAnnouncement() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </div >
     );
 }

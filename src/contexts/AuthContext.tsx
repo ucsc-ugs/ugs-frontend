@@ -55,7 +55,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     const token = getAuthToken();
     
+    console.log('AuthContext: Checking auth status, token exists:', !!token);
+    
     if (!token) {
+      console.log('AuthContext: No token found, user not authenticated');
       setUser(null);
       setIsLoading(false);
       setIsAuthenticated(false);
@@ -63,7 +66,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      // Verify token with backend
+      console.log('AuthContext: Making auth verification request to /api/user');
+      // Verify token with backend and get user profile
       const response = await fetch('http://localhost:8000/api/user', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -73,6 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const apiResponse = await response.json();
+        console.log('AuthContext: Auth verification successful');
         // Transform the new API response structure to match our User interface
         const userData: User = {
           id: apiResponse.id,
@@ -89,6 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(true);
         return true;
       } else {
+        console.log('AuthContext: Auth verification failed with status:', response.status);
         // Token is invalid, remove it
         removeAuthToken();
         setUser(null);
@@ -98,6 +104,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      // Only remove token on 401/403 errors, not on network errors
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.log('Network error during auth check, keeping token for retry');
+        setUser(null);
+        setIsLoading(false);
+        setIsAuthenticated(false);
+        return false;
+      }
+      // For other errors, remove token
+      console.log('AuthContext: Removing token due to non-network error');
       removeAuthToken();
       setUser(null);
       setIsLoading(false);

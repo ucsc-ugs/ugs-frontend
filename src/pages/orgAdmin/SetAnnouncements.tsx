@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AnnouncementModal from '@/components/AnnouncementModal';
 import {
     Megaphone,
     Plus,
@@ -7,20 +8,12 @@ import {
     Trash2,
     Filter,
     Search,
-    Calendar,
     Users,
-    Eye,
-    Bell,
-    Mail,
-    Clock,
     FileText,
     Star,
     AlertCircle,
     Info,
     CheckSquare,
-    Copy,
-    Send,
-    BarChart3,
     Tag,
     Pin,
     Zap,
@@ -37,18 +30,18 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Toast } from '@/components/ui/toast';
+import axios from 'axios';
 
 // Types
 interface Announcement {
     id: string;
     title: string;
     message: string;
-    audience: 'all' | 'exam-specific' | 'department-specific' | 'year-specific';
+    audience: 'all' | 'exam-specific' | 'department-specific';
     examId?: string;
     examTitle?: string;
-    departmentId?: string;
-    departmentName?: string;
-    yearLevel?: string;
+    // departmentId and departmentName removed
+    // yearLevel removed
     expiryDate: string;
     publishDate?: string; // For scheduled publishing
     status: 'published' | 'draft' | 'expired' | 'scheduled';
@@ -59,10 +52,7 @@ interface Announcement {
     createdAt: string;
     updatedAt?: string;
     createdBy: string;
-    notificationsEnabled: boolean;
-    emailNotificationsEnabled: boolean;
-    smsNotificationsEnabled: boolean;
-    pushNotificationsEnabled: boolean;
+    // Notification settings removed for announcements
     viewCount: number;
     clickCount: number;
     attachments?: FileAttachment[];
@@ -76,164 +66,126 @@ interface FileAttachment {
     type: string;
 }
 
-interface Exam {
-    id: string;
-    title: string;
-    date: string;
-    department: string;
-}
 
-interface Department {
-    id: string;
-    name: string;
-    code: string;
-}
 
 export default function SetAnnouncements() {
+    // Track which popover is open (by announcement id)
+    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+
+    // Only open modal on explicit click
+    const handleAnnouncementClick = (announcement: Announcement) => {
+        setSelectedAnnouncement(announcement);
+        setModalOpen(true);
+    };
+    // Add API_URL at the top of the component
+    const API_URL =
+        (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
+            ? import.meta.env.VITE_API_URL
+            : (typeof process !== 'undefined' && process.env.REACT_APP_API_URL)
+                ? process.env.REACT_APP_API_URL
+                : 'http://localhost:8000';
+
     const navigate = useNavigate();
 
     // State management
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [departments] = useState<Department[]>([
-        { id: '1', name: 'Computer Science', code: 'CS' },
-        { id: '2', name: 'Mathematics', code: 'MATH' },
-        { id: '3', name: 'Physics', code: 'PHY' },
-        { id: '4', name: 'Chemistry', code: 'CHEM' }
-    ]);
+
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterCategory, setFilterCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Reset filters handler
+    const handleResetFilters = () => {
+        setFilterStatus('all');
+        setFilterPriority('all');
+        setFilterCategory('all');
+        setSearchTerm('');
+    };
     const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([]);
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
 
-    // Mock data initialization
+    // Fetch announcements from backend
+
+    const fetchAnnouncements = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/announcements`);
+            setAnnouncements(response.data.map((a: any) => ({
+                id: a.id,
+                title: a.title,
+                message: a.message,
+                audience: a.audience,
+                examId: a.exam_id,
+                examTitle: a.examTitle || '',
+                // departmentId and departmentName removed
+                // yearLevel removed
+                expiryDate: a.expiry_date,
+                publishDate: a.publish_date,
+                status: a.status,
+                priority: a.priority,
+                category: a.category,
+                tags: Array.isArray(a.tags) ? a.tags : [],
+                isPinned: a.is_pinned,
+                createdAt: a.created_at,
+                updatedAt: a.updated_at,
+                createdBy: a.created_by ? String(a.created_by) : '',
+                // Notification settings removed for announcements
+                viewCount: a.view_count || 0,
+                clickCount: a.click_count || 0,
+                attachments: a.attachments || [],
+            })));
+        } catch {
+            setNotification({ type: 'error', message: 'Failed to load announcements!' });
+            setTimeout(() => setNotification(null), 3000);
+        }
+    };
+
     useEffect(() => {
-        // Mock exams data
-        setExams([
-            { id: '1', title: 'Computer Science Final Exam', date: '2025-08-15', department: 'Computer Science' },
-            { id: '2', title: 'Mathematics Midterm', date: '2025-07-30', department: 'Mathematics' },
-            { id: '3', title: 'Physics Lab Practical', date: '2025-08-10', department: 'Physics' },
-            { id: '4', title: 'Chemistry Theory Exam', date: '2025-08-20', department: 'Chemistry' }
-        ]);
-
-        // Mock announcements data
-        setAnnouncements([
-            {
-                id: '1',
-                title: 'Important: Exam Schedule Updated',
-                message: 'The exam schedule has been updated. Please check your individual timetables for any changes.',
-                audience: 'all',
-                expiryDate: '2025-08-30',
-                status: 'published',
-                priority: 'high',
-                category: 'exam',
-                tags: ['schedule', 'exam', 'important'],
-                isPinned: true,
-                createdAt: '2025-07-10',
-                createdBy: 'Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: true,
-                smsNotificationsEnabled: false,
-                pushNotificationsEnabled: true,
-                viewCount: 1250,
-                clickCount: 890
-            },
-            {
-                id: '2',
-                title: 'Computer Science Final - Additional Guidelines',
-                message: 'Please bring your student ID and calculator for the Computer Science final exam.',
-                audience: 'exam-specific',
-                examId: '1',
-                examTitle: 'Computer Science Final Exam',
-                expiryDate: '2025-08-15',
-                status: 'published',
-                priority: 'medium',
-                category: 'exam',
-                tags: ['computer-science', 'final-exam', 'guidelines'],
-                isPinned: false,
-                createdAt: '2025-07-12',
-                createdBy: 'Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: false,
-                smsNotificationsEnabled: true,
-                pushNotificationsEnabled: true,
-                viewCount: 456,
-                clickCount: 234
-            },
-            {
-                id: '3',
-                title: 'Draft: New Library Rules',
-                message: 'Updated library access rules will be implemented from next month.',
-                audience: 'all',
-                expiryDate: '2025-09-01',
-                status: 'draft',
-                priority: 'low',
-                category: 'administrative',
-                tags: ['library', 'rules', 'policy'],
-                isPinned: false,
-                createdAt: '2025-07-14',
-                createdBy: 'Admin',
-                notificationsEnabled: false,
-                emailNotificationsEnabled: false,
-                smsNotificationsEnabled: false,
-                pushNotificationsEnabled: false,
-                viewCount: 0,
-                clickCount: 0
-            },
-            {
-                id: '4',
-                title: 'URGENT: Campus Emergency Drill',
-                message: 'Emergency evacuation drill scheduled for tomorrow at 2 PM. All students and staff must participate.',
-                audience: 'all',
-                expiryDate: '2025-07-17',
-                publishDate: '2025-07-16T08:00:00',
-                status: 'scheduled',
-                priority: 'urgent',
-                category: 'emergency',
-                tags: ['emergency', 'drill', 'safety', 'urgent'],
-                isPinned: true,
-                createdAt: '2025-07-15',
-                createdBy: 'Safety Admin',
-                notificationsEnabled: true,
-                emailNotificationsEnabled: true,
-                smsNotificationsEnabled: true,
-                pushNotificationsEnabled: true,
-                viewCount: 0,
-                clickCount: 0
-            }
-        ]);
+        fetchAnnouncements();
+        const interval = setInterval(() => {
+            fetchAnnouncements();
+        }, 20000); // 20 seconds
+        return () => clearInterval(interval);
     }, []);
 
+    useEffect(() => {
+        // Fetch user id from backend
+        const token = localStorage.getItem('auth_token');
+        axios.get(
+            `${API_URL}/api/user`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        )
+            .then(res => setUserId(String(res.data.id)))
+            .catch(() => setUserId(null));
+    }, [API_URL]);
+
     // Filter announcements
-    const filteredAnnouncements = announcements.filter(announcement => {
-        const matchesStatus = filterStatus === 'all' ||
-            (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
-            (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
-            (filterStatus === 'scheduled' && announcement.status === 'scheduled') ||
-            announcement.status === filterStatus;
+    const filteredAnnouncements = announcements
+        .filter(a => !userId || a.createdBy === userId) // Only show announcements created by logged-in user
+        .filter(announcement => {
+            const matchesStatus = filterStatus === 'all' ||
+                (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
+                (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
+                (filterStatus === 'scheduled' && announcement.status === 'scheduled');
+            const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
+            const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
 
-        const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
+            const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                announcement.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
-
-        const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            announcement.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
-    }).sort((a, b) => {
-        // Sort by pinned first, then by priority, then by creation date
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-        if (priorityDiff !== 0) return priorityDiff;
-
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+            return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
+        })
+        .sort((a, b) => {
+            // Pinned first
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            // Within pinned/unpinned, latest created first
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
 
     // Handle edit (navigate to edit page)
     const handleEdit = (announcement: Announcement) => {
@@ -242,26 +194,25 @@ export default function SetAnnouncements() {
     };
 
     // Handle delete
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm('Are you sure you want to delete this announcement?')) {
-            setAnnouncements(prev => prev.filter(a => a.id !== id));
-            setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
-            setTimeout(() => setNotification(null), 3000);
+            const token = localStorage.getItem('auth_token');
+            try {
+                await axios.delete(
+                    `${API_URL}/api/announcements/${id}`,
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                );
+                // Close modal and clear selection AFTER successful deletion
+                setModalOpen(false);
+                setSelectedAnnouncement(null);
+                setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
+                fetchAnnouncements(); // Refresh table
+                setTimeout(() => setNotification(null), 3000);
+            } catch {
+                setNotification({ type: 'error', message: 'Failed to delete announcement!' });
+                setTimeout(() => setNotification(null), 3000);
+            }
         }
-    };
-
-    // Get status badge
-    const getStatusBadge = (announcement: Announcement) => {
-        if (announcement.status === 'draft') {
-            return <Badge variant="secondary" className="text-gray-600">Draft</Badge>;
-        }
-        if (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date()) {
-            return <Badge variant="destructive">Expired</Badge>;
-        }
-        if (announcement.status === 'published') {
-            return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
-        }
-        return <Badge variant="secondary">Unknown</Badge>;
     };
 
     // Get priority badge
@@ -273,11 +224,71 @@ export default function SetAnnouncements() {
             low: { color: 'bg-gray-100 text-gray-600', icon: Info, label: 'Low' }
         };
         const { color, icon: Icon, label } = config[priority];
+
         return (
-            <Badge className={`${color} flex items-center gap-1`}>
+            <Badge variant="outline" className={`${color} flex items-center gap-1`}>
                 <Icon className="w-3 h-3" />
                 {label}
             </Badge>
+        );
+    };
+
+    // Get status badge with expiry date
+    const getStatusBadge = (announcement: Announcement) => {
+        const now = new Date();
+        const expiryDate = new Date(announcement.expiryDate);
+
+        if (announcement.status === 'draft') {
+            return (
+                <div className="space-y-1">
+                    <Badge variant="outline" className="text-gray-600">Draft</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expires: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        if (announcement.status === 'scheduled') {
+            return (
+                <div className="space-y-1">
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Scheduled</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expires: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        if (announcement.status === 'published' && expiryDate <= now) {
+            return (
+                <div className="space-y-1">
+                    <Badge variant="destructive">Expired</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expired: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        if (announcement.status === 'published') {
+            return (
+                <div className="space-y-1">
+                    <Badge variant="outline" className="bg-green-100 text-green-800" style={{ cursor: 'default' }}>Active</Badge>
+                    <div className="text-xs text-gray-500">
+                        Expires: {expiryDate.toLocaleDateString()}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-1">
+                <Badge variant="secondary">Unknown</Badge>
+                <div className="text-xs text-gray-500">
+                    Expires: {expiryDate.toLocaleDateString()}
+                </div>
+            </div>
         );
     };
 
@@ -300,25 +311,42 @@ export default function SetAnnouncements() {
     };
 
     // Handle bulk operations
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (selectedAnnouncements.length === 0) return;
         if (confirm(`Are you sure you want to delete ${selectedAnnouncements.length} announcements?`)) {
-            setAnnouncements(prev => prev.filter(a => !selectedAnnouncements.includes(a.id)));
-            setSelectedAnnouncements([]);
-            setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
-            setTimeout(() => setNotification(null), 3000);
+            const token = localStorage.getItem('auth_token');
+            try {
+                // Delete each selected announcement
+                await Promise.all(selectedAnnouncements.map(id =>
+                    axios.delete(
+                        `${API_URL}/api/announcements/${id}`,
+                        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+                    )
+                ));
+                // Clear modal state in case the selected announcement was deleted
+                setModalOpen(false);
+                setSelectedAnnouncement(null);
+                setSelectedAnnouncements([]);
+                setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
+                fetchAnnouncements(); // Refresh table
+                setTimeout(() => setNotification(null), 3000);
+            } catch {
+                setNotification({ type: 'error', message: 'Failed to delete selected announcements!' });
+                setTimeout(() => setNotification(null), 3000);
+            }
         }
     };
+    // Auto-close modal if selected announcement no longer exists
+    useEffect(() => {
+        if (modalOpen && selectedAnnouncement) {
+            const stillExists = announcements.some(a => a.id === selectedAnnouncement.id);
+            if (!stillExists) {
+                setModalOpen(false);
+                setSelectedAnnouncement(null);
+            }
+        }
+    }, [announcements, modalOpen, selectedAnnouncement]);
 
-    const handleBulkPublish = () => {
-        if (selectedAnnouncements.length === 0) return;
-        setAnnouncements(prev => prev.map(a =>
-            selectedAnnouncements.includes(a.id) ? { ...a, status: 'published' as const } : a
-        ));
-        setSelectedAnnouncements([]);
-        setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements published successfully!` });
-        setTimeout(() => setNotification(null), 3000);
-    };
 
     const handleSelectAll = () => {
         if (selectedAnnouncements.length === filteredAnnouncements.length) {
@@ -329,28 +357,38 @@ export default function SetAnnouncements() {
     };
 
     // Handle pin/unpin
-    const handleTogglePin = (id: string) => {
-        setAnnouncements(prev => prev.map(a =>
-            a.id === id ? { ...a, isPinned: !a.isPinned } : a
-        ));
-        setNotification({ type: 'success', message: 'Announcement pin status updated!' });
-        setTimeout(() => setNotification(null), 2000);
-    };
-
-    // Handle duplicate
-    const handleDuplicate = (announcement: Announcement) => {
-        const duplicate = {
-            ...announcement,
-            id: Date.now().toString(),
-            title: `Copy of ${announcement.title}`,
-            status: 'draft' as const,
-            createdAt: new Date().toISOString().split('T')[0],
-            viewCount: 0,
-            clickCount: 0
-        };
-        setAnnouncements(prev => [...prev, duplicate]);
-        setNotification({ type: 'success', message: 'Announcement duplicated successfully!' });
-        setTimeout(() => setNotification(null), 3000);
+    const handleTogglePin = async (id: string) => {
+        const announcement = announcements.find(a => a.id === id);
+        if (!announcement) return;
+        const token = localStorage.getItem('auth_token');
+        try {
+            await axios.put(
+                `${API_URL}/api/announcements/${id}`,
+                {
+                    title: announcement.title,
+                    message: announcement.message,
+                    audience: announcement.audience,
+                    exam_id: announcement.examId || null,
+                    // department_id removed
+                    // year_level removed
+                    expiry_date: announcement.expiryDate,
+                    publish_date: announcement.publishDate || null,
+                    status: announcement.status,
+                    priority: announcement.priority,
+                    category: announcement.category,
+                    tags: announcement.tags,
+                    is_pinned: !announcement.isPinned, // Toggle pin
+                    created_by: announcement.createdBy
+                },
+                token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+            );
+            setNotification({ type: 'success', message: 'Announcement pin status updated!' });
+            fetchAnnouncements(); // Refresh table
+            setTimeout(() => setNotification(null), 2000);
+        } catch {
+            setNotification({ type: 'error', message: 'Failed to update pin status!' });
+            setTimeout(() => setNotification(null), 3000);
+        }
     };
 
     return (
@@ -408,7 +446,16 @@ export default function SetAnnouncements() {
                                         <Filter className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <Select value={filterStatus} onValueChange={setFilterStatus}>
                                             <SelectTrigger className="w-36">
-                                                <SelectValue placeholder="Status" />
+                                                {filterStatus === 'all' ? (
+                                                    <span className="text-gray-500">Status</span>
+                                                ) : (
+                                                    <span>{
+                                                        filterStatus === 'active' ? 'Active' :
+                                                            filterStatus === 'expired' ? 'Expired' :
+                                                                filterStatus === 'draft' ? 'Draft' :
+                                                                    filterStatus === 'scheduled' ? 'Scheduled' : filterStatus
+                                                    }</span>
+                                                )}
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Status</SelectItem>
@@ -424,7 +471,11 @@ export default function SetAnnouncements() {
                                         <Star className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <Select value={filterPriority} onValueChange={setFilterPriority}>
                                             <SelectTrigger className="w-36">
-                                                <SelectValue placeholder="Priority" />
+                                                {filterPriority === 'all' ? (
+                                                    <span className="text-gray-500">Priority</span>
+                                                ) : (
+                                                    <span>{filterPriority.charAt(0).toUpperCase() + filterPriority.slice(1)}</span>
+                                                )}
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Priority</SelectItem>
@@ -440,7 +491,11 @@ export default function SetAnnouncements() {
                                         <Tag className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <Select value={filterCategory} onValueChange={setFilterCategory}>
                                             <SelectTrigger className="w-40">
-                                                <SelectValue placeholder="Category" />
+                                                {filterCategory === 'all' ? (
+                                                    <span className="text-gray-500">Category</span>
+                                                ) : (
+                                                    <span>{filterCategory.charAt(0).toUpperCase() + filterCategory.slice(1)}</span>
+                                                )}
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Categories</SelectItem>
@@ -452,6 +507,18 @@ export default function SetAnnouncements() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleResetFilters}
+                                        className="h-8 px-3 text-xs flex items-center gap-1"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Reset Filters
+                                    </Button>
                                 </div>
                             </div>
 
@@ -475,15 +542,6 @@ export default function SetAnnouncements() {
                                             {selectedAnnouncements.length} selected:
                                         </span>
                                         <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleBulkPublish}
-                                            className="h-8 px-3 text-xs"
-                                        >
-                                            <Send className="w-3 h-3 mr-1" />
-                                            Publish
-                                        </Button>
-                                        <Button
                                             variant="destructive"
                                             size="sm"
                                             onClick={handleBulkDelete}
@@ -497,10 +555,10 @@ export default function SetAnnouncements() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={handleSelectAll}
+                                    onClick={selectedAnnouncements.length > 0 ? () => setSelectedAnnouncements([]) : handleSelectAll}
                                 >
                                     <CheckSquare className="w-4 h-4 mr-1" />
-                                    {selectedAnnouncements.length === filteredAnnouncements.length ? 'Deselect All' : 'Select All'}
+                                    {selectedAnnouncements.length > 0 ? 'Deselect' : 'Select All'}
                                 </Button>
                             </div>
                         </div>
@@ -518,23 +576,26 @@ export default function SetAnnouncements() {
                                                 className="rounded"
                                             />
                                         </TableHead>
-                                        <TableHead>Title & Priority</TableHead>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Priority</TableHead>
                                         <TableHead>Category</TableHead>
-                                        <TableHead>Audience</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Analytics</TableHead>
-                                        <TableHead>Expiry Date</TableHead>
-                                        <TableHead>Notifications</TableHead>
+                                        <TableHead>Audience</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredAnnouncements.map((announcement) => (
-                                        <TableRow key={announcement.id} className={announcement.isPinned ? 'bg-yellow-50' : ''}>
+                                        <TableRow
+                                            key={announcement.id}
+                                            className={announcement.isPinned ? 'bg-yellow-50 cursor-pointer' : 'cursor-pointer'}
+                                            onClick={() => handleAnnouncementClick(announcement)}
+                                        >
                                             <TableCell>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedAnnouncements.includes(announcement.id)}
+                                                    onClick={e => e.stopPropagation()}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
                                                             setSelectedAnnouncements(prev => [...prev, announcement.id]);
@@ -555,7 +616,6 @@ export default function SetAnnouncements() {
                                                         {announcement.message}
                                                     </div>
                                                     <div className="flex items-center gap-1">
-                                                        {getPriorityBadge(announcement.priority)}
                                                         {announcement.tags.slice(0, 2).map(tag => (
                                                             <Badge key={tag} variant="outline" className="text-xs">
                                                                 {tag}
@@ -570,77 +630,35 @@ export default function SetAnnouncements() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
+                                                {getPriorityBadge(announcement.priority)}
+                                            </TableCell>
+                                            <TableCell>
                                                 {getCategoryBadge(announcement.category)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {getStatusBadge(announcement)}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="w-4 h-4 text-gray-400" />
                                                     <span className="capitalize">
                                                         {announcement.audience === 'all' ? 'All Students' :
-                                                            announcement.audience === 'exam-specific' ? announcement.examTitle :
-                                                                announcement.audience === 'department-specific' ? announcement.departmentName :
-                                                                    announcement.audience === 'year-specific' ? `Year ${announcement.yearLevel}` :
-                                                                        announcement.audience}
+                                                            announcement.audience === 'exam-specific' ? (announcement.examTitle ? announcement.examTitle : 'Exam specific') :
+                                                                announcement.audience}
                                                     </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {getStatusBadge(announcement)}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="text-sm space-y-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <Eye className="w-3 h-3 text-blue-500" />
-                                                        <span>{announcement.viewCount}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <BarChart3 className="w-3 h-3 text-green-500" />
-                                                        <span>{announcement.clickCount}</span>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-gray-400" />
-                                                    <span className="text-sm">
-                                                        {new Date(announcement.expiryDate).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                                {announcement.publishDate && (
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Clock className="w-3 h-3 text-orange-400" />
-                                                        <span className="text-xs text-gray-500">
-                                                            Scheduled: {new Date(announcement.publishDate).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    {announcement.notificationsEnabled ? (
-                                                        <Bell className="w-4 h-4 text-blue-500" />
-                                                    ) : (
-                                                        <Bell className="w-4 h-4 text-gray-300" />
-                                                    )}
-                                                    {announcement.emailNotificationsEnabled ? (
-                                                        <Mail className="w-4 h-4 text-green-500" />
-                                                    ) : (
-                                                        <Mail className="w-4 h-4 text-gray-300" />
-                                                    )}
-                                                    {announcement.smsNotificationsEnabled ? (
-                                                        <Send className="w-3 h-3 text-purple-500" />
-                                                    ) : (
-                                                        <Send className="w-3 h-3 text-gray-300" />
-                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Popover>
+                                                <Popover open={openPopoverId === announcement.id} onOpenChange={(open) => setOpenPopoverId(open ? announcement.id : null)}>
                                                     <PopoverTrigger asChild>
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                setOpenPopoverId(announcement.id);
+                                                            }}
                                                         >
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
@@ -650,7 +668,11 @@ export default function SetAnnouncements() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleTogglePin(announcement.id)}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await handleTogglePin(announcement.id);
+                                                                    setOpenPopoverId(null);
+                                                                }}
                                                                 className="w-full justify-start"
                                                             >
                                                                 <Pin className={`w-4 h-4 mr-2 ${announcement.isPinned ? 'text-orange-500' : 'text-gray-400'}`} />
@@ -659,7 +681,11 @@ export default function SetAnnouncements() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleEdit(announcement)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEdit(announcement);
+                                                                    setOpenPopoverId(null);
+                                                                }}
                                                                 className="w-full justify-start"
                                                             >
                                                                 <Edit className="w-4 h-4 mr-2" />
@@ -668,16 +694,11 @@ export default function SetAnnouncements() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleDuplicate(announcement)}
-                                                                className="w-full justify-start"
-                                                            >
-                                                                <Copy className="w-4 h-4 mr-2" />
-                                                                Duplicate
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleDelete(announcement.id)}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await handleDelete(announcement.id);
+                                                                    setOpenPopoverId(null);
+                                                                }}
                                                                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
                                                             >
                                                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -699,7 +720,18 @@ export default function SetAnnouncements() {
                         </div>
                     </CardContent>
                 </Card>
+                {/* Modal for announcement details, only opens on explicit click */}
+                {modalOpen && selectedAnnouncement && (
+                    <AnnouncementModal
+                        open={modalOpen}
+                        onClose={() => {
+                            setModalOpen(false);
+                            setSelectedAnnouncement(null);
+                        }}
+                        announcement={selectedAnnouncement}
+                    />
+                )}
             </div>
         </div>
-    );
+    )
 }

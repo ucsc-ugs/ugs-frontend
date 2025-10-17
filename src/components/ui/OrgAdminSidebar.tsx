@@ -14,7 +14,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import ucscLogo from "@/assets/ucsc_logo.png";
 import profileSample from "@/assets/profile_sample.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +30,7 @@ const mockAdmin = {
 export function OrgAdminSidebar() {
   const [isExamsOpen, setIsExamsOpen] = useState(false);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [user, setUser] = useState<{ id: string; name: string; role: string; university?: string; avatar?: string } | null>(null);
   const location = useLocation();
 
   // Close dropdowns when navigating to non-related routes
@@ -49,6 +51,27 @@ export function OrgAdminSidebar() {
     setIsExamsOpen(false);
     setIsUsersOpen(false);
   };
+
+  useEffect(() => {
+    // Fetch user info from backend (adjust endpoint as needed)
+    const token = localStorage.getItem('auth_token');
+    axios.get(
+      (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL
+        : 'http://localhost:8000') + '/api/user',
+      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+    )
+      .then(res => {
+        setUser({
+          id: String(res.data.id),
+          name: res.data.name,
+          role: res.data.role || 'University Admin',
+          university: res.data.university || 'University of Colombo',
+          avatar: res.data.avatar || profileSample
+        });
+      })
+      .catch(() => setUser(null));
+  }, []);
 
   const mainLinks = [
     { name: "Dashboard", path: "/admin", icon: Home },
@@ -83,7 +106,7 @@ export function OrgAdminSidebar() {
         </div>
 
         {/* Navigation Links */}
-        <div className="flex flex-col">
+        <div className="flex flex-col space-y-2">
           {/* Dashboard */}
           {mainLinks.slice(0, 1).map(({ name, path, icon: Icon, hasBell }) => (
             <NavLink
@@ -92,7 +115,7 @@ export function OrgAdminSidebar() {
               end={name === "Dashboard"}
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                   ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                   : "text-blue-800 hover:bg-blue-50 hover:scale-105"
                 }`
@@ -110,10 +133,10 @@ export function OrgAdminSidebar() {
           ))}
 
           {/* Exams Dropdown */}
-          <div>
+          <div className="mt-1">
             <button
               onClick={() => setIsExamsOpen(!isExamsOpen)}
-              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
+              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
               title="Exams"
             >
               <div className="relative flex-shrink-0">
@@ -131,13 +154,13 @@ export function OrgAdminSidebar() {
 
             {/* Exam Sub-links */}
             {isExamsOpen && (
-              <div className="mt-1 space-y-1 lg:ml-4">
+              <div className="mt-2 space-y-1 lg:ml-4">
                 {examLinks.map(({ name, path, icon: Icon }) => (
                   <NavLink
                     key={name}
                     to={path}
                     className={({ isActive }) =>
-                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-1.5 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                         ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                         : "text-blue-700 hover:bg-blue-50 hover:scale-105"
                       }`
@@ -155,10 +178,10 @@ export function OrgAdminSidebar() {
           </div>
 
           {/* Manage Users Dropdown */}
-          <div>
+          <div className="mt-1">
             <button
               onClick={() => setIsUsersOpen(!isUsersOpen)}
-              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
+              className="group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform text-blue-800 hover:bg-blue-50 hover:scale-105 w-full"
               title="Manage Users"
             >
               <div className="relative flex-shrink-0">
@@ -176,13 +199,13 @@ export function OrgAdminSidebar() {
 
             {/* User Sub-links */}
             {isUsersOpen && (
-              <div className="mt-1 space-y-1 lg:ml-4">
+              <div className="mt-2 space-y-1 lg:ml-4">
                 {userLinks.map(({ name, path, icon: Icon }) => (
                   <NavLink
                     key={name}
                     to={path}
                     className={({ isActive }) =>
-                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-1.5 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+                      `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                         ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                         : "text-blue-700 hover:bg-blue-50 hover:scale-105"
                       }`
@@ -205,12 +228,20 @@ export function OrgAdminSidebar() {
               key={name}
               to={path}
               onClick={handleNavClick}
-              className={({ isActive }) =>
-                `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
+              className={({ isActive }) => {
+                // Special handling for Set Announcements to include create/edit routes
+                const isAnnouncementActive = name === "Set Announcements" &&
+                  (location.pathname === path ||
+                    location.pathname === '/admin/create-announcement' ||
+                    location.pathname.startsWith('/admin/edit-announcement'));
+
+                const shouldBeActive = isActive || isAnnouncementActive;
+
+                return `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform ${shouldBeActive
                   ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                   : "text-blue-800 hover:bg-blue-50 hover:scale-105"
-                }`
-              }
+                  }`;
+              }}
               title={name}
             >
               <div className="relative flex-shrink-0">
@@ -230,13 +261,16 @@ export function OrgAdminSidebar() {
         {/* User Info */}
         <div className="flex flex-col items-center justify-center gap-2 lg:gap-3 px-2 lg:px-4">
           <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-blue-200">
-            <AvatarImage src={mockAdmin.avatar} alt={mockAdmin.name} />
-            <AvatarFallback>A</AvatarFallback>
+            <AvatarImage src={user?.avatar || profileSample} alt={user?.name || 'User'} />
+            <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
           </Avatar>
           <div className="hidden lg:flex flex-col text-xs xl:text-sm text-center leading-tight">
-            <span className="font-medium text-blue-800 truncate max-w-full">{mockAdmin.name}</span>
-            <span className="text-gray-500 truncate max-w-full">{mockAdmin.role}</span>
-            <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{mockAdmin.university}</span>
+            <span className="font-medium text-blue-800 truncate max-w-full">{user?.name || mockAdmin.name}</span>
+            <span className="text-gray-500 truncate max-w-full">{user?.role || mockAdmin.role}</span>
+            <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{user?.university || mockAdmin.university}</span>
+            {user?.id && (
+              <span className="text-gray-400 text-xs mt-1 truncate max-w-full">ID: {user.id}</span>
+            )}
           </div>
         </div>
 

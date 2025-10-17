@@ -4,15 +4,18 @@ import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
+import Announcements from "@/pages/Announcements";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
 import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
+import Profile from "@/pages/Profile";
 import Logout from "@/pages/Logout";
 import LandingPage from "@/pages/LandingPage";
 import SignInPage from "@/pages/SignInPage";
-import Sidebar from "@/components/ui/Sidebar";
+import ExamDetails from "@/pages/ExamDetails";
+import Sidebar from "@/components/ui/sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
 import ContactUsForm from "./components/ui/ContactUsForm";
@@ -28,13 +31,18 @@ import Settings from "@/pages/orgAdmin/Settings";
 import SetAnnouncements from "@/pages/orgAdmin/SetAnnouncements";
 import CreateAnnouncement from "@/pages/orgAdmin/CreateAnnouncement";
 import SuperAdminSidebar from "@/components/ui/SuperAdminSidebar";
-import SuperAdminLoginPage from "@/pages/SuperAdminLoginPage";
-import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
-import ManageOrganizations from "@/pages/ManageOrganizations";
-import ManageOrgAdmins from "@/pages/ManageOrgAdmins";
-import SuperAdminLogout from "@/pages/SuperAdminLogout";
-import OrgAdminLoginPage from "@/pages/OrgAdminLoginPage";
+import SuperAdminLoginPage from "@/pages/superAdmin/SuperAdminLoginPage";
+import SuperAdminDashboard from "@/pages/superAdmin/SuperAdminDashboard";
+import ManageOrganizations from "@/pages/superAdmin/ManageOrganizations";
+import ManageOrgAdmins from "@/pages/superAdmin/ManageOrgAdmins";
+import SuperAdminLogout from "@/pages/superAdmin/SuperAdminLogout";
+import OrgAdminLoginPage from "@/pages/orgAdmin/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
+import Revenue from "./pages/superAdmin/Revenue";
+import SuperAdminExams from "./pages/superAdmin/ManageExams";
+import UniversitiesPage from "./pages/UniversitiesPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import MyRegisteredExams from "./pages/test";
 
 function App() {
   return (
@@ -47,10 +55,14 @@ function App() {
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/contact-us" element={<ContactUsForm />} />
+            <Route path="/universities" element={<UniversitiesPage />} />
+            <Route path="/exams/:codeName" element={<ExamDetails />} />
+
+            {/* Sign in and sign up routes */}
 
             {/* Organization Admin Login */}
             <Route path="/admin/login" element={<OrgAdminLoginPage />} />
-            
+
             {/* Unauthorized access page */}
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
@@ -66,12 +78,14 @@ function App() {
                       <Route path="/organizations" element={<ManageOrganizations />} />
                       <Route path="/org-admins" element={<ManageOrgAdmins />} />
                       <Route path="/logout" element={<SuperAdminLogout />} />
+                      <Route path="/revenue" element={<Revenue />} />
+                      <Route path="/exams" element={<SuperAdminExams />} />
                     </Routes>
                   </div>
                 </div>
               </SuperAdminProtectedRoute>
             } />
-            
+
             {/* Protected routes with sidebar */}
             <Route path="/portal/*" element={
               <ProtectedRoute>
@@ -84,8 +98,11 @@ function App() {
                       <Route path="/register" element={<Register />} />
                       <Route path="/my-exams" element={<MyExams />} />
                       <Route path="/my-results" element={<MyResults />} />
+                      <Route path="/announcements" element={<Announcements />} />
                       <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
                     </Routes>
                   </div>
                 </div>

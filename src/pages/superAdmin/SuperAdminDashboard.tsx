@@ -54,10 +54,10 @@ export default function SuperAdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse bg-white border border-gray-200">
               <CardContent className="p-6">
                 <div className="h-8 bg-gray-200 rounded mb-4"></div>
                 <div className="h-6 bg-gray-200 rounded"></div>
@@ -71,8 +71,8 @@ export default function SuperAdminDashboard() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card className="border-red-200">
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <Card className="border-red-200 bg-white">
           <CardContent className="p-6 text-center">
             <p className="text-red-600">{error}</p>
           </CardContent>
@@ -82,7 +82,7 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
@@ -91,38 +91,44 @@ export default function SuperAdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium">Total Organizations</p>
-                <p className="text-3xl font-bold">{stats?.total_organizations || 0}</p>
+                <p className="text-gray-600 text-sm font-medium">Total Organizations</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.total_organizations || 0}</p>
               </div>
-              <Building2 className="h-8 w-8 text-blue-200" />
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <Building2 className="h-8 w-8 text-blue-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm font-medium">Org Admins</p>
-                <p className="text-3xl font-bold">{stats?.total_org_admins || 0}</p>
+                <p className="text-gray-600 text-sm font-medium">Org Admins</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.total_org_admins || 0}</p>
               </div>
-              <Users className="h-8 w-8 text-green-200" />
+              <div className="bg-green-50 p-3 rounded-lg">
+                <Users className="h-8 w-8 text-green-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm font-medium">Total Students</p>
-                <p className="text-3xl font-bold">{stats?.total_students || 0}</p>
+                <p className="text-gray-600 text-sm font-medium">Total Students</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.total_students || 0}</p>
               </div>
-              <GraduationCap className="h-8 w-8 text-purple-200" />
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <GraduationCap className="h-8 w-8 text-purple-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -131,13 +137,13 @@ export default function SuperAdminDashboard() {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Organizations */}
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-900">
+              <Building2 className="h-5 w-5 text-gray-600" />
               Recent Organizations
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-600">
               Latest organizations added to the system
             </CardDescription>
           </CardHeader>
@@ -145,7 +151,7 @@ export default function SuperAdminDashboard() {
             <div className="space-y-4">
               {stats?.recent_organizations?.length ? (
                 stats.recent_organizations.map((org) => (
-                  <div key={org.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={org.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
                     <div>
                       <p className="font-medium text-gray-900">{org.name}</p>
                       <p className="text-sm text-gray-500">{org.description}</p>
@@ -166,13 +172,13 @@ export default function SuperAdminDashboard() {
         </Card>
 
         {/* Recent Org Admins */}
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-gray-900">
+              <Users className="h-5 w-5 text-gray-600" />
               Recent Org Admins
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-600">
               Latest organizational administrators added
             </CardDescription>
           </CardHeader>
@@ -180,7 +186,7 @@ export default function SuperAdminDashboard() {
             <div className="space-y-4">
               {stats?.recent_org_admins?.length ? (
                 stats.recent_org_admins.map((admin) => (
-                  <div key={admin.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={admin.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
                     <div>
                       <p className="font-medium text-gray-900">{admin.user.name}</p>
                       <p className="text-sm text-gray-500">{admin.user.email}</p>
@@ -203,19 +209,19 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* System Status */}
-      <Card>
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Activity className="h-5 w-5 text-gray-600" />
             System Status
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             Current system health and statistics
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-100 rounded-lg">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <div>
                 <p className="font-medium text-gray-900">System Status</p>
@@ -223,7 +229,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg">
               <TrendingUp className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="font-medium text-gray-900">Growth Rate</p>
@@ -231,7 +237,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
+            <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-100 rounded-lg">
               <Activity className="h-5 w-5 text-purple-600" />
               <div>
                 <p className="font-medium text-gray-900">Active Users</p>

@@ -40,18 +40,17 @@ export default function AdminDashboard() {
     ];
 
     const examDistribution = [
-        { name: 'Undergraduate', value: 45 },
-        { name: 'Postgraduate', value: 30 },
-        { name: 'Professional', value: 15 },
-        { name: 'Diploma', value: 10 },
+        { name: 'GCAT', value: 45 },
+        { name: 'GCCT', value: 30 },
+        { name: 'FIT', value: 15 },
     ];
 
     const recentRegistrations = [
-        { id: 1, student: "John Doe", exam: "Final Year Exam", date: "2023-06-15", status: "completed" },
-        { id: 2, student: "Jane Smith", exam: "Mid Term Exam", date: "2023-06-14", status: "pending" },
-        { id: 3, student: "Robert Johnson", exam: "Practical Test", date: "2023-06-14", status: "completed" },
-        { id: 4, student: "Emily Davis", exam: "Final Year Exam", date: "2023-06-13", status: "rejected" },
-        { id: 5, student: "Michael Wilson", exam: "Entrance Exam", date: "2023-06-12", status: "completed" },
+        { id: 1, student: "Havindu Wijayalath", exam: "GCCT", date: "2023-06-15", status: "completed" },
+        { id: 2, student: "Janusha Jayaweera", exam: "GCCT", date: "2023-06-14", status: "pending" },
+        { id: 3, student: "Ranuga Lekamwasam", exam: "FIT", date: "2023-06-14", status: "completed" },
+        { id: 4, student: "Mandinu Maneth", exam: "GCAT", date: "2023-06-13", status: "rejected" },
+        { id: 5, student: "Bhagya Semage", exam: "FIT", date: "2023-06-12", status: "completed" },
     ];
 
     return (
@@ -102,9 +101,6 @@ export default function AdminDashboard() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{stats.totalRegistrations.toLocaleString()}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    {stats.pendingRegistrations} pending approval
-                                </p>
                             </CardContent>
                             <CardFooter className="p-2 pt-0">
                                 <Button variant="ghost" size="sm" className="text-xs h-6">

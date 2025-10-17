@@ -129,7 +129,44 @@ export const getCurrentUser = async (): Promise<any> => {
   return await apiRequest('/user');
 };
 
+export const updateProfile = async (profileData: { name: string; email: string }): Promise<any> => {
+  return await apiRequest('/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(profileData),
+  });
+};
+
+export const updatePassword = async (passwordData: { 
+  current_password: string; 
+  password: string; 
+  password_confirmation: string; 
+}): Promise<any> => {
+  return await apiRequest('/profile/password', {
+    method: 'PUT',
+    body: JSON.stringify(passwordData),
+  });
+};
+
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
   return getAuthToken() !== null;
+};
+
+// Payment verification
+export const verifyPayment = async (orderId: string): Promise<{
+  exam_name: string;
+  registration_status: string;
+  index_number: string;
+  payment: {
+    payment_id: string;
+    amount: string;
+    currency: string;
+    status_message: string;
+    created_at: string;
+  };
+}> => {
+  return await apiRequest('/payment/verify', {
+    method: 'POST',
+    body: JSON.stringify({ order_id: orderId }),
+  });
 };
