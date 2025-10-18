@@ -347,6 +347,71 @@ export default function CreateAnnouncement() {
                                 </Select>
                             </div>
 
+                            {/* Audience */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Audience <span className="text-red-500">*</span>
+                                </label>
+                                <Select
+                                    value={formData.audience}
+                                    onValueChange={(value) =>
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            audience: value as 'all' | 'exam-specific',
+                                            examId: ''
+                                        }))
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={{
+                                                'all': 'All Students',
+                                                'exam-specific': 'Exam-specific',
+                                                'year-specific': 'Year-specific'
+                                            }[formData.audience]}
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Students</SelectItem>
+                                        <SelectItem value="exam-specific">Exam-specific</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Exam Selection (if exam-specific) */}
+                            {formData.audience === 'exam-specific' && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Select Exam <span className="text-red-500">*</span>
+                                    </label>
+                                    <Select
+                                        value={formData.examId}
+                                        onValueChange={(value) => setFormData(prev => ({ ...prev, examId: value }))}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue
+                                                placeholder={
+                                                    exams.find(e => e.id === formData.examId)
+                                                        ? exams.find(e => e.id === formData.examId)!.title
+                                                        : 'Choose an exam'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {exams.length === 0 ? (
+                                                <SelectItem value="" disabled>No exams available</SelectItem>
+                                            ) : (
+                                                exams.map(exam => (
+                                                    <SelectItem key={exam.id} value={exam.id}>
+                                                        {exam.title}
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
                             {/* Title */}
                             <div>
                                 <label className="block text-sm font-medium mb-2">
@@ -438,73 +503,8 @@ export default function CreateAnnouncement() {
                                 />
                             </div>
 
-                            {/* Audience */}
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Audience <span className="text-red-500">*</span>
-                                </label>
-                                <Select
-                                    value={formData.audience}
-                                    onValueChange={(value) =>
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            audience: value as 'all' | 'exam-specific',
-                                            examId: ''
-                                        }))
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue
-                                            placeholder={{
-                                                'all': 'All Students',
-                                                'exam-specific': 'Exam-specific',
-                                                'year-specific': 'Year-specific'
-                                            }[formData.audience]}
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Students</SelectItem>
-                                        <SelectItem value="exam-specific">Exam-specific</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Exam Selection (if exam-specific) */}
-                            {formData.audience === 'exam-specific' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Select Exam <span className="text-red-500">*</span>
-                                    </label>
-                                    <Select
-                                        value={formData.examId}
-                                        onValueChange={(value) => setFormData(prev => ({ ...prev, examId: value }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue
-                                                placeholder={
-                                                    exams.find(e => e.id === formData.examId)
-                                                        ? exams.find(e => e.id === formData.examId)!.title
-                                                        : 'Choose an exam'
-                                                }
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {exams.length === 0 ? (
-                                                    <div className="p-2 text-sm text-muted-foreground">No exams available</div>
-                                                ) : (
-                                                exams.map(exam => (
-                                                    <SelectItem key={exam.id} value={exam.id}>
-                                                        {exam.title}
-                                                    </SelectItem>
-                                                ))
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
                             {/* Department-specific audience and selection removed */}
-                            
+
 
                             {/* Dates Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -516,7 +516,7 @@ export default function CreateAnnouncement() {
                                         type="date"
                                         value={formData.expiryDate}
                                         onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                                        min={new Date().toISOString().split('T')[0]}
+                                        min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                                         required
                                     />
                                 </div>
