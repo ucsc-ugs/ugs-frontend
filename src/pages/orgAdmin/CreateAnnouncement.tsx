@@ -128,21 +128,21 @@ export default function CreateAnnouncement() {
     // Load editing data when component mounts
     useEffect(() => {
         if (editingAnnouncement) {
+            // editingAnnouncement may have extra properties (yearLevel etc.) not defined in our formData shape.
+            // Cast to any to avoid TypeScript errors and only pick known fields.
+            const e: any = editingAnnouncement;
             setFormData({
-                title: editingAnnouncement.title,
-                message: editingAnnouncement.message,
-                audience: editingAnnouncement.audience === 'department-specific' ? 'all' : editingAnnouncement.audience,
-                examId: editingAnnouncement.examId || '',
-                // departmentId removed
-                // yearLevel removed
-                expiryDate: editingAnnouncement.expiryDate,
-                publishDate: editingAnnouncement.publishDate || '',
-                status: editingAnnouncement.status === 'expired' || editingAnnouncement.status === 'scheduled' ? 'published' : editingAnnouncement.status,
-                priority: editingAnnouncement.priority,
-                category: editingAnnouncement.category,
-                tags: editingAnnouncement.tags || [],
-                isPinned: editingAnnouncement.isPinned,
-                // Notification settings removed for announcements
+                title: e.title,
+                message: e.message,
+                audience: e.audience === 'department-specific' ? 'all' : e.audience,
+                examId: e.examId || '',
+                expiryDate: e.expiryDate,
+                publishDate: e.publishDate || '',
+                status: e.status === 'expired' || e.status === 'scheduled' ? 'published' : e.status,
+                priority: e.priority,
+                category: e.category,
+                tags: e.tags || [],
+                isPinned: e.isPinned,
                 selectedTemplate: ''
             });
         }
@@ -251,7 +251,6 @@ export default function CreateAnnouncement() {
             audience: 'all',
             examId: '',
             // departmentId removed
-            // yearLevel removed
             expiryDate: '',
             publishDate: '',
             status: 'published',
@@ -491,8 +490,8 @@ export default function CreateAnnouncement() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             {exams.length === 0 ? (
-                                                <SelectItem value="" disabled>No exams available</SelectItem>
-                                            ) : (
+                                                    <div className="p-2 text-sm text-muted-foreground">No exams available</div>
+                                                ) : (
                                                 exams.map(exam => (
                                                     <SelectItem key={exam.id} value={exam.id}>
                                                         {exam.title}

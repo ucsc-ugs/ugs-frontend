@@ -27,7 +27,10 @@ export default function UniversitiesPage() {
     try {
       setIsLoading(true);
   const response = await getOrganizations();
-  const orgs: Organization[] = Array.isArray(response.data) ? response.data : [];
+  const payload = response.data;
+  // response.data can be an array or an object with data field. Normalize to an array.
+  const p: any = payload;
+  const orgs = Array.isArray(p) ? p : (p?.data && Array.isArray(p.data) ? p.data : []);
   setOrganizations(orgs);
     } catch (err: any) {
       console.error("Load organizations error:", err);

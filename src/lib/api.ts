@@ -170,3 +170,8 @@ export const verifyPayment = async (orderId: string): Promise<{
     body: JSON.stringify({ order_id: orderId }),
   });
 };
+
+// Fetch dashboard data for the current authenticated student
+export const getDashboard = async (): Promise<any> => {
+  return await apiRequest('/dashboard');
+};
