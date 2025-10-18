@@ -217,6 +217,11 @@ export const deleteOrgAdmin = async (id: number): Promise<SuperAdminApiResponse>
   });
 };
 
+// Revenue
+export const getRevenueData = async (timeRange: string = 'all_time'): Promise<SuperAdminApiResponse> => {
+  return await adminApiRequest(`/revenue?range=${timeRange}`);
+};
+
 // Check if user is authenticated
 export const isSuperAdminAuthenticated = (): boolean => {
   return getAuthToken() !== null;

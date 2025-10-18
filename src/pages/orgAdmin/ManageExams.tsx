@@ -33,7 +33,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExamDateDetailsModal } from "@/components/ExamDateDetailsModal";
 import CreateExam from "./CreateExam";
 import { orgAdminApi, type Location } from "@/lib/orgAdminApi";
-import { getExams, createExam, updateExam, deleteExam, updateExamDateStatus, updateExpiredExamStatuses, testConnection, addExamDate, updateExamType, updateExamDate, type ExamData } from "@/lib/examApi";
+import { getExams, createExam, updateExam, deleteExam, deleteExamDate, updateExamDateStatus, updateExpiredExamStatuses, testConnection, addExamDate, updateExamType, updateExamDate, type ExamData } from "@/lib/examApi";
 
 interface ExamDateRow {
     examId: number;
@@ -96,8 +96,10 @@ export default function ManageExams() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const [showCreateExam, setShowCreateExam] = useState(false);
+    const [showCreateExamModal, setShowCreateExamModal] = useState(false);
     const [editingExam, setEditingExam] = useState<ExamDateRow | null>(null);
     const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
+    const [deleteExamDateId, setDeleteExamDateId] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orgId, setOrgId] = useState<number | null>(null);
     const [orgError, setOrgError] = useState<string>("");
@@ -485,6 +487,7 @@ export default function ManageExams() {
             // Reload exams after creating
             await loadExams();
             setShowCreateExam(false);
+            setShowCreateExamModal(false);
             setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
             setError("");
         } catch (err: any) {
@@ -639,10 +642,44 @@ export default function ManageExams() {
         }
     };
 
+    const handleDeleteExamDate = async () => {
+        if (!deleteExamDateId) {
+            console.error('No deleteExamDateId provided');
+            setError('No exam date selected for deletion');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const result = await deleteExamDate(deleteExamDateId);
+            console.log('Delete exam date result:', result);
+            
+            // Reload exams after deleting
+            await loadExams();
+            setDeleteExamDateId(null);
+            setError("");
+        } catch (err: any) {
+            console.error('Delete exam date error:', err);
+            
+            let errorMessage = 'Failed to delete exam date';
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            setError(errorMessage);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const closeModals = () => {
         setShowCreateExam(false);
+        setShowCreateExamModal(false);
         setEditingExam(null);
         setDeleteExamId(null);
+        setDeleteExamDateId(null);
         setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
         setError("");
         
@@ -824,6 +861,18 @@ export default function ManageExams() {
         return sortedGroups;
     }, [examDates, searchTerm, selectedStatus]);
 
+    // Helper function for description truncation (compact inline display)
+    const truncateDescription = (description: string, maxWords: number = 6) => {
+        if (!description) return '';
+        
+        const words = description.split(' ');
+        if (words.length <= maxWords) {
+            return description;
+        }
+        
+        return words.slice(0, maxWords).join(' ') + '...';
+    };
+
     const stats = useMemo(() => {
         const total = examDates.length;
         const upcoming = examDates.filter(e => e.status === "upcoming").length;
@@ -943,38 +992,7 @@ export default function ManageExams() {
         setSelectedExamName("");
     };
 
-    const handleSimulateRegistration = async (examDateId: number) => {
-        try {
-            // Simulate a student registration with a random student ID
-            const randomStudentId = Math.floor(Math.random() * 100) + 1;
-            
-            const response = await fetch('/api/admin/test/register-student', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-                },
-                body: JSON.stringify({
-                    exam_date_id: examDateId,
-                    student_id: randomStudentId
-                })
-            });
 
-            const result = await response.json();
-            
-            if (response.ok) {
-                console.log('Student registered successfully:', result);
-                // Reload exams to show updated registration counts
-                await loadExams();
-            } else {
-                console.error('Registration failed:', result.message);
-                setError(result.message || 'Registration failed');
-            }
-        } catch (error) {
-            console.error('Simulate registration error:', error);
-            setError('Failed to simulate registration');
-        }
-    };
 
     return (
         <div className="min-h-screen">
@@ -1004,7 +1022,7 @@ export default function ManageExams() {
                     <div className="flex gap-2">
                         <Button
                             className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={() => setShowCreateExam(true)}
+                            onClick={() => setShowCreateExamModal(true)}
                             disabled={!orgId}
                             title={!orgId ? "Organization access required to create exams" : "Create New Exam"}
                         >
@@ -1166,7 +1184,7 @@ export default function ManageExams() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead className="text-left">Exam</TableHead>
+                                                <TableHead className="text-left w-80 max-w-xs">Exam</TableHead>
                                                 <TableHead className="text-left">Date</TableHead>
                                                 <TableHead className="text-left">Halls</TableHead>
                                                 <TableHead className="text-left">Registration Deadline</TableHead>
@@ -1183,15 +1201,29 @@ export default function ManageExams() {
                                                     const isFirstInGroup = dateIndex === 0;
                                                     return (
                                                         <TableRow key={`${examDate.examId}-${examDate.examDateId}`} className={isFirstInGroup && dateIndex > 0 ? "border-t-2 border-gray-200" : ""}>
-                                                        <TableCell className={isFirstInGroup ? "" : "border-l-4 border-gray-100"}>
+                                                        <TableCell className={`${isFirstInGroup ? "" : "border-l-4 border-gray-100"}`}>
                                                             {isFirstInGroup ? (
-                                                                <div className="flex items-center justify-between">
-                                                                    <div>
-                                                                        <div className="font-medium flex items-center gap-2">
-                                                                            <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-800">{examDate.code_name || '-'}</span>
-                                                                            <span>{examDate.examName}</span>
+                                                                <div className="flex items-start justify-between gap-6">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <div className="font-medium flex items-center gap-2 flex-wrap">
+                                                                            <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-800 flex-shrink-0">{examDate.code_name || '-'}</span>
+                                                                            <span className="break-words">{examDate.examName}</span>
                                                                         </div>
-                                                                        <div className="text-sm text-gray-500">
+                                                                        {examDate.description && (
+                                                                            <div 
+                                                                                className="text-xs text-gray-500 mt-1 overflow-hidden pr-4"
+                                                                                style={{
+                                                                                    display: '-webkit-box',
+                                                                                    WebkitLineClamp: 2,
+                                                                                    WebkitBoxOrient: 'vertical',
+                                                                                    lineHeight: '1.4em',
+                                                                                    maxHeight: '2.8em'
+                                                                                }}
+                                                                            >
+                                                                                {truncateDescription(examDate.description, 6)}
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="text-sm text-gray-500 mt-1">
                                                                             Created: {formatDate(examDate.createdAt)}
                                                                         </div>
                                                                     </div>
@@ -1250,9 +1282,6 @@ export default function ManageExams() {
                                                                             .sort((a, b) => (a.pivot?.priority || 0) - (b.pivot?.priority || 0))
                                                                             .map((location, idx) => (
                                                                                 <div key={location.id} className="flex items-center gap-1.5">
-                                                                                    <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium">
-                                                                                        #{idx + 1}
-                                                                                    </span>
                                                                                     <span className="text-sm">{location.location_name}</span>
                                                                                     <span className="text-xs text-gray-500">({location.capacity})</span>
                                                                                 </div>
@@ -1376,15 +1405,6 @@ export default function ManageExams() {
                                                                             <Users className="w-4 h-4 mr-2" />
                                                                             View Registrations
                                                                         </Button>
-                                                                        <Button 
-                                                                            variant="ghost" 
-                                                                            size="sm" 
-                                                                            className="justify-start text-green-600"
-                                                                            onClick={() => handleSimulateRegistration(examDate.examDateId)}
-                                                                        >
-                                                                            <Plus className="w-4 h-4 mr-2" />
-                                                                            Simulate Registration
-                                                                        </Button>
                                                                         <Button variant="ghost" size="sm" className="justify-start">
                                                                             <Download className="w-4 h-4 mr-2" />
                                                                             Export Data
@@ -1405,15 +1425,13 @@ export default function ManageExams() {
                                                                             size="sm"
                                                                             className="justify-start text-red-600"
                                                                             onClick={() => {
-                                                                                console.log('Delete button clicked for exam:', examDate.examName);
-                                                                                console.log('Exam ID being set:', examDate.examId);
-                                                                                console.log('Exam Date ID:', examDate.examDateId);
-                                                                                console.log('Full exam object:', examDate);
-                                                                                setDeleteExamId(examDate.examId);
+                                                                                console.log('Delete button clicked for exam date:', examDate.examName);
+                                                                                console.log('Exam Date ID being set:', examDate.examDateId);
+                                                                                setDeleteExamDateId(examDate.examDateId);
                                                                             }}
                                                                         >
                                                                             <Trash2 className="w-4 h-4 mr-2" />
-                                                                            Delete Exam
+                                                                            Delete Exam Date
                                                                         </Button>
                                                                     </div>
                                                                 </PopoverContent>
@@ -1442,7 +1460,7 @@ export default function ManageExams() {
                                     </p>
                                     <Button
                                         className="bg-blue-600 hover:bg-blue-700 text-white"
-                                        onClick={() => setShowCreateExam(true)}
+                                        onClick={() => setShowCreateExamModal(true)}
                                     >
                                         <Plus className="w-4 h-4 mr-2" />
                                         Create New Exam
@@ -1456,9 +1474,16 @@ export default function ManageExams() {
                 )}
 
                 {/* Create/Edit Modal */}
-                {(showCreateExam || editingExam) && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-lg w-full max-w-md">
+                {(showCreateExamModal || editingExam) && (
+                    <div 
+                        className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                closeModals();
+                            }
+                        }}
+                    >
+                        <div className="bg-white rounded-lg w-full max-w-md shadow-xl border">
                             <div className="p-6">
                                 <h3 className="text-lg font-semibold mb-4">
                                     {editingExam ? 'Edit Exam' : 'Create New Exam'}
@@ -1609,23 +1634,6 @@ export default function ManageExams() {
                                                                 ))}
                                                             </div>
                                                         )}
-                                                        {examDate.location_ids.length > 0 && (
-                                                            <div className="mt-2">
-                                                                <div className="text-xs text-blue-600 mb-1">
-                                                                    {examDate.location_ids.length} hall{examDate.location_ids.length > 1 ? 's' : ''} selected:
-                                                                </div>
-                                                                <div className="flex flex-wrap gap-1">
-                                                                    {examDate.location_ids.map((locationId, idx) => {
-                                                                        const location = locations.find(loc => loc.id === locationId);
-                                                                        return location ? (
-                                                                            <span key={locationId} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                                                                                #{idx + 1} {location.location_name}
-                                                                            </span>
-                                                                        ) : null;
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        )}
                                                         {locationsError && (
                                                             <p className="text-red-500 text-xs mt-1">{locationsError}</p>
                                                         )}
@@ -1685,10 +1693,23 @@ export default function ManageExams() {
                     />
                 )}
 
+                {/* Delete Exam Date Confirmation Modal */}
+                {deleteExamDateId && (
+                    <ConfirmDialog
+                        isOpen={!!deleteExamDateId}
+                        title="Delete Exam Date"
+                        message="Are you sure you want to delete this exam date? This action cannot be undone."
+                        confirmText="Delete"
+                        cancelText="Cancel"
+                        onConfirm={handleDeleteExamDate}
+                        onCancel={() => setDeleteExamDateId(null)}
+                    />
+                )}
+
                 {/* Add Exam Date Modal */}
                 {showAddExamDate && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl border">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold">Add New Date to {addDateExamName}</h3>
                                 <Button
@@ -1792,8 +1813,8 @@ export default function ManageExams() {
 
                 {/* Edit Exam Type Modal */}
                 {showEditExamType && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl border">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold">Edit Exam Type</h3>
                                 <Button
@@ -1890,8 +1911,8 @@ export default function ManageExams() {
 
                 {/* Edit Exam Date Modal */}
                 {showEditExamDate && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                    <div className="fixed inset-0 bg-black/10 backdrop-blur-[2px] flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl border">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold">Edit Exam Date</h3>
                                 <Button

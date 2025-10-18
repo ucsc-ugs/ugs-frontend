@@ -1,8 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
+import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Clock, AlertTriangle, Info, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, AlertTriangle, Info, CheckCircle, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+
+interface ExamDate {
+    id: number;
+    exam_id: number;
+    exam_title: string;
+    exam_code: string;
+    date: string;
+    location: string;
+    status: string;
+}
 
 interface ImportantDate {
     date: Date;
@@ -10,38 +20,9 @@ interface ImportantDate {
     description: string;
     type: "exam" | "deadline" | "result" | "event";
     time?: string;
+    location?: string;
+    status?: string;
 }
-
-const importantDates: ImportantDate[] = [
-    {
-        date: new Date(2025, 6, 15), // July 15, 2025
-        title: "GMAT Exam",
-        description: "Your rescheduled GMAT exam. Please arrive 30 minutes early.",
-        type: "exam",
-        time: "10:00 AM"
-    },
-    {
-        date: new Date(2025, 6, 20), // July 20, 2025
-        title: "BIT Application Deadline",
-        description: "Final deadline for BIT Aptitude Test registration.",
-        type: "deadline",
-        time: "11:59 PM"
-    },
-    {
-        date: new Date(2025, 6, 25), // July 25, 2025
-        title: "GCAT Results",
-        description: "GCAT exam results will be published.",
-        type: "result",
-        time: "2:00 PM"
-    },
-    {
-        date: new Date(2025, 6, 30), // July 30, 2025
-        title: "Course Registration Opens",
-        description: "Registration opens for Advanced Database Systems course.",
-        type: "event",
-        time: "9:00 AM"
-    }
-];
 
 const typeConfig = {
     exam: {
@@ -80,11 +61,69 @@ export const CompactCalendar = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [popoverDate, setPopoverDate] = useState<Date | null>(null);
+    const [importantDates, setImportantDates] = useState<ImportantDate[]>([]);
+
+    // Fetch exam dates from API
+    useEffect(() => {
+        const fetchExamDates = async () => {
+            try {
+                const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+                if (!token) {
+                    console.log("No auth token found");
+                    return;
+                }
+
+                const headers: HeadersInit = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                };
+
+                console.log("Fetching exam dates from API...");
+                const response = await fetch("http://localhost:8000/api/student/exam-dates", { headers });
+
+                if (response.ok) {
+                    const examDates: ExamDate[] = await response.json();
+                    console.log("Received exam dates:", examDates);
+
+                    // Transform exam dates to important dates format
+                    const transformed: ImportantDate[] = examDates.map(exam => {
+                        // Parse date - handle both ISO and MySQL datetime formats
+                        const dateStr = exam.date.replace(' ', 'T'); // Convert MySQL format to ISO
+                        const examDateTime = parseISO(dateStr);
+                        console.log("Parsing date:", exam.date, "→", dateStr, "→", examDateTime);
+                        return {
+                            date: examDateTime,
+                            title: `${exam.exam_code}: ${exam.exam_title}`,
+                            description: exam.location,
+                            type: "exam" as const,
+                            time: format(examDateTime, "hh:mm a"),
+                            location: exam.location,
+                            status: exam.status
+                        };
+                    });
+
+                    console.log("Transformed dates:", transformed);
+                    setImportantDates(transformed);
+                } else {
+                    console.error("API response not OK:", response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error("Failed to fetch exam dates:", error);
+            }
+        };
+
+        fetchExamDates();
+    }, []);
 
     const getImportantDate = (date: Date): ImportantDate | undefined => {
-        return importantDates.find(importantDate =>
+        const found = importantDates.find(importantDate =>
             isSameDay(importantDate.date, date)
         );
+        // Debug: Log when we find a match
+        if (found) {
+            console.log("Found exam date match:", { calendarDate: date, examDate: found });
+        }
+        return found;
     };
 
     const handleDateClick = (date: Date) => {
@@ -224,24 +263,44 @@ export const CompactCalendar = () => {
                                             <p className="text-sm text-muted-foreground mb-3">
                                                 {selectedImportantDate.description}
                                             </p>
-                                            <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
-                                                <span className="flex items-center gap-1">
-                                                    <CalendarIcon className="w-3 h-3" />
-                                                    {format(selectedImportantDate.date, "MMM dd, yyyy")}
-                                                </span>
-                                                {selectedImportantDate.time && (
+                                            <div className="space-y-2 mb-3">
+                                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                                     <span className="flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        {selectedImportantDate.time}
+                                                        <CalendarIcon className="w-3 h-3" />
+                                                        {format(selectedImportantDate.date, "MMM dd, yyyy")}
                                                     </span>
+                                                    {selectedImportantDate.time && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            {selectedImportantDate.time}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {selectedImportantDate.location && (
+                                                    <div className="flex items-start gap-1 text-xs text-muted-foreground">
+                                                        <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                                        <span>{selectedImportantDate.location}</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div className={cn(
-                                                "inline-block px-2 py-1 text-xs font-medium rounded-full",
-                                                typeConfig[selectedImportantDate.type].bgColor,
-                                                typeConfig[selectedImportantDate.type].color
-                                            )}>
-                                                {selectedImportantDate.type.toUpperCase()}
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn(
+                                                    "inline-block px-2 py-1 text-xs font-medium rounded-full",
+                                                    typeConfig[selectedImportantDate.type].bgColor,
+                                                    typeConfig[selectedImportantDate.type].color
+                                                )}>
+                                                    {selectedImportantDate.type.toUpperCase()}
+                                                </div>
+                                                {selectedImportantDate.status && (
+                                                    <div className={cn(
+                                                        "inline-block px-2 py-1 text-xs font-medium rounded-full",
+                                                        selectedImportantDate.status === 'upcoming' ? "bg-blue-100 text-blue-700" :
+                                                            selectedImportantDate.status === 'completed' ? "bg-gray-100 text-gray-700" :
+                                                                "bg-yellow-100 text-yellow-700"
+                                                    )}>
+                                                        {selectedImportantDate.status.toUpperCase()}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -250,29 +309,6 @@ export const CompactCalendar = () => {
                         </PopoverContent>
                     )}
                 </Popover>
-            </div>
-
-            {/* Compact Legend */}
-            <div className="border-t bg-muted/30 px-4 py-3">
-                <h4 className="text-xs font-semibold text-foreground mb-2 text-center">Event Types</h4>
-                <div className="flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></div>
-                        <span className="text-muted-foreground font-medium">Exams</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0"></div>
-                        <span className="text-muted-foreground font-medium">Deadlines</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></div>
-                        <span className="text-muted-foreground font-medium">Results</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></div>
-                        <span className="text-muted-foreground font-medium">Events</span>
-                    </div>
-                </div>
             </div>
         </div>
     );

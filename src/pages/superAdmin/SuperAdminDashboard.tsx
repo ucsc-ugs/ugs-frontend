@@ -26,7 +26,12 @@ export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expandedOrgs, setExpandedOrgs] = useState<number[]>([]);
 
+  const toggleOrgExpand = (id: number) => {
+    setExpandedOrgs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -109,7 +114,7 @@ export default function SuperAdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Org Admins</p>
+                <p className="text-gray-600 text-sm font-medium">Organization Admins</p>
                 <p className="text-3xl font-bold text-gray-900">{stats?.total_org_admins || 0}</p>
               </div>
               <div className="bg-green-50 p-3 rounded-lg">
@@ -151,24 +156,52 @@ export default function SuperAdminDashboard() {
             <div className="space-y-4">
               {stats?.recent_organizations?.length ? (
                 stats.recent_organizations.map((org) => (
-                  <div key={org.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div>
+                  <div
+                    key={org.id}
+                    className="flex items-start justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex-1 pr-4">
                       <p className="font-medium text-gray-900">{org.name}</p>
-                      <p className="text-sm text-gray-500">{org.description}</p>
+                      <div className="mt-1 text-sm text-gray-500">
+                        {/* description: clamp to 2 lines when collapsed, show full when expanded */}
+                        <div
+                          style={
+                            expandedOrgs.includes(org.id)
+                              ? undefined
+                              : {
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }
+                          }
+                        >
+                          {org.description}
+                        </div>
+                        <button
+                          onClick={() => toggleOrgExpand(org.id)}
+                          className="mt-2 inline-block text-xs text-blue-600 hover:underline"
+                          aria-expanded={expandedOrgs.includes(org.id)}
+                        >
+                          {expandedOrgs.includes(org.id) ? "Read less" : "Read more"}
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">
-                        <Calendar className="h-3 w-3 inline mr-1" />
-                        {formatDate(org.created_at)}
+                    
+                    {/* date aligned vertically center */}
+                    <div className="flex-shrink-0 flex items-center">
+                      <p className="text-xs text-gray-400 flex items-center space-x-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDate(org.created_at)}</span>
                       </p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">No organizations found</p>
-              )}
-            </div>
-          </CardContent>
+                 ))
+               ) : (
+                 <p className="text-gray-500 text-center py-4">No organizations found</p>
+               )}
+             </div>
+           </CardContent>
         </Card>
 
         {/* Recent Org Admins */}
