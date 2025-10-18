@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Building2, BookOpen, Calendar, PieChart } from "lucide-react";
+import { DollarSign, TrendingUp, Building2, BookOpen, PieChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
+
 
 interface RevenueData {
   total_revenue: number;
@@ -33,88 +35,91 @@ interface RevenueData {
 }
 
 export default function RevenueDashboard() {
-  const dummyRevenueData: RevenueData = {
-    total_revenue: 2105000,
-    total_commission: 315000,
-    organization_revenues: [
-      {
-        id: 1,
-        name: "UCSC",
-        revenue: 780000,
-        commission: 32500,
-        exam_count: 3
-      },
-      {
-        id: 2,
-        name: "UOM",
-        revenue: 980000,
-        commission: 75400,
-        exam_count: 2
-      },
-      {
-        id: 3,
-        name: "UOK",
-        revenue: 1254000,
-        commission: 98000,
-        exam_count: 1
-      }
-    ],
-    exam_revenues: [
-      {
-        id: 1,
-        name: "GCAT",
-        organization_name: "UCSC",
-        revenue: 4500.75,
-        commission: 675.11,
-        attempt_count: 90
-      },
-      {
-        id: 2,
-        name: "FIT",
-        organization_name: "UCSC",
-        revenue: 3500.50,
-        commission: 700.10,
-        attempt_count: 70
-      },
-      {
-        id: 3,
-        name: "GCCT",
-        organization_name: "Business College",
-        revenue: 2500.00,
-        commission: 200.00,
-        attempt_count: 50
-      },
-      {
-        id: 4,
-        name: "MAT",
-        organization_name: "UOM",
-        revenue: 2000.00,
-        commission: 300.00,
-        attempt_count: 40
-      }
-    ],
-    monthly_revenues: [
-      { month: "Jan", revenue: 12000, commission: 1800 },
-      { month: "Feb", revenue: 19000, commission: 2850 },
-      { month: "Mar", revenue: 15000, commission: 2250 },
-      { month: "Apr", revenue: 18000, commission: 2700 },
-      { month: "May", revenue: 21000, commission: 3150 },
-      { month: "Jun", revenue: 24000, commission: 3600 },
-      { month: "Jul", revenue: 16000, commission: 2400 }
-    ]
-  };
-
-  const [data] = useState<RevenueData>(dummyRevenueData);
+  const [data, setData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [timeRange, setTimeRange] = useState("all_time");
   const [activeTab, setActiveTab] = useState("overview");
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("auth_token");
+        
+        if (!token) {
+          setError("Authentication token not found");
+          return;
+        }
+
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/revenue?range=${timeRange}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        // Normalize response to avoid runtime errors if some fields are missing
+        const payload = response.data || {};
+        setData({
+          total_revenue: Number(payload.total_revenue ?? 0),
+          total_commission: Number(payload.total_commission ?? 0),
+          organization_revenues: Array.isArray(payload.organization_revenues) ? payload.organization_revenues : [],
+          exam_revenues: Array.isArray(payload.exam_revenues) ? payload.exam_revenues : [],
+          monthly_revenues: Array.isArray(payload.monthly_revenues) ? payload.monthly_revenues : [],
+        });
+         setError("");
+      } catch (err: any) {
+        console.error("Error fetching revenue data:", err);
+        setError(err.response?.data?.message || "Failed to fetch revenue data");
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [timeRange]);
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'LKR'
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "LKR",
     }).format(amount);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600 text-lg">Loading revenue data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-red-600 text-lg">{error}</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-red-500 text-lg">No data found.</p>
+      </div>
+    );
+  }
+
+  // Guarded local arrays to avoid runtime errors when mapping
+  const orgs = data.organization_revenues ?? [];
+  const exams = data.exam_revenues ?? [];
+  const months = data.monthly_revenues ?? [];
+  
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -141,28 +146,23 @@ export default function RevenueDashboard() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        <button
-          className={`px-4 py-2 font-medium ${activeTab === 'overview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${activeTab === 'organizations' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setActiveTab('organizations')}
-        >
-          By Organization
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${activeTab === 'exams' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setActiveTab('exams')}
-        >
-          By Exam
-        </button>
+        {["overview", "organizations", "exams"].map((tab) => (
+          <button
+            key={tab}
+            className={`px-4 py-2 font-medium ${
+              activeTab === tab
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === "overview" ? "Overview" : tab === "organizations" ? "By Organization" : "By Exam"}
+          </button>
+        ))}
       </div>
 
       {/* Overview Tab */}
-      {activeTab === 'overview' && (
+      {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -228,14 +228,11 @@ export default function RevenueDashboard() {
             </CardHeader>
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.monthly_revenues}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
+                <BarChart data={months} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value) => formatCurrency(Number(value))}
                     labelFormatter={(label) => `Month: ${label}`}
                   />
@@ -250,7 +247,7 @@ export default function RevenueDashboard() {
       )}
 
       {/* Organizations Tab */}
-      {activeTab === 'organizations' && (
+      {activeTab === "organizations" && (
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -274,7 +271,7 @@ export default function RevenueDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.organization_revenues.map((org) => (
+                {orgs.map((org) => (
                   <TableRow key={org.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
@@ -308,7 +305,7 @@ export default function RevenueDashboard() {
       )}
 
       {/* Exams Tab */}
-      {activeTab === 'exams' && (
+      {activeTab === "exams" && (
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -333,7 +330,7 @@ export default function RevenueDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.exam_revenues.map((exam) => (
+                {exams.map((exam) => (
                   <TableRow key={exam.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
