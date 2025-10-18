@@ -170,3 +170,30 @@ export const verifyPayment = async (orderId: string): Promise<{
     body: JSON.stringify({ order_id: orderId }),
   });
 };
+
+// Verify email endpoint - calls the full URL with auth token
+export const verifyEmail = async (fullUrl: string): Promise<any> => {
+  const token = getAuthToken();
+  
+  const config: RequestInit = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  };
+
+  const response = await fetch(fullUrl, config);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw {
+      status: response.status,
+      message: data.message || 'An error occurred',
+      errors: data.errors || {},
+    };
+  }
+
+  return data;
+};
