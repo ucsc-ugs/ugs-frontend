@@ -162,14 +162,6 @@ export default function Locations() {
   const handleEditLocation = async () => {
     if (!validateForm() || !editingLocation) return;
 
-    // Check if capacity is being reduced below current registrations
-    if (editingLocation.current_registrations && formData.capacity < editingLocation.current_registrations) {
-      setFormErrors({
-        capacity: `Cannot reduce capacity below current registrations (${editingLocation.current_registrations})`
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     
     try {
@@ -257,13 +249,6 @@ export default function Locations() {
     setShowCreateModal(true);
   };
 
-  const getCapacityColor = (current: number = 0, total: number) => {
-    const percentage = (current / total) * 100;
-    if (percentage >= 90) return 'text-red-600 bg-red-50';
-    if (percentage >= 70) return 'text-orange-600 bg-orange-50';
-    return 'text-green-600 bg-green-50';
-  };
-
   const filteredLocations = locations.filter(location =>
     location.location_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -345,16 +330,11 @@ export default function Locations() {
                     <TableRow>
                       <TableHead>Location Name</TableHead>
                       <TableHead className="text-center">Capacity</TableHead>
-                      <TableHead className="text-center">Current Registrations</TableHead>
-                      <TableHead className="text-center">Availability</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLocations.map((location) => {
-                      const currentRegistrations = location.current_registrations || 0;
-                      const availableSlots = location.capacity - currentRegistrations;
-                      
                       return (
                         <TableRow key={location.id}>
                           <TableCell>
@@ -369,18 +349,6 @@ export default function Locations() {
                           <TableCell className="text-center">
                             <Badge variant="outline" className="font-mono">
                               {location.capacity}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="font-mono">
-                              {currentRegistrations}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge 
-                              className={`font-mono ${getCapacityColor(currentRegistrations, location.capacity)}`}
-                            >
-                              {availableSlots} available
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -398,8 +366,6 @@ export default function Locations() {
                                 size="sm"
                                 onClick={() => setDeleteLocationId(location.id)}
                                 className="text-red-600 hover:text-red-700"
-                                disabled={currentRegistrations > 0}
-                                title={currentRegistrations > 0 ? "Cannot delete location with registered students" : "Delete location"}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -523,11 +489,6 @@ export default function Locations() {
                 />
                 {formErrors.capacity && (
                   <p className="text-sm text-red-600 mt-1">{formErrors.capacity}</p>
-                )}
-                {editingLocation?.current_registrations && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Current registrations: {editingLocation.current_registrations}
-                  </p>
                 )}
               </div>
 
