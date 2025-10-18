@@ -37,6 +37,7 @@ const API_BASE_URL = 'http://localhost:8000/api';
 
 const useFinanceData = (examId: string, month: string) => {
     const [data, setData] = useState<FinanceData[]>([]);
+    const [meta, setMeta] = useState<{ totals?: { uniqueStudents: number; uniquePaidStudents: number; uniqueUnpaidStudents: number } } | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -58,9 +59,11 @@ const useFinanceData = (examId: string, month: string) => {
                     params,
                 });
                 setData(res.data?.data ?? []);
+                setMeta(res.data?.meta ?? null);
             } catch (e: any) {
                 setError(e.response?.data?.message || e.message || 'Failed to load finance data');
                 setData([]);
+                setMeta(null);
             } finally {
                 setLoading(false);
             }
@@ -69,7 +72,7 @@ const useFinanceData = (examId: string, month: string) => {
         fetchData();
     }, [examId, month]);
 
-    return { data, loading, error };
+    return { data, meta, loading, error };
 };
 
 const useExamOptions = (data: FinanceData[]) => {
@@ -86,7 +89,7 @@ export default function FinanceDashboard() {
     const [selectedMonth, setSelectedMonth] = useState("");
     const [chartType, setChartType] = useState<"pie" | "bar">("bar");
 
-    const { data: financeData, loading, error } = useFinanceData(selectedExam, selectedMonth);
+    const { data: financeData, meta, loading, error } = useFinanceData(selectedExam, selectedMonth);
     const examOptions = useExamOptions(financeData);
 
     const filteredData = useMemo(() => {
@@ -96,10 +99,12 @@ export default function FinanceDashboard() {
 
     const summary = useMemo(() => {
         const totalExams = filteredData.length;
-        const totalStudents = filteredData.reduce((sum, exam) => sum + exam.totalRegistrations, 0);
+        // Prefer backend-provided unique student counts; fallback to summed registrations
+        const totalStudents = meta?.totals?.uniqueStudents ?? filteredData.reduce((sum, exam) => sum + exam.totalRegistrations, 0);
         const totalRevenue = filteredData.reduce((sum, exam) => sum + exam.paidRevenue, 0);
-        const totalPaid = filteredData.reduce((sum, exam) => sum + exam.paidRegistrations, 0);
-        const totalUnpaid = filteredData.reduce((sum, exam) => sum + exam.unpaidRegistrations, 0);
+        // For paid/unpaid counts, prefer unique student counts if provided
+        const totalPaid = meta?.totals?.uniquePaidStudents ?? filteredData.reduce((sum, exam) => sum + exam.paidRegistrations, 0);
+        const totalUnpaid = meta?.totals?.uniqueUnpaidStudents ?? filteredData.reduce((sum, exam) => sum + exam.unpaidRegistrations, 0);
         const pendingRevenue = filteredData.reduce((sum, exam) => sum + exam.unpaidRevenue, 0);
 
         return {
@@ -111,7 +116,7 @@ export default function FinanceDashboard() {
             pendingRevenue,
             paymentRate: totalStudents > 0 ? ((totalPaid / totalStudents) * 100).toFixed(1) : "0"
         };
-    }, [filteredData]);
+    }, [filteredData, meta]);
 
     const chartData = useMemo(() => {
         return filteredData.map(exam => ({
