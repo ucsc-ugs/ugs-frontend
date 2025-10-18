@@ -24,20 +24,19 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 };
 
 export interface OrgAdmin {
+  type: string;
+  role: string;
   id: number;
-  name: string;
-  user_id: number;
   organization_id: number;
-  created_at: string;
-  updated_at: string;
-  user: {
-    id: number;
+  user_type: string;
+  data: {
     name: string;
     email: string;
+    created_at: string;
+    student: any | null;
   };
-  organization: {
-    id: number;
-    name: string;
+  meta: {
+    permissions: string[];
   };
 }
 
@@ -45,11 +44,13 @@ export interface CreateOrgAdminData {
   name: string;
   email: string;
   password: string;
+  permissions?: string[];
 }
 
 export interface UpdateOrgAdminData {
   name: string;
   email: string;
+  permissions?: string[];
 }
 
 export const orgAdminApi = {
