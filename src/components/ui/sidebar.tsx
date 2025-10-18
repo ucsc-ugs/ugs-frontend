@@ -4,7 +4,6 @@ import {
   Home,
   UserPlus,
   BookOpen,
-  Award,
   Bell,
   LogOut,
 } from "lucide-react";
@@ -23,11 +22,6 @@ function Sidebar() {
     { name: "Home", path: "/portal", icon: Home },
     { name: "Register", path: "/portal/register", icon: UserPlus },
     { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
-    {
-      name: "Announcements",
-      path: "/portal/announcements",
-      icon: Award,
-    },
     {
       name: "Notifications",
       path: "/portal/notifications",
