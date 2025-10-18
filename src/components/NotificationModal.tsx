@@ -34,7 +34,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ open = true, noti
             setExamLoading(true);
             setExamError(null);
             setExamDetails(null);
-            fetch(`http://localhost:8000/api/exams/${notification.exam_id}`)
+            fetch(`http://localhost:8000/api/exams/id/${notification.exam_id}`)
                 .then(res => {
                     if (!res.ok) throw new Error("Failed to fetch exam details");
                     return res.json();
