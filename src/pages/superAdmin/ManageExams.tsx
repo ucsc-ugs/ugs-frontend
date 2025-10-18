@@ -20,7 +20,7 @@ interface Exam {
   };
   is_active: boolean;
   created_at: string;
-  total_students: number;
+  registered_students_count: number;
   passing_rate: number;
 }
 
@@ -80,38 +80,35 @@ export default function SuperAdminExams() {
     }
   };
 
-  const toggleExamStatus = async (examId: number) => {
-    const target = exams.find(e => e.id === examId);
-    if (!target) return;
-    const newStatus = !target.is_active;
-    // Optimistic update
-    setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: newStatus } : e));
-    try {
-      const token = localStorage.getItem("auth_token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-      await axios.patch(`${API_BASE}/exams/${examId}`, { is_active: newStatus }, { headers });
-    } catch (err) {
-      console.error("Failed to update status:", err);
-      // rollback on failure
-      setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: target.is_active } : e));
-      setError("Failed to update exam status");
-    }
-  };
+  // const toggleExamStatus = async (examId: number) => {
+  //   const target = exams.find(e => e.id === examId);
+  //   if (!target) return;
+  //   const newStatus = !target.is_active;
+  //   // Optimistic update
+  //   setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: newStatus } : e));
+  //   try {
+  //     const token = localStorage.getItem("auth_token");
+  //     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  //     await axios.patch(`${API_BASE}/exams/${examId}`, { is_active: newStatus }, { headers });
+  //   } catch (err) {
+  //     console.error("Failed to update status:", err);
+  //     // rollback on failure
+  //     setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: target.is_active } : e));
+  //     setError("Failed to update exam status");
+  //   }
+  // };
 
   const filteredExams = exams.filter(exam => {
     const matchesSearch =
       exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && exam.is_active) ||
-      (statusFilter === "inactive" && !exam.is_active);
+  
 
     const matchesOrganization =
       organizationFilter === "all" || exam.organization.name === organizationFilter;
 
-    return matchesSearch && matchesStatus && matchesOrganization;
+    return matchesSearch && matchesOrganization;
   });
 
   if (loading) {
@@ -143,13 +140,13 @@ export default function SuperAdminExams() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4 space-y-4 md:space-y-0 md:flex md:space-x-4">
-          <div className="relative flex-1">
+          <div className="relative md:flex-[2] flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search exams by name or description..."
+              placeholder="Search exams by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
             />
           </div>
 
@@ -169,19 +166,7 @@ export default function SuperAdminExams() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-400" />
-                  <SelectValue placeholder="Filter by status" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            
           </div>
         </CardContent>
       </Card>
@@ -217,8 +202,7 @@ export default function SuperAdminExams() {
                 <TableRow>
                   <TableHead>Exam</TableHead>
                   <TableHead>Organization</TableHead>
-                  <TableHead>Price (LKR)</TableHead>
-                  <TableHead>Duration</TableHead>
+                  <TableHead>Price (LKR)</TableHead>              
                   <TableHead>Students</TableHead>
                   <TableHead>Pass Rate</TableHead>
                   <TableHead>Created</TableHead>
@@ -242,15 +226,10 @@ export default function SuperAdminExams() {
                         {exam.price.toLocaleString('en-LK')} LKR
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        {exam.duration} mins
-                      </div>
-                    </TableCell>
+                    
                     <TableCell>
                       <div className="text-center">
-                        {exam.total_students}
+                        {exam.registered_students_count}
                       </div>
                     </TableCell>
                     <TableCell>
