@@ -6,7 +6,6 @@ import {
     Users,
     BookOpen,
     Download,
-    Calendar,
     FileText,
     PieChart as PieChartIcon,
     BarChart3
@@ -91,18 +90,9 @@ export default function FinanceDashboard() {
     const examOptions = useExamOptions(financeData);
 
     const filteredData = useMemo(() => {
-        // Backend already applies filters; this is a safety net if needed.
-        return financeData.filter(exam => {
-            const matchesExam = selectedExam === 'all' || exam.id.toString() === selectedExam;
-            let matchesMonth = true;
-            if (selectedMonth) {
-                const examDate = exam.examDate ? new Date(exam.examDate) : null;
-                const examMonth = examDate ? examDate.toISOString().slice(0, 7) : '';
-                matchesMonth = examMonth === selectedMonth;
-            }
-            return matchesExam && matchesMonth;
-        });
-    }, [financeData, selectedExam, selectedMonth]);
+        // Rely on backend for filtering by exam and month to avoid mismatches.
+        return financeData;
+    }, [financeData]);
 
     const summary = useMemo(() => {
         const totalExams = filteredData.length;
@@ -152,18 +142,11 @@ export default function FinanceDashboard() {
         }).format(amount);
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    };
+    // Date formatting no longer needed in table; keep utility here if needed elsewhere.
 
     const exportToCSV = () => {
         const headers = [
             "Exam Name",
-            "Date",
             "Total Registrations",
             "Paid",
             "Unpaid",
@@ -175,7 +158,6 @@ export default function FinanceDashboard() {
 
         const csvData = filteredData.map(exam => [
             exam.examName,
-            exam.examDate,
             exam.totalRegistrations,
             exam.paidRegistrations,
             exam.unpaidRegistrations,
@@ -449,7 +431,6 @@ export default function FinanceDashboard() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Exam Name</TableHead>
-                                        <TableHead>Date</TableHead>
                                         <TableHead>Total Registrations</TableHead>
                                         <TableHead>Paid</TableHead>
                                         <TableHead>Unpaid</TableHead>
@@ -460,23 +441,17 @@ export default function FinanceDashboard() {
                                 </TableHeader>
                                 <TableBody>
                                     {error ? (
-                                        <TableRow><TableCell colSpan={8} className="text-center text-red-600">{error}</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7} className="text-center text-red-600">{error}</TableCell></TableRow>
                                     ) : loading ? (
-                                        <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7} className="text-center">Loading...</TableCell></TableRow>
                                     ) : filteredData.length === 0 ? (
-                                        <TableRow><TableCell colSpan={8} className="text-center">No data</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7} className="text-center">No data</TableCell></TableRow>
                                     ) : filteredData.map((exam) => {
                                         const paymentRate = (exam.paidRegistrations / exam.totalRegistrations) * 100;
                                         return (
                                             <TableRow key={exam.id}>
                                                 <TableCell>
                                                     <div className="font-medium">{exam.examName}</div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Calendar className="w-4 h-4 text-gray-400" />
-                                                        {formatDate(exam.examDate)}
-                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="font-medium">{exam.totalRegistrations}</div>

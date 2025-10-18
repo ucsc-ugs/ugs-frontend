@@ -371,7 +371,11 @@ export default function ManageStudents() {
                                             </div>
                                             <div>
                                                 <div className="text-sm text-gray-500">Exam Registrations</div>
-                                                <div className="font-medium">{detailData?.exams_count ?? detailData?.exams?.length ?? 0}</div>
+                                                <div className="font-medium">
+                                                    {detailData?.exams_count
+                                                        ?? (Array.isArray(detailData?.exam_registrations) ? detailData.exam_registrations.length : undefined)
+                                                        ?? (Array.isArray(detailData?.exams) ? detailData.exams.length : 0)}
+                                                </div>
                                             </div>
                                         </div>
 
