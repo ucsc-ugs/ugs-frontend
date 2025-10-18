@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnnouncementModal from '@/components/AnnouncementModal';
 import {
@@ -40,6 +40,8 @@ interface Announcement {
     audience: 'all' | 'exam-specific' | 'department-specific';
     examId?: string;
     examTitle?: string;
+    examName?: string;
+    examCode?: string;
     // departmentId and departmentName removed
     // yearLevel removed
     expiryDate: string;
@@ -91,6 +93,7 @@ export default function SetAnnouncements() {
 
     // State management
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('all');
@@ -109,8 +112,11 @@ export default function SetAnnouncements() {
     const [userId, setUserId] = useState<string | null>(null);
 
     // Fetch announcements from backend
-
-    const fetchAnnouncements = async () => {
+    const fetchAnnouncements = useCallback(async () => {
+        // Only show loading if there are no announcements yet (initial load)
+        if (announcements.length === 0) {
+            setIsLoading(true);
+        }
         try {
             const response = await axios.get(`${API_URL}/api/announcements`);
             setAnnouncements(response.data.map((a: any) => ({
@@ -120,6 +126,8 @@ export default function SetAnnouncements() {
                 audience: a.audience,
                 examId: a.exam_id,
                 examTitle: a.examTitle || '',
+                examName: a.exam_name || '',
+                examCode: a.exam_code || '',
                 // departmentId and departmentName removed
                 // yearLevel removed
                 expiryDate: a.expiry_date,
@@ -137,30 +145,38 @@ export default function SetAnnouncements() {
                 clickCount: a.click_count || 0,
                 attachments: a.attachments || [],
             })));
+            setIsLoading(false);
         } catch {
             setNotification({ type: 'error', message: 'Failed to load announcements!' });
             setTimeout(() => setNotification(null), 3000);
+            setIsLoading(false);
         }
-    };
+    }, [API_URL, announcements.length]);
 
     useEffect(() => {
-        fetchAnnouncements();
-        const interval = setInterval(() => {
-            fetchAnnouncements();
-        }, 20000); // 20 seconds
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        // Fetch user id from backend
+        // Fetch user id from backend first
         const token = localStorage.getItem('auth_token');
         axios.get(
             `${API_URL}/api/user`,
             token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
         )
-            .then(res => setUserId(String(res.data.id)))
-            .catch(() => setUserId(null));
-    }, [API_URL]);
+            .then(res => {
+                setUserId(String(res.data.id));
+                // Fetch announcements after user ID is set
+                fetchAnnouncements();
+            })
+            .catch(() => {
+                setUserId(null);
+                // Still fetch announcements even if user fetch fails
+                fetchAnnouncements();
+            });
+
+        // Set up polling interval (background refresh)
+        const interval = setInterval(() => {
+            fetchAnnouncements();
+        }, 20000); // 20 seconds
+        return () => clearInterval(interval);
+    }, [API_URL, fetchAnnouncements]);
 
     // Filter announcements
     const filteredAnnouncements = announcements
@@ -588,7 +604,13 @@ export default function SetAnnouncements() {
                                     {filteredAnnouncements.map((announcement) => (
                                         <TableRow
                                             key={announcement.id}
-                                            className={announcement.isPinned ? 'bg-yellow-50 cursor-pointer' : 'cursor-pointer'}
+                                            className={
+                                                announcement.isPinned
+                                                    ? 'bg-yellow-50 cursor-pointer'
+                                                    : announcement.audience === 'exam-specific'
+                                                        ? 'bg-orange-50/30 cursor-pointer'
+                                                        : 'bg-blue-50/20 cursor-pointer'
+                                            }
                                             onClick={() => handleAnnouncementClick(announcement)}
                                         >
                                             <TableCell>
@@ -641,11 +663,19 @@ export default function SetAnnouncements() {
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="w-4 h-4 text-gray-400" />
-                                                    <span className="capitalize">
-                                                        {announcement.audience === 'all' ? 'All Students' :
-                                                            announcement.audience === 'exam-specific' ? (announcement.examTitle ? announcement.examTitle : 'Exam specific') :
-                                                                announcement.audience}
-                                                    </span>
+                                                    <div>
+                                                        <div className="capitalize">
+                                                            {announcement.audience === 'all' ? 'All Students' :
+                                                                announcement.audience === 'exam-specific' ? 'Exam Specific' :
+                                                                    announcement.audience}
+                                                        </div>
+                                                        {announcement.audience === 'exam-specific' && announcement.examName && (
+                                                            <div className="text-xs mt-0.5 bg-orange-100/60 text-orange-800 px-2 py-0.5 rounded inline-block">
+                                                                {announcement.examName}
+                                                                {announcement.examCode && <span className="ml-1 font-medium">({announcement.examCode})</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -712,7 +742,13 @@ export default function SetAnnouncements() {
                                     ))}
                                 </TableBody>
                             </Table>
-                            {filteredAnnouncements.length === 0 && (
+                            {isLoading && (
+                                <div className="text-center py-12">
+                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <p className="mt-4 text-gray-500">Loading announcements...</p>
+                                </div>
+                            )}
+                            {!isLoading && filteredAnnouncements.length === 0 && (
                                 <div className="text-center py-8 text-gray-500">
                                     No announcements found.
                                 </div>

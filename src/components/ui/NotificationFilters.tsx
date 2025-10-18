@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, Search } from 'lucide-react';
 
 interface FilterProps {
     onFilterChange: (filters: FilterState) => void;
@@ -11,6 +11,7 @@ interface FilterProps {
 export interface FilterState {
     readStatus: 'all' | 'read' | 'unread';
     dateRange: 'all' | 'today';
+    searchQuery: string;
 }
 
 export const NotificationFilters = ({
@@ -22,6 +23,7 @@ export const NotificationFilters = ({
     const [filters, setFilters] = useState<FilterState>({
         readStatus: 'all',
         dateRange: 'all',
+        searchQuery: '',
     });
 
     const handleFilterChange = (key: keyof FilterState, value: FilterState[keyof FilterState]) => {
@@ -33,6 +35,20 @@ export const NotificationFilters = ({
     return (
         <div className="w-full flex justify-center mb-6">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-4 flex flex-row items-center gap-3">
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search tags or topics..."
+                        value={filters.searchQuery}
+                        onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+                        className="w-64 pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    />
+                </div>
+
+                {/* Vertical separator */}
+                <div className="h-8 w-px bg-gray-300"></div>
                 <button
                     onClick={() => handleFilterChange('readStatus', 'all')}
                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${filters.readStatus === 'all'

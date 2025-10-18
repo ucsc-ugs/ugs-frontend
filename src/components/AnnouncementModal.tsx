@@ -16,6 +16,8 @@ type AnnouncementModalProps = {
         expiryDate: string;
         publishDate?: string;
         tags?: string[];
+        examName?: string;
+        examCode?: string;
     } | null;
 };
 
@@ -45,6 +47,15 @@ export default function AnnouncementModal({ open, onClose, announcement }: Annou
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 bg-gray-50 rounded-lg p-4 border">
                         <div className="flex flex-col"><span className="font-semibold">Audience:</span> {announcement.audience}</div>
+                        {announcement.examName && (
+                            <div className="flex flex-col">
+                                <span className="font-semibold text-orange-700">Exam:</span>
+                                <div className="bg-orange-100/60 text-orange-800 px-3 py-1.5 rounded-md mt-1 inline-block">
+                                    <span className="font-medium">{announcement.examName}</span>
+                                    {announcement.examCode && <span className="ml-1.5 text-sm">({announcement.examCode})</span>}
+                                </div>
+                            </div>
+                        )}
                         <div className="flex flex-col"><span className="font-semibold">Priority:</span> {announcement.priority}</div>
                         <div className="flex flex-col"><span className="font-semibold">Category:</span> {announcement.category}</div>
                         <div className="flex flex-col"><span className="font-semibold">Status:</span> {announcement.status}</div>
