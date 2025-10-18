@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   MapPin,
+  Bell,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -73,15 +74,15 @@ export function OrgAdminSidebar() {
   useEffect(() => {
     // Fetch user info from admin API to get proper organization data
     const token = localStorage.getItem('auth_token');
-    const apiUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
-      ? import.meta.env.VITE_API_URL
+    const apiUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_URL
+      ? (import.meta as any).env.VITE_API_URL
       : 'http://localhost:8000');
 
     // First get user info from admin endpoint
     axios.get(`${apiUrl}/api/admin/user`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(async (userRes) => {
+      .then(async (userRes: any) => {
         const userData = userRes.data;
 
         // Then get organization info
@@ -163,7 +164,7 @@ export function OrgAdminSidebar() {
               to={path}
               end={name === "Dashboard"}
               onClick={handleNavClick}
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-3 lg:py-3 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                   ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                   : "text-blue-800 hover:bg-blue-50 hover:scale-105"
@@ -206,7 +207,7 @@ export function OrgAdminSidebar() {
                     <NavLink
                       key={name}
                       to={path}
-                      className={({ isActive }) =>
+                      className={({ isActive }: { isActive: boolean }) =>
                         `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                           ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                           : "text-blue-700 hover:bg-blue-50 hover:scale-105"
@@ -253,7 +254,7 @@ export function OrgAdminSidebar() {
                     <NavLink
                       key={name}
                       to={path}
-                      className={({ isActive }) =>
+                      className={({ isActive }: { isActive: boolean }) =>
                         `group flex items-center gap-2 lg:gap-4 px-2 sm:px-3 lg:px-4 py-2 lg:py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
                           ? "bg-blue-100 text-blue-800 font-bold border-l-2 lg:border-l-4 border-blue-700 scale-105"
                           : "text-blue-700 hover:bg-blue-50 hover:scale-105"
@@ -278,7 +279,7 @@ export function OrgAdminSidebar() {
               key={name}
               to={path}
               onClick={handleNavClick}
-              className={({ isActive }) => {
+              className={({ isActive }: { isActive: boolean }) => {
                 // Special handling for Set Announcements to include create/edit routes
                 const isAnnouncementActive = name === "Set Announcements" &&
                   (location.pathname === path ||
@@ -325,7 +326,7 @@ export function OrgAdminSidebar() {
         <NavLink
           to={logoutLink.path}
           onClick={handleNavClick}
-          className={({ isActive }) =>
+          className={({ isActive }: { isActive: boolean }) =>
             `group flex items-center justify-center gap-2 lg:gap-3 px-2 sm:px-3 lg:px-4 py-2 rounded-md transition-all duration-200 ease-in-out transform ${isActive
               ? "bg-red-100 text-red-600 font-bold border-l-2 lg:border-l-4 border-red-600 scale-105"
               : "text-red-600 hover:bg-red-50 hover:scale-105"
