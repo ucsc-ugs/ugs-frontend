@@ -22,6 +22,7 @@ import ContactUsForm from "./components/ui/ContactUsForm";
 import AdminDashboard from "@/pages/orgAdmin/OrgAdminHome";
 import AdminNotifications from "@/pages/orgAdmin/AdminNotifications";
 import ManageExams from "@/pages/orgAdmin/ManageExams";
+import Locations from "@/pages/orgAdmin/Locations";
 import CreateExam from "@/pages/orgAdmin/CreateExam";
 import PublishResults from "@/pages/orgAdmin/PublishResults";
 import FinanceDashboard from "@/pages/orgAdmin/FinanceDashboard";
@@ -119,6 +120,7 @@ function App() {
                       <Route path="/" element={<AdminDashboard />} />
                       <Route path="/notifications" element={<AdminNotifications />} />
                       <Route path="/manage-exams" element={<ManageExams />} />
+                      <Route path="/locations" element={<Locations />} />
                       <Route path="/create-exam" element={<CreateExam />} />
                       <Route path="/publish-results" element={<PublishResults />} />
                       <Route path="/finance" element={<FinanceDashboard />} />

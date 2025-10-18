@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8000/api/admin';
 
 // Helper function for API requests
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
@@ -52,16 +52,28 @@ export interface UpdateOrgAdminData {
   email: string;
 }
 
+export interface Location {
+  id: number;
+  organization_id: number;
+  location_name: string;
+  capacity: number;
+  current_registrations?: number;
+  organization?: {
+    id: number;
+    name: string;
+  };
+}
+
 export const orgAdminApi = {
   // Get all admins in the current admin's organization
   getOrgAdmins: async (): Promise<OrgAdmin[]> => {
-    const response = await apiRequest('/admin/my-org-admins');
+    const response = await apiRequest('/my-org-admins');
     return response.data;
   },
 
   // Create a new admin in the current admin's organization
   createOrgAdmin: async (data: CreateOrgAdminData): Promise<OrgAdmin> => {
-    const response = await apiRequest('/admin/my-org-admins', {
+    const response = await apiRequest('/my-org-admins', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -70,7 +82,7 @@ export const orgAdminApi = {
 
   // Update an existing admin
   updateOrgAdmin: async (id: number, data: UpdateOrgAdminData): Promise<OrgAdmin> => {
-    const response = await apiRequest(`/admin/my-org-admins/${id}`, {
+    const response = await apiRequest(`/my-org-admins/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -79,15 +91,22 @@ export const orgAdminApi = {
 
   // Delete an admin
   deleteOrgAdmin: async (id: number): Promise<void> => {
-    await apiRequest(`/admin/my-org-admins/${id}`, {
+    await apiRequest(`/my-org-admins/${id}`, {
       method: 'DELETE',
     });
   },
 
   // Get current organization details
   getMyOrganization: async (): Promise<any> => {
-    const response = await apiRequest('/admin/my-organization');
-    return response.data;
+    console.log('Making request to /my-organization...');
+    try {
+      const response = await apiRequest('/my-organization');
+      console.log('getMyOrganization response:', response);
+      return response.data;
+    } catch (error) {
+      console.error('getMyOrganization error:', error);
+      throw error;
+    }
   },
 
   // Upload organization logo
@@ -96,7 +115,7 @@ export const orgAdminApi = {
     formData.append('logo', logoFile);
 
     const token = localStorage.getItem('auth_token');
-    const response = await fetch(`${API_BASE_URL}/admin/my-organization/logo`, {
+    const response = await fetch(`${API_BASE_URL}/my-organization/logo`, {
       method: 'POST',
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -114,10 +133,16 @@ export const orgAdminApi = {
 
   // Update organization details (name, description, etc.)
   updateMyOrganization: async (data: any): Promise<any> => {
-    const response = await apiRequest('/admin/my-organization', {
+    const response = await apiRequest('/my-organization', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    return response.data;
+  },
+
+  // Get locations for the current organization
+  getLocations: async (): Promise<Location[]> => {
+    const response = await apiRequest('/locations');
     return response.data;
   },
 };
