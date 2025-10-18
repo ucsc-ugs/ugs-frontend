@@ -69,6 +69,7 @@ export const CompactCalendar = () => {
             try {
                 const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
                 if (!token) {
+                    console.log("No auth token found");
                     return;
                 }
 
@@ -77,14 +78,19 @@ export const CompactCalendar = () => {
                     'Authorization': `Bearer ${token}`,
                 };
 
+                console.log("Fetching exam dates from API...");
                 const response = await fetch("http://localhost:8000/api/student/exam-dates", { headers });
 
                 if (response.ok) {
                     const examDates: ExamDate[] = await response.json();
+                    console.log("Received exam dates:", examDates);
 
                     // Transform exam dates to important dates format
                     const transformed: ImportantDate[] = examDates.map(exam => {
-                        const examDateTime = parseISO(exam.date);
+                        // Parse date - handle both ISO and MySQL datetime formats
+                        const dateStr = exam.date.replace(' ', 'T'); // Convert MySQL format to ISO
+                        const examDateTime = parseISO(dateStr);
+                        console.log("Parsing date:", exam.date, "→", dateStr, "→", examDateTime);
                         return {
                             date: examDateTime,
                             title: `${exam.exam_code}: ${exam.exam_title}`,
@@ -96,7 +102,10 @@ export const CompactCalendar = () => {
                         };
                     });
 
+                    console.log("Transformed dates:", transformed);
                     setImportantDates(transformed);
+                } else {
+                    console.error("API response not OK:", response.status, response.statusText);
                 }
             } catch (error) {
                 console.error("Failed to fetch exam dates:", error);
@@ -107,9 +116,14 @@ export const CompactCalendar = () => {
     }, []);
 
     const getImportantDate = (date: Date): ImportantDate | undefined => {
-        return importantDates.find(importantDate =>
+        const found = importantDates.find(importantDate =>
             isSameDay(importantDate.date, date)
         );
+        // Debug: Log when we find a match
+        if (found) {
+            console.log("Found exam date match:", { calendarDate: date, examDate: found });
+        }
+        return found;
     };
 
     const handleDateClick = (date: Date) => {
@@ -295,21 +309,6 @@ export const CompactCalendar = () => {
                         </PopoverContent>
                     )}
                 </Popover>
-            </div>
-
-            {/* Compact Legend */}
-            <div className="border-t bg-muted/30 px-4 py-3">
-                <h4 className="text-xs font-semibold text-foreground mb-2 text-center">Event Types</h4>
-                <div className="flex items-center justify-center gap-6 text-xs">
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></div>
-                        <span className="text-muted-foreground font-medium">Exams</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0"></div>
-                        <span className="text-muted-foreground font-medium">Deadlines</span>
-                    </div>
-                </div>
             </div>
         </div>
     );
