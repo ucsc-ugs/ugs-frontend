@@ -1,5 +1,5 @@
 // src/pages/orgAdmin/PublishResults.tsx
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
     Upload,
     FileText,
@@ -15,20 +15,45 @@ import {
     Send,
     X,
     Info,
-    Users
+    Users,
+    Loader2
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
+
+interface ExamDate {
+    id: number;
+    date: string;
+    location?: string;
+    status?: string;
+    student_exams_count?: number;
+}
 
 interface Exam {
     id: number;
     name: string;
+    code_name: string;
+    description: string;
+    price: number;
+    organization_id: number;
+    exam_dates: ExamDate[];
+}
+
+// Flattened structure for display - each exam date becomes a separate card
+interface ExamDateCard {
+    id: number;
+    exam_id: number;
+    exam_name: string;
+    exam_code_name: string;
+    exam_description: string;
+    exam_price: number;
     date: string;
-    university: string;
-    totalStudents: number;
-    status: "completed" | "active" | "draft";
+    location?: string;
+    status?: string;
+    student_count: number;
 }
 
 interface ResultEntry {
@@ -47,32 +72,45 @@ interface ManualEntry {
     grade: string;
 }
 
-const mockExams: Exam[] = [
-    {
-        id: 1,
-        name: "Data Structures & Algorithms",
-        date: "2025-07-10",
-        university: "University of Colombo",
-        totalStudents: 125,
-        status: "completed"
-    },
-    {
-        id: 2,
-        name: "Database Management Systems",
-        date: "2025-07-08",
-        university: "University of Peradeniya",
-        totalStudents: 98,
-        status: "completed"
-    },
-    {
-        id: 3,
-        name: "Software Engineering",
-        date: "2025-07-12",
-        university: "University of Moratuwa",
-        totalStudents: 87,
-        status: "completed"
-    }
-];
+// Helper function to determine exam date status
+const getExamDateStatus = (date: string): "completed" | "active" | "draft" => {
+    const now = new Date();
+    const examDate = new Date(date);
+    
+    if (examDate < now) return "completed";
+    if (examDate > now) return "active";
+    return "draft";
+};
+
+// Helper function to flatten exams with their exam dates into separate cards
+const flattenExamDates = (exams: Exam[]): ExamDateCard[] => {
+    const flattened: ExamDateCard[] = [];
+    
+    exams.forEach(exam => {
+        exam.exam_dates.forEach(examDate => {
+            flattened.push({
+                id: examDate.id,
+                exam_id: exam.id,
+                exam_name: exam.name,
+                exam_code_name: exam.code_name,
+                exam_description: exam.description,
+                exam_price: exam.price,
+                date: examDate.date,
+                location: examDate.location,
+                status: examDate.status,
+                student_count: examDate.student_exams_count || 0
+            });
+        });
+    });
+    
+    // Sort by exam name, then by date
+    return flattened.sort((a, b) => {
+        if (a.exam_name !== b.exam_name) {
+            return a.exam_name.localeCompare(b.exam_name);
+        }
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+};
 
 const mockStudents = [
     { id: "CS/2020/001", name: "John Doe" },
@@ -163,7 +201,11 @@ const parseCSVContent = (content: string): ResultEntry[] => {
 };
 
 export default function PublishResults() {
-    const [selectedExam, setSelectedExam] = useState<number | null>(null);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examDateCards, setExamDateCards] = useState<ExamDateCard[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [selectedExamDate, setSelectedExamDate] = useState<number | null>(null);
     const [csvFile, setCsvFile] = useState<File | null>(null);
     const [results, setResults] = useState<ResultEntry[]>([]);
     const [manualEntry, setManualEntry] = useState<ManualEntry>({
@@ -176,9 +218,40 @@ export default function PublishResults() {
     const [isPublished, setIsPublished] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    const selectedExamData = useMemo(() => {
-        return mockExams.find(exam => exam.id === selectedExam);
-    }, [selectedExam]);
+    // Fetch exams from API
+    useEffect(() => {
+        const fetchExams = async () => {
+            try {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    setError("No authentication token found");
+                    return;
+                }
+
+                const response = await axios.get("http://localhost:8000/api/exam-dates", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                const fetchedExams: Exam[] = response.data.data || [];
+                setExams(fetchedExams);
+                
+                // Flatten the exams into separate exam date cards
+                const flattened = flattenExamDates(fetchedExams);
+                setExamDateCards(flattened);
+            } catch (err: any) {
+                console.error(err);
+                setError(err.response?.data?.message || err.message || "Failed to fetch exams");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchExams();
+    }, []);
+
+    const selectedExamDateData = useMemo(() => {
+        return examDateCards.find(card => card.id === selectedExamDate);
+    }, [selectedExamDate, examDateCards]);
 
     const validResults = useMemo(() => {
         return results.filter(result => result.isValid);
@@ -287,6 +360,34 @@ export default function PublishResults() {
         URL.revokeObjectURL(url);
     }, []);
 
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen flex justify-center items-center">
+                <div className="flex items-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                    <span className="text-gray-600">Loading exams...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="min-h-screen flex justify-center items-center">
+                <div className="text-center">
+                    <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Exams</h2>
+                    <p className="text-red-600 mb-4">{error}</p>
+                    <Button onClick={() => window.location.reload()}>
+                        Try Again
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen">
             <div className="max-w-7xl mx-auto p-4 lg:p-6">
@@ -316,7 +417,7 @@ export default function PublishResults() {
                                 <div>
                                     <h3 className="font-semibold text-green-900">Results Published Successfully!</h3>
                                     <p className="text-green-700 text-sm">
-                                        {validResults.length} students have been notified about their results for {selectedExamData?.name}
+                                        {validResults.length} students have been notified about their results for {selectedExamDateData?.exam_name} ({new Date(selectedExamDateData?.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
                                     </p>
                                 </div>
                             </div>
@@ -324,80 +425,103 @@ export default function PublishResults() {
                     </Card>
                 )}
 
-                {/* Exam Selection */}
+                {/* Exam Date Selection */}
                 <div className="mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {mockExams.map(exam => (
-                            <Card
-                                key={exam.id}
-                                className={`transition-all duration-200 hover:shadow-lg cursor-pointer ${selectedExam === exam.id ? 'ring-2 ring-blue-500' : ''
-                                    }`}
-                            >
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-lg leading-tight mb-2">{exam.name}</CardTitle>
-                                            <Badge
-                                                className={`${exam.status === 'completed'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : exam.status === 'active'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-gray-100 text-gray-800'
-                                                    } text-xs`}
-                                            >
-                                                {exam.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-1 gap-2 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <BookOpen className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-600">{exam.university}</span>
+                    {examDateCards.length === 0 ? (
+                        <Card className="text-center py-8">
+                            <CardContent>
+                                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Exam Dates Available</h3>
+                                <p className="text-gray-600">There are no past exam dates available for publishing results.</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {examDateCards.map(examDateCard => {
+                                const status = getExamDateStatus(examDateCard.date);
+                                
+                                return (
+                                    <Card
+                                        key={examDateCard.id}
+                                        className={`transition-all duration-200 hover:shadow-lg cursor-pointer ${selectedExamDate === examDateCard.id ? 'ring-2 ring-blue-500' : ''
+                                            }`}
+                                    >
+                                        <CardHeader className="pb-3">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <CardTitle className="text-lg leading-tight mb-2">{examDateCard.exam_name}</CardTitle>
+                                                    <Badge
+                                                        className={`${status === 'completed'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : status === 'active'
+                                                                ? 'bg-blue-100 text-blue-800'
+                                                                : 'bg-gray-100 text-gray-800'
+                                                            } text-xs`}
+                                                    >
+                                                        {status}
+                                                    </Badge>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Target className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-600">
-                                                    {new Date(exam.date).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Users className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-600">{exam.totalStudents} students</span>
-                                            </div>
-                                        </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-1 gap-2 text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <BookOpen className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-gray-600">{examDateCard.exam_code_name}</span>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        <Target className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-gray-600">
+                                                            {new Date(examDateCard.date).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {examDateCard.location && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Users className="w-4 h-4 text-gray-400" />
+                                                            <span className="text-gray-600">{examDateCard.location}</span>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        <Users className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-gray-600">{examDateCard.student_count} students</span>
+                                                    </div>
+                                                </div>
 
-                                        <Button
-                                            onClick={() => setSelectedExam(exam.id)}
-                                            className={`w-full transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 ${selectedExam === exam.id ? 'border-blue-500 bg-blue-50 text-blue-700' : ''}`}
-                                            variant="outline"
-                                            disabled={exam.status !== 'completed'}
-                                        >
-                                            {selectedExam === exam.id ? (
-                                                <>
-                                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                                    Selected - Publish Results
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Send className="w-4 h-4 mr-2" />
-                                                    {exam.status === 'completed' ? 'Publish Results' : 'Not Available'}
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                                <Button
+                                                    onClick={() => setSelectedExamDate(examDateCard.id)}
+                                                    className={`w-full transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 ${selectedExamDate === examDateCard.id ? 'border-blue-500 bg-blue-50 text-blue-700' : ''}`}
+                                                    variant="outline"
+                                                    disabled={status !== 'completed'}
+                                                >
+                                                    {selectedExamDate === examDateCard.id ? (
+                                                        <>
+                                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                                            Selected - Publish Results
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Send className="w-4 h-4 mr-2" />
+                                                            {status === 'completed' ? 'Publish Results' : 'Not Available'}
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                    {selectedExamData && (
+                    {selectedExamDateData && (
                         <Card className="mt-6 border-blue-200">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -405,10 +529,14 @@ export default function PublishResults() {
                                         <CheckCircle className="w-5 h-5 text-blue-600" />
                                         <div>
                                             <h4 className="font-medium text-blue-900">
-                                                Selected: {selectedExamData.name}
+                                                Selected: {selectedExamDateData.exam_name}
                                             </h4>
                                             <p className="text-gray-600 text-sm">
-                                                Ready to upload and publish results for {selectedExamData.totalStudents} students
+                                                {new Date(selectedExamDateData.date).toLocaleDateString('en-US', {
+                                                    month: 'long',
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })} - Ready to publish results for {selectedExamDateData.student_count} students
                                             </p>
                                         </div>
                                     </div>
@@ -416,7 +544,7 @@ export default function PublishResults() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => {
-                                            setSelectedExam(null);
+                                            setSelectedExamDate(null);
                                             setCsvFile(null);
                                             setResults([]);
                                             setManualEntry({ studentId: "", score: "", grade: "" });
@@ -431,7 +559,7 @@ export default function PublishResults() {
                     )}
                 </div>
 
-                {selectedExam && (
+                {selectedExamDate && (
                     <>
                         {/* File Upload Section */}
                         <Card className="mb-6">
@@ -688,7 +816,7 @@ export default function PublishResults() {
                                     <h3 className="text-lg font-semibold">Confirm Publication</h3>
                                 </div>
                                 <p className="text-gray-600 mb-4">
-                                    Are you sure you want to publish results for <strong>{selectedExamData?.name}</strong>?
+                                    Are you sure you want to publish results for <strong>{selectedExamDateData?.exam_name}</strong> on <strong>{selectedExamDateData?.date ? new Date(selectedExamDateData.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</strong>?
                                     This will notify <strong>{validResults.length} students</strong> about their results.
                                 </p>
                                 <p className="text-sm text-gray-500 mb-6">
@@ -727,7 +855,7 @@ export default function PublishResults() {
                                     </div>
                                     <h3 className="text-lg font-semibold mb-2">Results Published Successfully!</h3>
                                     <p className="text-gray-600 mb-4">
-                                        {validResults.length} students have been notified about their results for {selectedExamData?.name}.
+                                        {validResults.length} students have been notified about their results for {selectedExamDateData?.exam_name} on {selectedExamDateData?.date ? new Date(selectedExamDateData.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}.
                                     </p>
 
                                     <div className="bg-gray-50 p-4 rounded-lg text-left mb-6">
