@@ -288,16 +288,20 @@ const MyExams = () => {
                         <div className="flex items-center gap-2">
                           {exam.organization.logo ? (
                             <img
-                              src={exam.organization.logo}
+                              src={`http://localhost:8000/storage${exam.organization.logo}`}
                               alt={`${exam.organization.name} logo`}
-                              className="w-6 h-6 rounded-full object-cover"
+                              className="w-8 h-8 rounded-full object-cover"
+                              style={{ width: '32px', height: '32px' }}
+                              onError={(e) => {
+                                e.currentTarget.src = "/ucsclogo.png";
+                              }}
                             />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-400 flex items-center justify-center text-white font-medium text-xs">
+                            <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-medium text-sm">
                               {exam.organization.name.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <p className="text-xs text-gray-500 font-medium">
+                          <p className="text-sm text-gray-700 font-bold">
                             {exam.organization.name}
                           </p>
                         </div>
@@ -431,17 +435,22 @@ const MyExams = () => {
                   <div className="flex items-center gap-4">
                     {selectedExam.organization.logo ? (
                       <img
-                        src={selectedExam.organization.logo}
+                        src={`http://localhost:8000/storage${selectedExam.organization.logo}`}
                         alt={`${selectedExam.organization.name} logo`}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+                        style={{ width: '64px', height: '64px' }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.removeAttribute('style');
+                        }}
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
                         {selectedExam.organization.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800 text-lg">
+                      <h3 className="font-bold text-gray-800 text-xl">
                         {selectedExam.organization.name}
                       </h3>
                       <p className="text-sm text-gray-600">Organization</p>

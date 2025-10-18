@@ -100,6 +100,7 @@ export default function ManageExams() {
     const [editingExam, setEditingExam] = useState<ExamDateRow | null>(null);
     const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
     const [deleteExamDateId, setDeleteExamDateId] = useState<number | null>(null);
+    const [deleteError, setDeleteError] = useState<string>(""); // Local error for delete operations
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orgId, setOrgId] = useState<number | null>(null);
     const [orgError, setOrgError] = useState<string>("");
@@ -645,19 +646,20 @@ export default function ManageExams() {
     const handleDeleteExamDate = async () => {
         if (!deleteExamDateId) {
             console.error('No deleteExamDateId provided');
-            setError('No exam date selected for deletion');
+            setDeleteError('No exam date selected for deletion');
             return;
         }
 
         try {
             setIsSubmitting(true);
+            setDeleteError(""); // Clear any previous error
             const result = await deleteExamDate(deleteExamDateId);
             console.log('Delete exam date result:', result);
             
             // Reload exams after deleting
             await loadExams();
             setDeleteExamDateId(null);
-            setError("");
+            setDeleteError("");
         } catch (err: any) {
             console.error('Delete exam date error:', err);
             
@@ -668,7 +670,7 @@ export default function ManageExams() {
                 errorMessage = err.message;
             }
             
-            setError(errorMessage);
+            setDeleteError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -680,6 +682,7 @@ export default function ManageExams() {
         setEditingExam(null);
         setDeleteExamId(null);
         setDeleteExamDateId(null);
+        setDeleteError(""); // Clear delete error
         setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
         setError("");
         
@@ -1702,8 +1705,20 @@ export default function ManageExams() {
                         confirmText="Delete"
                         cancelText="Cancel"
                         onConfirm={handleDeleteExamDate}
-                        onCancel={() => setDeleteExamDateId(null)}
-                    />
+                        onCancel={() => {
+                            setDeleteExamDateId(null);
+                            setDeleteError(""); // Clear error when canceling
+                        }}
+                    >
+                        {deleteError && (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                                <div className="flex">
+                                    <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 mr-2" />
+                                    <div className="text-sm text-red-700">{deleteError}</div>
+                                </div>
+                            </div>
+                        )}
+                    </ConfirmDialog>
                 )}
 
                 {/* Add Exam Date Modal */}
