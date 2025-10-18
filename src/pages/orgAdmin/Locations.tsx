@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   MapPin,
   Plus,
@@ -47,6 +46,7 @@ export default function Locations() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [deleteError, setDeleteError] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   
   // Modal states
@@ -211,6 +211,7 @@ export default function Locations() {
     if (!deleteLocationId) return;
 
     setIsSubmitting(true);
+    setDeleteError(""); // Clear any previous delete errors
     
     try {
       const token = localStorage.getItem('auth_token');
@@ -221,15 +222,22 @@ export default function Locations() {
         }
       });
 
+      // Success - close modal and refresh
       setDeleteLocationId(null);
+      setDeleteError("");
       await fetchLocations();
     } catch (err: any) {
       console.error('Error deleting location:', err);
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
+      
+      // Show professional error message only in the popup
+      if (err.response?.status === 400 && err.response?.data?.message?.includes('registered')) {
+        setDeleteError('Cannot delete this location as students are currently registered to it. Please reassign or remove students before deleting.');
+      } else if (err.response?.data?.message) {
+        setDeleteError(err.response.data.message);
       } else {
-        setError('Failed to delete location. Please try again.');
+        setDeleteError('Unable to delete location. Please try again or contact support if the problem persists.');
       }
+      // Don't close the modal on error so user can see the message
     } finally {
       setIsSubmitting(false);
     }
@@ -514,17 +522,61 @@ export default function Locations() {
         </Dialog>
 
         {/* Delete Confirmation Modal */}
-        {deleteLocationId && (
-          <ConfirmDialog
-            isOpen={!!deleteLocationId}
-            title="Delete Location"
-            message="Are you sure you want to delete this location? This action cannot be undone."
-            confirmText="Delete"
-            cancelText="Cancel"
-            onConfirm={handleDeleteLocation}
-            onCancel={() => setDeleteLocationId(null)}
-          />
-        )}
+        <Dialog open={!!deleteLocationId} onOpenChange={() => {
+          setDeleteLocationId(null);
+          setDeleteError("");
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="w-5 h-5" />
+                Delete Location
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete this location? This action cannot be undone.
+              </p>
+              
+              {deleteError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-red-700">{deleteError}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteLocationId(null);
+                    setDeleteError("");
+                  }}
+                  disabled={isSubmitting}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteLocation}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

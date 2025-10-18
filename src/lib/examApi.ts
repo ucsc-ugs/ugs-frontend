@@ -221,4 +221,11 @@ export const updateExamDate = async (examDateId: number, examDateData: {
   });
 };
 
+// Delete a specific exam date
+export const deleteExamDate = async (examDateId: number): Promise<ApiResponse> => {
+  return await apiRequest(`/exam-date/${examDateId}`, {
+    method: 'DELETE',
+  });
+};
+
 export type { ExamData, ExamDate, ApiResponse };
