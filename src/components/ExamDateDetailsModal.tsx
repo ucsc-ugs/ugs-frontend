@@ -197,29 +197,7 @@ export const ExamDateDetailsModal = ({
     }
   };
 
-  const handleCreateSampleStudents = async () => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/admin/test/create-sample-students', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (response.ok) {
-        const result = await response.json();
-        alert(result.message);
-      } else {
-        const errorData = await response.json();
-        alert('Failed to create sample students: ' + errorData.message);
-      }
-    } catch (error) {
-      console.error('Error creating sample students:', error);
-      alert('Error creating sample students. Please try again.');
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -347,24 +325,6 @@ export const ExamDateDetailsModal = ({
                 </CardContent>
               </Card>
             </div>
-
-            {/* Test Controls (for development) */}
-            <Card className="bg-yellow-50 border-yellow-200">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleCreateSampleStudents}
-                    size="sm"
-                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                  >
-                    Create Sample Students
-                  </Button>
-                  <span className="text-sm text-yellow-700">
-                    For testing purposes - creates 10 sample students
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Registered Students */}
             <Card>

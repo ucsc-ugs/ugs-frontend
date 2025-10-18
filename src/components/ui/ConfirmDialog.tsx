@@ -26,7 +26,7 @@ export function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md border-0 shadow-xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
