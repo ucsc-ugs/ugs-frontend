@@ -332,8 +332,8 @@ export default function ManageExams() {
                             price: Number(exam.price) || 0,
                             organization_id: exam.organization_id,
                             registration_deadline: exam.registration_deadline,
-                            currentRegistrations: examDate.current_registrations || 0,
-                            maxParticipants: examDate.max_participants || 0,
+                            currentRegistrations: (examDate as any)?.current_registrations || 0,
+                            maxParticipants: (examDate as any)?.max_participants || 0,
                         });
                     });
                 } else {

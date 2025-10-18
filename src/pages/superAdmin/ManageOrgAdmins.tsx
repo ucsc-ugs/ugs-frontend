@@ -142,6 +142,9 @@ export default function ManageOrgAdmins() {
     admin.organization.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Selected organization display name for the Select trigger
+  const selectedOrgName = organizations.find(o => o.id.toString() === formData.organization_id)?.name;
+
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen">
@@ -263,6 +266,7 @@ export default function ManageOrgAdmins() {
                     </Label>
                     <Select
                       value={formData.organization_id}
+                      displayValue={selectedOrgName}
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, organization_id: value }))}
                     >
                       <SelectTrigger

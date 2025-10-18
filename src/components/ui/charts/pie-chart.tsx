@@ -16,13 +16,9 @@ interface PieChartProps {
 }
 
 export function PieChart({ data, height = 300 }: PieChartProps) {
-  const renderCustomizedLabel = ({
-    name,
-    percent = 0
-  }: {
-    name: string;
-    percent?: number;
-  }) => {
+  const renderCustomizedLabel = (props: any) => {
+    const name: string = props?.name ?? "";
+    const percent: number = typeof props?.percent === 'number' ? props.percent : 0;
     return `${name}: ${(percent * 100).toFixed(0)}%`;
   };
 

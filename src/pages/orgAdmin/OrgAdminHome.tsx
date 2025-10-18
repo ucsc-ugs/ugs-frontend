@@ -17,41 +17,53 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart } from "@/components/ui/charts/bar-chart";
 import { PieChart } from "@/components/ui/charts/pie-chart";
+import { useEffect, useState } from 'react';
+import { orgAdminApi } from '@/lib/orgAdminApi';
 
 export default function AdminDashboard() {
-    // Mock data - replace with real API calls
-    const stats = {
-        totalExams: 24,
-        activeExams: 8,
-        totalRegistrations: 1243,
-        pendingRegistrations: 42,
-        totalRevenue: 1256000,
-        revenueChange: 12.5,
-        upcomingExams: 5,
-    };
+    const [stats, setStats] = useState<any | null>(null);
+    const [registrationData, setRegistrationData] = useState<any[]>([]);
+    const [examDistribution, setExamDistribution] = useState<any[]>([]);
+    const [recentRegistrations, setRecentRegistrations] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const registrationData = [
-        { name: 'Jan', value: 120 },
-        { name: 'Feb', value: 210 },
-        { name: 'Mar', value: 180 },
-        { name: 'Apr', value: 250 },
-        { name: 'May', value: 195 },
-        { name: 'Jun', value: 288 },
-    ];
+    useEffect(() => {
+        const load = async () => {
+            setIsLoading(true);
+            try {
+                const resp = await orgAdminApi.getDashboard();
+                const payload = resp.data || resp;
 
-    const examDistribution = [
-        { name: 'GCAT', value: 45 },
-        { name: 'GCCT', value: 30 },
-        { name: 'FIT', value: 15 },
-    ];
+                // Map server payload fields to UI state with safe fallbacks
+                setStats({
+                    totalExams: Number(payload.total_exams ?? payload.totalExams ?? 0),
+                    activeExams: Number(payload.active_exams ?? payload.activeExams ?? 0),
+                    totalRegistrations: Number(payload.total_registrations ?? payload.totalRegistrations ?? 0),
+                    pendingRegistrations: Number(payload.pending_registrations ?? payload.pendingRegistrations ?? 0),
+                    totalRevenue: Number(payload.total_revenue ?? payload.totalRevenue ?? 0),
+                    revenueChange: Number(payload.revenue_change ?? payload.revenueChange ?? 0),
+                    upcomingExams: Number(payload.upcoming_exams ?? payload.upcomingExams ?? 0),
+                });
 
-    const recentRegistrations = [
-        { id: 1, student: "Havindu Wijayalath", exam: "GCCT", date: "2023-06-15", status: "completed" },
-        { id: 2, student: "Janusha Jayaweera", exam: "GCCT", date: "2023-06-14", status: "pending" },
-        { id: 3, student: "Ranuga Lekamwasam", exam: "FIT", date: "2023-06-14", status: "completed" },
-        { id: 4, student: "Mandinu Maneth", exam: "GCAT", date: "2023-06-13", status: "rejected" },
-        { id: 5, student: "Bhagya Semage", exam: "FIT", date: "2023-06-12", status: "completed" },
-    ];
+                setRegistrationData(Array.isArray(payload.monthly_registrations) ? payload.monthly_registrations : (payload.registrationData || []));
+                setExamDistribution(Array.isArray(payload.exam_distribution) ? payload.exam_distribution : (payload.examDistribution || examDistribution));
+                setRecentRegistrations(Array.isArray(payload.recent_registrations) ? payload.recent_registrations : (payload.recentRegistrations || []));
+            } catch (err) {
+                console.error('Failed to load org admin dashboard:', err);
+                // keep mock/default values if API fails
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        load();
+    }, []);
+
+    // registrationData, examDistribution and recentRegistrations are provided from API during load
+    // fallbacks used when API data isn't available
+    const defaultRegistrationData = [{ name: 'Jan', value: 120 }, { name: 'Feb', value: 210 }, { name: 'Mar', value: 180 }];
+    const defaultExamDistribution = [{ name: 'GCAT', value: 45 }, { name: 'GCCT', value: 30 }, { name: 'FIT', value: 15 }];
+    const defaultRecent: any[] = [];
 
     return (
         <div className="min-h-screen">
@@ -82,9 +94,9 @@ export default function AdminDashboard() {
                                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{stats.totalExams}</div>
+                                <div className="text-2xl font-bold">{stats?.totalExams ?? 0}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    {stats.activeExams} active exams
+                                    {stats?.activeExams ?? 0} active exams
                                 </p>
                             </CardContent>
                             <CardFooter className="p-2 pt-0">
@@ -100,7 +112,7 @@ export default function AdminDashboard() {
                                 <Home className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{stats.totalRegistrations.toLocaleString()}</div>
+                                <div className="text-2xl font-bold">{(stats?.totalRegistrations ?? 0).toLocaleString()}</div>
                             </CardContent>
                             <CardFooter className="p-2 pt-0">
                                 <Button variant="ghost" size="sm" className="text-xs h-6">
@@ -115,10 +127,10 @@ export default function AdminDashboard() {
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">LKR {stats.totalRevenue.toLocaleString()}</div>
+                                <div className="text-2xl font-bold">LKR {(stats?.totalRevenue ?? 0).toLocaleString()}</div>
                                 <p className="text-xs text-muted-foreground flex items-center">
                                     <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                                    {stats.revenueChange}% from last period
+                                    {String(stats?.revenueChange ?? 0)}% from last period
                                 </p>
                             </CardContent>
                             <CardFooter className="p-2 pt-0">
@@ -134,7 +146,7 @@ export default function AdminDashboard() {
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{stats.upcomingExams}</div>
+                                <div className="text-2xl font-bold">{stats?.upcomingExams ?? 0}</div>
                                 <p className="text-xs text-muted-foreground">
                                     Next exam in 3 days
                                 </p>
@@ -162,7 +174,7 @@ export default function AdminDashboard() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <BarChart data={registrationData} />
+                                <BarChart data={(registrationData.length ? registrationData : defaultRegistrationData)} />
                             </CardContent>
                         </Card>
 
@@ -179,7 +191,7 @@ export default function AdminDashboard() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <PieChart data={examDistribution} />
+                                <PieChart data={(examDistribution.length ? examDistribution : defaultExamDistribution)} />
                             </CardContent>
                         </Card>
                     </div>
@@ -208,12 +220,12 @@ export default function AdminDashboard() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {recentRegistrations.map((reg) => (
+                    {(recentRegistrations.length ? recentRegistrations : defaultRecent).map((reg: any, idx: number) => (
                                         <TableRow key={reg.id}>
-                                            <TableCell className="font-medium">{reg.student}</TableCell>
-                                            <TableCell>{reg.exam}</TableCell>
-                                            <TableCell>{reg.date}</TableCell>
-                                            <TableCell className="text-right">
+                        <TableCell className="font-medium">{reg.student || reg.user?.name || `#${reg.id ?? idx}`}</TableCell>
+                        <TableCell>{reg.exam || reg.exam_name || ''}</TableCell>
+                        <TableCell>{reg.date || reg.exam_date || ''}</TableCell>
+                        <TableCell className="text-right">
                                                 <Badge
                                                     variant={reg.status === 'completed' ? 'default' :
                                                         reg.status === 'pending' ? 'secondary' : 'destructive'}

@@ -145,4 +145,10 @@ export const orgAdminApi = {
     const response = await apiRequest('/locations');
     return response.data;
   },
+  // Get dashboard metrics for the current org admin (summary stats, trends, etc.)
+  getDashboard: async (): Promise<any> => {
+    // backend should return a payload with fields like total_exams, total_registrations, monthly_registrations, exam_distribution, recent_registrations, total_revenue, upcoming_exams
+    const response = await apiRequest('/dashboard');
+    return response;
+  },
 };
