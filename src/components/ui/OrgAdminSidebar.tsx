@@ -124,6 +124,7 @@ export function OrgAdminSidebar() {
 
   const examLinks = [
     { name: "Manage Exams", path: "/admin/manage-exams", icon: BookOpen, permissions: ["exam.create", "exam.view", "exam.update", "exam.schedule.set", "exam.schedule.update", "exam.registration.deadline.set", "exam.registration.deadline.extend"] },
+    { name: "Locations", path: "/admin/locations", icon: MapPin, permissions: ["exam.location.manage"] },
     { name: "Publish Results", path: "/admin/publish-results", icon: Target, permissions: ["exam.view", "exam.update"] },
   ];
 
