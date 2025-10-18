@@ -4,7 +4,6 @@ import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
-import Announcements from "@/pages/Announcements";
 import Home from "@/pages/Home";
 import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
@@ -20,7 +19,6 @@ import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
 import ContactUsForm from "./components/ui/ContactUsForm";
 import AdminDashboard from "@/pages/orgAdmin/OrgAdminHome";
-import AdminNotifications from "@/pages/orgAdmin/AdminNotifications";
 import ManageExams from "@/pages/orgAdmin/ManageExams";
 import Locations from "@/pages/orgAdmin/Locations";
 import CreateExam from "@/pages/orgAdmin/CreateExam";
@@ -99,7 +97,6 @@ function App() {
                       <Route path="/register" element={<Register />} />
                       <Route path="/my-exams" element={<MyExams />} />
                       <Route path="/my-results" element={<MyResults />} />
-                      <Route path="/announcements" element={<Announcements />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
@@ -118,7 +115,6 @@ function App() {
                   <div className="ml-20 md:ml-64 p-6">
                     <Routes>
                       <Route path="/" element={<AdminDashboard />} />
-                      <Route path="/notifications" element={<AdminNotifications />} />
                       <Route path="/manage-exams" element={<ManageExams />} />
                       <Route path="/locations" element={<Locations />} />
                       <Route path="/create-exam" element={<CreateExam />} />
