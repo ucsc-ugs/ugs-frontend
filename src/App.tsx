@@ -19,7 +19,7 @@ import ExamDetails from "@/pages/ExamDetails";
 import Sidebar from "@/components/ui/sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
-import ContactUsForm from "./components/ui/ContactUsForm";
+import ContactUs from "./pages/ContactUs";
 import AdminDashboard from "@/pages/orgAdmin/OrgAdminHome";
 import ManageExams from "@/pages/orgAdmin/ManageExams";
 import Locations from "@/pages/orgAdmin/Locations";
@@ -44,6 +44,7 @@ import SuperAdminExams from "./pages/superAdmin/ManageExams";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MyRegisteredExams from "./pages/test";
+import ViewPastExams from "./pages/orgAdmin/test";
 
 function App() {
   return (
@@ -56,7 +57,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/contact-us" element={<ContactUsForm />} />
+            <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/universities" element={<UniversitiesPage />} />
             <Route path="/exams/:codeName" element={<ExamDetails />} />
 

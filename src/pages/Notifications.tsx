@@ -74,6 +74,21 @@ const filterAnnouncements = (announcements: Announcement[], filters: FilterState
       }
     }
 
+    // Search Query Filter (search in title, message, tags, category)
+    if (filters.searchQuery && filters.searchQuery.trim() !== '') {
+      const query = filters.searchQuery.toLowerCase();
+      const matchesTitle = a.title.toLowerCase().includes(query);
+      const matchesMessage = a.message.toLowerCase().includes(query);
+      const matchesTags = a.tags?.some(tag => tag.toLowerCase().includes(query)) || false;
+      const matchesCategory = a.category?.toLowerCase().includes(query) || false;
+      const matchesExamCode = a.exam_code?.toLowerCase().includes(query) || false;
+      const matchesExamTitle = a.exam_title?.toLowerCase().includes(query) || false;
+
+      if (!matchesTitle && !matchesMessage && !matchesTags && !matchesCategory && !matchesExamCode && !matchesExamTitle) {
+        return false;
+      }
+    }
+
     return true;
   });
 };
@@ -89,6 +104,7 @@ function NotificationsPage() {
   const [filters, setFilters] = useState<FilterState>({
     readStatus: 'all',
     dateRange: 'all',
+    searchQuery: '',
   });
   const [isNotificationsExpanded, setIsNotificationsExpanded] = useState(true);
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(true);
@@ -231,9 +247,9 @@ function NotificationsPage() {
 
         <NotificationFilters
           onFilterChange={setFilters}
-          totalCount={generalNotifications.length + generalAnnouncements.length + examAnnouncements.length}
+          totalCount={generalAnnouncements.length + examAnnouncements.length}
           readCount={generalAnnouncements.filter(a => a.is_read).length + examAnnouncements.filter(a => a.is_read).length}
-          unreadCount={generalNotifications.length + generalAnnouncements.filter(a => !a.is_read).length + examAnnouncements.filter(a => !a.is_read).length}
+          unreadCount={generalAnnouncements.filter(a => !a.is_read).length + examAnnouncements.filter(a => !a.is_read).length}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
@@ -407,11 +423,11 @@ function NotificationsPage() {
 
             {/* Notifications */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
-              <button
-                onClick={() => setIsNotificationsExpanded(!isNotificationsExpanded)}
-                className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100"
-              >
-                <div className="flex items-center gap-3">
+              <div className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors border-b border-gray-100">
+                <div
+                  className="flex items-center gap-3 flex-1 cursor-pointer"
+                  onClick={() => setIsNotificationsExpanded(!isNotificationsExpanded)}
+                >
                   <div className="p-2.5 bg-blue-100 rounded-xl">
                     <Bell className="w-5 h-5 text-blue-600" />
                   </div>
@@ -433,10 +449,7 @@ function NotificationsPage() {
                   {generalNotifications.filter(n => !n.is_read).length > 0 && (
                     <>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMarkAllAsRead();
-                        }}
+                        onClick={handleMarkAllAsRead}
                         className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors"
                       >
                         Mark All
@@ -446,13 +459,19 @@ function NotificationsPage() {
                       </span>
                     </>
                   )}
-                  {isNotificationsExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-blue-600" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-blue-600" />
-                  )}
+                  <button
+                    onClick={() => setIsNotificationsExpanded(!isNotificationsExpanded)}
+                    className="p-1 hover:bg-blue-50 rounded-md transition-colors"
+                    aria-label="Toggle notifications"
+                  >
+                    {isNotificationsExpanded ? (
+                      <ChevronUp className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-blue-600" />
+                    )}
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {isNotificationsExpanded && (
                 <div className="p-5 pt-3 bg-gray-50">
