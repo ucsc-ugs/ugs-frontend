@@ -1,26 +1,73 @@
 const API_BASE_URL = 'http://localhost:8000/api/admin';
 
-// Helper function for API requests
+// Import axios if not already available
+import axios from 'axios';
+
+// Helper function for API requests using axios instead of fetch
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('auth_token');
   
-  const config: RequestInit = {
-    headers: {
+  console.log('Making API request to:', `${API_BASE_URL}${endpoint}`);
+  console.log('Token:', token ? 'Present' : 'Missing');
+  
+  try {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
-    ...options,
-  };
+      'Accept': 'application/json',
+    };
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Add any additional headers from options
+    if (options.headers) {
+      Object.assign(headers, options.headers);
+    }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'API request failed');
+    const axiosConfig = {
+      method: (options.method || 'GET') as any,
+      url: `${API_BASE_URL}${endpoint}`,
+      headers,
+      ...(options.body && { data: JSON.parse(options.body as string) })
+    };
+
+    console.log('Request config:', axiosConfig);
+
+    const response = await axios(axiosConfig);
+    
+    console.log('Response status:', response.status);
+    console.log('Response data:', response.data);
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('API Error:', error);
+    
+    if (error.response) {
+      // Server responded with error status
+      console.error('Error response data:', error.response.data);
+      console.error('Error response status:', error.response.status);
+      
+      if (error.response.status === 422 && error.response.data?.errors) {
+        // Validation errors - format them nicely
+        const validationErrors = error.response.data.errors;
+        console.error('Detailed validation errors:', validationErrors);
+        const errorMessages = Object.entries(validationErrors)
+          .map(([field, messages]: [string, any]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('\n');
+        throw new Error(`Validation errors:\n${errorMessages}`);
+      }
+      
+      const errorMessage = error.response.data?.message || `HTTP ${error.response.status}: ${error.response.statusText}`;
+      throw new Error(errorMessage);
+    } else if (error.request) {
+      // Request was made but no response received
+      throw new Error('Network error: No response received from server');
+    } else {
+      // Something else happened
+      throw new Error(error.message || 'Unknown error occurred');
+    }
   }
-  
-  return response.json();
 };
 
 export interface OrgAdmin {
@@ -144,6 +191,19 @@ export const orgAdminApi = {
   // Get locations for the current organization
   getLocations: async (): Promise<Location[]> => {
     const response = await apiRequest('/locations');
+    return response.data;
+  },
+
+  // Change password
+  changePassword: async (data: {
+    current_password: string;
+    new_password: string;
+    new_password_confirmation: string;
+  }): Promise<any> => {
+    const response = await apiRequest('/change-password', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
     return response.data;
   },
 };

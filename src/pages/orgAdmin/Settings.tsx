@@ -6,7 +6,6 @@ import {
     Building,
     Upload,
     Shield,
-    Bell,
     Lock,
     X
 } from "lucide-react";
@@ -16,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { orgAdminApi } from "@/lib/orgAdminApi";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/contexts/ToastContext";
 
 interface OrganizationSettings {
     id: number;
@@ -27,11 +26,6 @@ interface OrganizationSettings {
     address?: string;
     website?: string;
     logo?: string;
-
-    // Communication Preferences (these will be stored separately or as JSON)
-    enableEmailNotifications: boolean;
-    enableInAppNotifications: boolean;
-    emailSignature: string;
 }
 
 interface PasswordChangeData {
@@ -48,10 +42,7 @@ const defaultSettings: OrganizationSettings = {
     phone_number: "",
     address: "",
     website: "",
-    logo: "",
-    enableEmailNotifications: true,
-    enableInAppNotifications: true,
-    emailSignature: "Best regards,\nAdministration Team"
+    logo: ""
 };
 
 export default function Settings() {
@@ -60,6 +51,8 @@ export default function Settings() {
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [savedMessage, setSavedMessage] = useState("");
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [lastPasswordChangeRequest, setLastPasswordChangeRequest] = useState<number>(0);
     const [passwordData, setPasswordData] = useState<PasswordChangeData>({
         currentPassword: "",
         newPassword: "",
@@ -82,10 +75,7 @@ export default function Settings() {
             setIsLoading(true);
             const organization = await orgAdminApi.getMyOrganization();
             setSettings({
-                ...organization,
-                enableEmailNotifications: true, // These would come from user preferences
-                enableInAppNotifications: true,
-                emailSignature: "Best regards,\nAdministration Team"
+                ...organization
             });
             
             // Set logo preview if exists
@@ -106,14 +96,24 @@ export default function Settings() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            await orgAdminApi.updateMyOrganization({
+            const updateData = {
                 name: settings.name,
                 description: settings.description,
                 contact_email: settings.contact_email,
                 phone_number: settings.phone_number,
                 address: settings.address,
                 website: settings.website
-            });
+            };
+            
+            // Filter out empty string values to avoid validation issues
+            const filteredData = Object.fromEntries(
+                Object.entries(updateData).filter(([key, value]) => value !== "" && value !== null && value !== undefined)
+            );
+            
+            console.log('Original data:', updateData);
+            console.log('Filtered data to send:', filteredData);
+            
+            await orgAdminApi.updateMyOrganization(filteredData);
             
             setSavedMessage("Settings saved successfully!");
             setTimeout(() => setSavedMessage(""), 3000);
@@ -209,34 +209,156 @@ export default function Settings() {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
 
-    const handlePasswordChange = async () => {
+    const handlePasswordChange = async (e?: React.MouseEvent) => {
+        // Prevent any default behavior and double execution
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        const now = Date.now();
+        
+        // Prevent duplicate requests within 2 seconds (debounce)
+        if (now - lastPasswordChangeRequest < 2000) {
+            console.log('Ignoring duplicate request - too soon after last request');
+            return;
+        }
+
+        // Check if already processing to prevent double execution
+        if (isChangingPassword) {
+            console.log('Password change already in progress, skipping...');
+            return;
+        }
+
+        setLastPasswordChangeRequest(now);
+        console.log('Starting password change process...');
+
+        // Frontend validation first
+        if (!passwordData.currentPassword.trim()) {
+            toast({
+                title: "Error",
+                description: "Current password is required!",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!passwordData.newPassword.trim()) {
+            toast({
+                title: "Error",
+                description: "New password is required!",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!passwordData.confirmPassword.trim()) {
+            toast({
+                title: "Error",
+                description: "Password confirmation is required!",
+                variant: "destructive",
+            });
+            return;
+        }
+
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            alert("New passwords do not match!");
+            toast({
+                title: "Error",
+                description: "New password and confirmation password do not match!",
+                variant: "destructive",
+            });
             return;
         }
 
         if (passwordData.newPassword.length < 8) {
-            alert("Password must be at least 8 characters long!");
+            toast({
+                title: "Error",
+                description: "New password must be at least 8 characters long!",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (passwordData.currentPassword === passwordData.newPassword) {
+            toast({
+                title: "Error",
+                description: "New password must be different from your current password!",
+                variant: "destructive",
+            });
             return;
         }
 
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            alert("Password changed successfully!");
+            setIsChangingPassword(true);
+            console.log('Making API call to change password...');
+            
+            await orgAdminApi.changePassword({
+                current_password: passwordData.currentPassword,
+                new_password: passwordData.newPassword,
+                new_password_confirmation: passwordData.confirmPassword,
+            });
+            
+            console.log('Password change successful!');
+            
+            // Success - show success message and clear form
+            toast({
+                title: "Success",
+                description: "Password changed successfully! Please use your new password for future logins.",
+            });
+            
+            // Clear password form
             setPasswordData({
                 currentPassword: "",
                 newPassword: "",
                 confirmPassword: ""
             });
-        } catch {
-            alert("Error changing password. Please try again.");
+            
+        } catch (error: any) {
+            console.error('Password change error:', error);
+            
+            // Extract and display appropriate error message
+            let errorMessage = "Error changing password. Please try again.";
+            
+            if (error.message) {
+                // Check for specific error types
+                if (error.message.includes('current_password: The current password is incorrect') || 
+                    error.message.includes('Current password is incorrect') ||
+                    error.message.includes('current_password')) {
+                    errorMessage = "Current password is incorrect. Please check your current password and try again.";
+                } else if (error.message.includes('Validation errors')) {
+                    // Extract the actual validation message
+                    const validationPart = error.message.replace('Validation errors:\n', '').replace('Validation errors:', '').trim();
+                    
+                    // If it contains current_password error, show user-friendly message
+                    if (validationPart.includes('current_password')) {
+                        errorMessage = "Current password is incorrect. Please check your current password and try again.";
+                    } else if (validationPart.includes('new_password')) {
+                        errorMessage = "New password validation failed. Please ensure it meets all requirements.";
+                    } else {
+                        // Show the cleaned validation message
+                        errorMessage = validationPart;
+                    }
+                } else if (error.message.includes('new_password')) {
+                    errorMessage = "New password validation failed. Please ensure it meets all requirements.";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            toast({
+                title: "Password Change Failed",
+                description: errorMessage,
+                variant: "destructive",
+            });
+            
+        } finally {
+            console.log('Setting isChangingPassword to false');
+            setIsChangingPassword(false);
         }
     };
 
     const tabs = [
         { id: "profile", label: "Organization Profile", icon: Building },
-        { id: "communication", label: "Communication", icon: Bell },
         { id: "account", label: "Account Settings", icon: Lock }
     ];
 
@@ -274,14 +396,6 @@ export default function Settings() {
                                 {savedMessage}
                             </Badge>
                         )}
-                        <Button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            <Save className="w-4 h-4 mr-2" />
-                            {isSaving ? "Saving..." : "Save Changes"}
-                        </Button>
                     </div>
                 </div>
 
@@ -372,6 +486,19 @@ export default function Settings() {
                                         </div>
                                     </div>
                                     <div>
+                                        <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                                            Organization Description
+                                        </Label>
+                                        <textarea
+                                            id="description"
+                                            value={settings.description || ''}
+                                            onChange={(e) => handleInputChange("description", e.target.value)}
+                                            rows={4}
+                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Enter a description of your organization..."
+                                        />
+                                    </div>
+                                    <div>
                                         <Label htmlFor="address" className="text-sm font-medium text-gray-700">
                                             Address
                                         </Label>
@@ -450,87 +577,6 @@ export default function Settings() {
                             </Card>
                         )}
 
-                        {/* Communication Preferences */}
-                        {activeTab === "communication" && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Bell className="w-5 h-5" />
-                                        Communication Preferences
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <Label className="text-sm font-medium text-gray-700">
-                                                    Enable Email Notifications
-                                                </Label>
-                                                <p className="text-sm text-gray-500">
-                                                    Receive system notifications via email
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings.enableEmailNotifications}
-                                                    onChange={(e) => handleInputChange("enableEmailNotifications", e.target.checked)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <Label className="text-sm font-medium text-gray-700">
-                                                    Enable In-App Notifications
-                                                </Label>
-                                                <p className="text-sm text-gray-500">
-                                                    Show notifications within the application
-                                                </p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={settings.enableInAppNotifications}
-                                                    onChange={(e) => handleInputChange("enableInAppNotifications", e.target.checked)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="emailSignature" className="text-sm font-medium text-gray-700">
-                                            Email Signature for Announcements
-                                        </Label>
-                                        <textarea
-                                            id="emailSignature"
-                                            value={settings.emailSignature}
-                                            onChange={(e) => handleInputChange("emailSignature", e.target.value)}
-                                            rows={4}
-                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Enter your email signature for official announcements..."
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">This signature will be automatically added to announcement emails</p>
-                                    </div>
-
-                                    <div className="flex justify-end pt-4 border-t border-gray-200">
-                                        <Button
-                                            onClick={handleSave}
-                                            disabled={isSaving}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                                        >
-                                            <Save className="w-4 h-4 mr-2" />
-                                            {isSaving ? "Saving..." : "Save Preferences"}
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
                         {/* Account Settings */}
                         {activeTab === "account" && (
                             <Card>
@@ -582,11 +628,22 @@ export default function Settings() {
                                                 />
                                             </div>
                                             <Button
+                                                type="button"
                                                 onClick={handlePasswordChange}
-                                                className="bg-red-600 hover:bg-red-700 text-white"
+                                                disabled={isChangingPassword}
+                                                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                <Shield className="w-4 h-4 mr-2" />
-                                                Change Password
+                                                {isChangingPassword ? (
+                                                    <>
+                                                        <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                        Changing Password...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Shield className="w-4 h-4 mr-2" />
+                                                        Change Password
+                                                    </>
+                                                )}
                                             </Button>
                                         </div>
                                     </div>

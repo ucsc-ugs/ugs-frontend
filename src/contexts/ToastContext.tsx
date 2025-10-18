@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface ToastMessage {
   id: string;
@@ -13,7 +13,15 @@ interface ToastOptions {
   variant?: 'default' | 'destructive';
 }
 
-export function useToast() {
+interface ToastContextType {
+  toasts: ToastMessage[];
+  toast: (options: ToastOptions) => { id: string };
+  dismiss: (toastId: string) => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toast = useCallback((options: ToastOptions) => {
@@ -42,12 +50,21 @@ export function useToast() {
   }, []);
 
   const dismiss = useCallback((toastId: string) => {
+    console.log('🍞 Dismissing toast with ID:', toastId);
     setToasts((prevToasts) => prevToasts.filter((t) => t.id !== toastId));
   }, []);
 
-  return {
-    toast,
-    dismiss,
-    toasts,
-  };
+  return (
+    <ToastContext.Provider value={{ toasts, toast, dismiss }}>
+      {children}
+    </ToastContext.Provider>
+  );
+}
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (context === undefined) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
 }

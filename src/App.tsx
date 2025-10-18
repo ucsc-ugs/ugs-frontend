@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { Toaster } from "@/components/ui/toaster";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
@@ -45,9 +47,10 @@ import MyRegisteredExams from "./pages/test";
 
 function App() {
   return (
-    <AuthProvider>
-      <SuperAdminAuthProvider>
-        <Router>
+    <ToastProvider>
+      <AuthProvider>
+        <SuperAdminAuthProvider>
+          <Router>
           <Routes>
             {/* Landing page */}
             <Route path="/" element={<LandingPage />} />
@@ -134,8 +137,10 @@ function App() {
 
           </Routes>
         </Router>
+        <Toaster />
       </SuperAdminAuthProvider>
     </AuthProvider>
+    </ToastProvider>
   );
 }
 
