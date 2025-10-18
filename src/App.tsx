@@ -43,6 +43,7 @@ import SuperAdminExams from "./pages/superAdmin/ManageExams";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MyRegisteredExams from "./pages/test";
+import ViewPastExams from "./pages/orgAdmin/test";
 
 function App() {
   return (
