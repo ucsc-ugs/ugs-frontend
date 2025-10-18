@@ -72,6 +72,29 @@ interface ManualEntry {
     grade: string;
 }
 
+interface Student {
+    id: number;
+    index_number: string;
+    student_id: number;
+    student_name: string;
+    status: string;
+    attended: boolean;
+    result: string | null;
+    selected_exam_date_id: number;
+    assigned_location_id: number | null;
+}
+
+interface PublishedResult {
+    id: number;
+    index_number: string;
+    student_id: number;
+    student_name: string;
+    result: string;
+    attended: boolean;
+    status: string;
+    updated_at: string;
+}
+
 // Helper function to determine exam date status
 const getExamDateStatus = (date: string): "completed" | "active" | "draft" => {
     const now = new Date();
@@ -84,9 +107,21 @@ const getExamDateStatus = (date: string): "completed" | "active" | "draft" => {
 
 // Helper function to flatten exams with their exam dates into separate cards
 const flattenExamDates = (exams: Exam[]): ExamDateCard[] => {
+    // Ensure exams is an array
+    if (!Array.isArray(exams)) {
+        console.error("flattenExamDates: exams is not an array:", exams);
+        return [];
+    }
+    
     const flattened: ExamDateCard[] = [];
     
     exams.forEach(exam => {
+        // Ensure exam has exam_dates array
+        if (!exam.exam_dates || !Array.isArray(exam.exam_dates)) {
+            console.warn("Exam has no exam_dates:", exam);
+            return;
+        }
+        
         exam.exam_dates.forEach(examDate => {
             flattened.push({
                 id: examDate.id,
@@ -112,13 +147,6 @@ const flattenExamDates = (exams: Exam[]): ExamDateCard[] => {
     });
 };
 
-const mockStudents = [
-    { id: "CS/2020/001", name: "John Doe" },
-    { id: "CS/2020/002", name: "Jane Smith" },
-    { id: "CS/2020/003", name: "Michael Brown" },
-    { id: "CS/2020/004", name: "Sarah Wilson" },
-    { id: "CS/2020/005", name: "David Kumar" }
-];
 
 const getGradeColor = (grade: string) => {
     switch (grade.toUpperCase()) {
@@ -143,13 +171,13 @@ const getGradeColor = (grade: string) => {
     }
 };
 
-const validateStudentId = (studentId: string): boolean => {
-    return mockStudents.some(student => student.id === studentId);
+const validateStudentId = (studentId: string, students: Student[]): boolean => {
+    return students.some(student => student.index_number === studentId);
 };
 
-const getStudentName = (studentId: string): string => {
-    const student = mockStudents.find(s => s.id === studentId);
-    return student ? student.name : "Unknown Student";
+const getStudentName = (studentId: string, students: Student[]): string => {
+    const student = students.find(s => s.index_number === studentId);
+    return student ? student.student_name : "Unknown Student";
 };
 
 const validateScore = (score: number): boolean => {
@@ -161,7 +189,7 @@ const validateGrade = (grade: string): boolean => {
     return validGrades.includes(grade.toUpperCase());
 };
 
-const parseCSVContent = (content: string): ResultEntry[] => {
+const parseCSVContent = (content: string, students: Student[]): ResultEntry[] => {
     const lines = content.trim().split('\n');
     const results: ResultEntry[] = [];
 
@@ -177,7 +205,7 @@ const parseCSVContent = (content: string): ResultEntry[] => {
         const numericScore = parseFloat(score);
 
         if (!studentId) errors.push("Student ID is required");
-        else if (!validateStudentId(studentId)) errors.push("Invalid Student ID");
+        else if (!validateStudentId(studentId, students)) errors.push("Invalid Student ID");
 
         if (!score) errors.push("Score is required");
         else if (isNaN(numericScore)) errors.push("Score must be a number");
@@ -189,7 +217,7 @@ const parseCSVContent = (content: string): ResultEntry[] => {
         results.push({
             id: `row-${index}`,
             studentId: studentId || "",
-            studentName: studentId ? getStudentName(studentId) : "",
+            studentName: studentId ? getStudentName(studentId, students) : "",
             score: numericScore || 0,
             grade: grade || "",
             isValid: errors.length === 0,
@@ -203,6 +231,8 @@ const parseCSVContent = (content: string): ResultEntry[] => {
 export default function PublishResults() {
     const [exams, setExams] = useState<Exam[]>([]);
     const [examDateCards, setExamDateCards] = useState<ExamDateCard[]>([]);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [publishedResults, setPublishedResults] = useState<PublishedResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [selectedExamDate, setSelectedExamDate] = useState<number | null>(null);
@@ -217,6 +247,9 @@ export default function PublishResults() {
     const [isPublishing, setIsPublishing] = useState(false);
     const [isPublished, setIsPublished] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [editingResult, setEditingResult] = useState<PublishedResult | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
 
     // Fetch exams from API
     useEffect(() => {
@@ -232,7 +265,22 @@ export default function PublishResults() {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                const fetchedExams: Exam[] = response.data.data || [];
+                console.log("API Response:", response.data); // Debug log
+
+                // Handle different response structures
+                let fetchedExams: Exam[] = [];
+                
+                if (response.data && response.data.data) {
+                    fetchedExams = Array.isArray(response.data.data) ? response.data.data : [];
+                } else if (Array.isArray(response.data)) {
+                    fetchedExams = response.data;
+                } else {
+                    console.error("Unexpected API response structure:", response.data);
+                    setError("Invalid response format from server");
+                    return;
+                }
+
+                console.log("Fetched exams:", fetchedExams); // Debug log
                 setExams(fetchedExams);
                 
                 // Flatten the exams into separate exam date cards
@@ -252,6 +300,65 @@ export default function PublishResults() {
     const selectedExamDateData = useMemo(() => {
         return examDateCards.find(card => card.id === selectedExamDate);
     }, [selectedExamDate, examDateCards]);
+
+    // Fetch students when exam date is selected
+    useEffect(() => {
+        const fetchStudents = async () => {
+            if (!selectedExamDate) {
+                setStudents([]);
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    setError("No authentication token found");
+                    return;
+                }
+
+                const response = await axios.get(`http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/students`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                setStudents(response.data.data.students || []);
+            } catch (err: any) {
+                console.error(err);
+                setError(err.response?.data?.message || err.message || "Failed to fetch students");
+            }
+        };
+
+        fetchStudents();
+    }, [selectedExamDate]);
+
+    // Fetch published results when exam date is selected
+    useEffect(() => {
+        const fetchPublishedResults = async () => {
+            if (!selectedExamDate) {
+                setPublishedResults([]);
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    setError("No authentication token found");
+                    return;
+                }
+
+                const response = await axios.get(`http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/published-results`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                setPublishedResults(response.data.data.results || []);
+            } catch (err: any) {
+                console.error(err);
+                // Don't set error for published results as it's optional
+                setPublishedResults([]);
+            }
+        };
+
+        fetchPublishedResults();
+    }, [selectedExamDate]);
 
     const validResults = useMemo(() => {
         return results.filter(result => result.isValid);
@@ -274,11 +381,11 @@ export default function PublishResults() {
         const reader = new FileReader();
         reader.onload = (e) => {
             const content = e.target?.result as string;
-            const parsedResults = parseCSVContent(content);
+            const parsedResults = parseCSVContent(content, students);
             setResults(parsedResults);
         };
         reader.readAsText(file);
-    }, []);
+    }, [students]);
 
     const handleAddManualEntry = useCallback(() => {
         const { studentId, score, grade } = manualEntry;
@@ -291,7 +398,7 @@ export default function PublishResults() {
         const numericScore = parseFloat(score);
         const errors: string[] = [];
 
-        if (!validateStudentId(studentId)) errors.push("Invalid Student ID");
+        if (!validateStudentId(studentId, students)) errors.push("Invalid Student ID");
         if (isNaN(numericScore) || !validateScore(numericScore)) errors.push("Invalid score");
         if (!validateGrade(grade)) errors.push("Invalid grade");
 
@@ -303,7 +410,7 @@ export default function PublishResults() {
         const newEntry: ResultEntry = {
             id: `manual-${Date.now()}`,
             studentId,
-            studentName: getStudentName(studentId),
+            studentName: getStudentName(studentId, students),
             score: numericScore,
             grade: grade.toUpperCase(),
             isValid: errors.length === 0,
@@ -312,7 +419,7 @@ export default function PublishResults() {
 
         setResults(prev => [...prev, newEntry]);
         setManualEntry({ studentId: "", score: "", grade: "" });
-    }, [manualEntry, results]);
+    }, [manualEntry, results, students]);
 
     const handleRemoveResult = useCallback((id: string) => {
         setResults(prev => prev.filter(result => result.id !== id));
@@ -324,29 +431,54 @@ export default function PublishResults() {
             return;
         }
 
+        if (!selectedExamDate) {
+            alert('No exam date selected');
+            return;
+        }
+
         setIsPublishing(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                alert('No authentication token found');
+                return;
+            }
+
+            // Transform results to match API format
+            const resultsData = validResults.map(result => ({
+                index_number: result.studentId,
+                result: result.grade,
+                attended: true // Assuming all students with results attended
+            }));
+
+            const response = await axios.post(
+                `http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/publish-results`,
+                { results: resultsData },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
             setIsPublished(true);
             setShowConfirmModal(false);
             setShowSuccessModal(true);
-        } catch {
-            alert('Failed to publish results. Please try again.');
+        } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || 'Failed to publish results. Please try again.');
         } finally {
             setIsPublishing(false);
         }
-    }, [validResults]);
+    }, [validResults, selectedExamDate]);
 
     const downloadSampleCSV = useCallback(() => {
+        if (students.length === 0) {
+            alert('No students available for this exam date');
+            return;
+        }
+
         const sampleData = [
             "Student ID,Score,Grade",
-            "CS/2020/001,85,A",
-            "CS/2020/002,78,B+",
-            "CS/2020/003,92,A+",
-            "CS/2020/004,65,C+",
-            "CS/2020/005,58,C"
+            ...students.slice(0, 5).map(student => 
+                `${student.index_number},${Math.floor(Math.random() * 40) + 60},${['A', 'B+', 'B', 'C+', 'C'][Math.floor(Math.random() * 5)]}`
+            )
         ].join('\n');
 
         const blob = new Blob([sampleData], { type: 'text/csv' });
@@ -358,7 +490,52 @@ export default function PublishResults() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }, [students]);
+
+    const handleEditResult = useCallback((result: PublishedResult) => {
+        setEditingResult(result);
+        setShowEditModal(true);
     }, []);
+
+    const handleUpdateResult = useCallback(async () => {
+        if (!editingResult || !selectedExamDate) return;
+
+        setIsUpdating(true);
+        try {
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                alert('No authentication token found');
+                return;
+            }
+
+            const response = await axios.put(
+                `http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/results/${editingResult.id}`,
+                {
+                    result: editingResult.result,
+                    attended: editingResult.attended
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Update the published results list
+            setPublishedResults(prev => 
+                prev.map(result => 
+                    result.id === editingResult.id 
+                        ? { ...result, ...response.data.data }
+                        : result
+                )
+            );
+
+            setShowEditModal(false);
+            setEditingResult(null);
+            alert('Result updated successfully!');
+        } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || 'Failed to update result. Please try again.');
+        } finally {
+            setIsUpdating(false);
+        }
+    }, [editingResult, selectedExamDate]);
 
     // Show loading state
     if (loading) {
@@ -630,13 +807,18 @@ export default function PublishResults() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Student ID
                                         </label>
-                                        <input
-                                            type="text"
+                                        <select
                                             value={manualEntry.studentId}
                                             onChange={(e) => setManualEntry(prev => ({ ...prev, studentId: e.target.value }))}
-                                            placeholder="e.g., CS/2020/001"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
+                                        >
+                                            <option value="">Select student...</option>
+                                            {students.map(student => (
+                                                <option key={student.index_number} value={student.index_number}>
+                                                    {student.index_number} - {student.student_name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -806,6 +988,72 @@ export default function PublishResults() {
                     </>
                 )}
 
+                {/* Published Results Section */}
+                {publishedResults.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FileText className="w-5 h-5" />
+                                Published Results ({publishedResults.length} students)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Student ID</TableHead>
+                                            <TableHead>Student Name</TableHead>
+                                            <TableHead>Result</TableHead>
+                                            <TableHead>Attended</TableHead>
+                                            <TableHead>Last Updated</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {publishedResults.map((result) => (
+                                            <TableRow key={result.id}>
+                                                <TableCell className="font-medium">{result.index_number}</TableCell>
+                                                <TableCell>{result.student_name}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={getGradeColor(result.result)}>
+                                                        {result.result}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {result.attended ? (
+                                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                                    ) : (
+                                                        <XCircle className="w-4 h-4 text-red-600" />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {new Date(result.updated_at).toLocaleDateString('en-US', {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEditResult(result)}
+                                                    >
+                                                        <FileText className="w-4 h-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Confirmation Modal */}
                 {showConfirmModal && (
                     <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
@@ -883,6 +1131,87 @@ export default function PublishResults() {
                                 >
                                     Close
                                 </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Result Modal */}
+                {showEditModal && editingResult && (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
+                        <div className="bg-white rounded-lg w-full max-w-md mx-4 shadow-xl">
+                            <div className="p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                    <h3 className="text-lg font-semibold">Edit Result</h3>
+                                </div>
+                                
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Student
+                                        </label>
+                                        <p className="text-gray-900 font-medium">
+                                            {editingResult.index_number} - {editingResult.student_name}
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Grade
+                                        </label>
+                                        <select
+                                            value={editingResult.result}
+                                            onChange={(e) => setEditingResult(prev => prev ? { ...prev, result: e.target.value } : null)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="A+">A+</option>
+                                            <option value="A">A</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B">B</option>
+                                            <option value="B-">B-</option>
+                                            <option value="C+">C+</option>
+                                            <option value="C">C</option>
+                                            <option value="C-">C-</option>
+                                            <option value="D">D</option>
+                                            <option value="F">F</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={editingResult.attended}
+                                                onChange={(e) => setEditingResult(prev => prev ? { ...prev, attended: e.target.checked } : null)}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">Student attended the exam</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowEditModal(false);
+                                            setEditingResult(null);
+                                        }}
+                                        disabled={isUpdating}
+                                        className="flex-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleUpdateResult}
+                                        disabled={isUpdating}
+                                        className="flex-1"
+                                    >
+                                        {isUpdating ? "Updating..." : "Update Result"}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
