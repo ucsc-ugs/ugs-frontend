@@ -372,12 +372,25 @@ const MyExams = () => {
                         <div className="text-lg font-bold text-gray-900">
                           LKR {exam.price.toLocaleString()}
                         </div>
-                        <button
-                          onClick={() => handleViewDetails(exam)}
-                          className="px-3 py-1.5 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors text-sm font-medium"
-                        >
-                          View Details
-                        </button>
+                        <div className="flex gap-2">
+                          {/* Reschedule Button - Show only if there are multiple exam dates available */}
+                          {exam.available_exam_dates && exam.available_exam_dates.length > 1 && (
+                            <button
+                              onClick={() => handleReschedule(exam)}
+                              className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Reschedule
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleViewDetails(exam)}
+                            className="px-3 py-1.5 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors text-sm font-medium flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Details
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -508,9 +521,6 @@ const MyExams = () => {
                         <p className="text-lg font-semibold text-gray-900">
                           {selectedExam.pivot.assigned_location.location_name}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Capacity: {selectedExam.pivot.assigned_location.capacity} students
-                        </p>
                       </div>
                     )}
                   </div>
@@ -588,7 +598,7 @@ const MyExams = () => {
 
         {/* Reschedule Modal */}
         {showRescheduleModal && rescheduleExam && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
