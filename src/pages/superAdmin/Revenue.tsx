@@ -1,5 +1,26 @@
+/**
+ * Revenue Dashboard Component
+ * 
+ * BACKEND REQUIREMENT:
+ * This component requires a backend endpoint at: GET /api/admin/revenue?range={timeRange}
+ * 
+ * The endpoint must:
+ * 1. Be protected by super admin authentication middleware
+ * 2. Accept a 'range' query parameter (last_7_days, last_30_days, last_quarter, last_year, all_time)
+ * 3. Return JSON with the following structure:
+ *    {
+ *      "total_revenue": number,
+ *      "total_commission": number,
+ *      "organization_revenues": [{ id, name, revenue, commission, exam_count }],
+ *      "exam_revenues": [{ id, name, organization_name, revenue, commission, attempt_count }],
+ *      "monthly_revenues": [{ month, revenue, commission }]
+ *    }
+ * 
+ * Current Error: "Call to a member function isSuperAdmin() on null"
+ * This suggests the backend authentication middleware is not properly retrieving the user.
+ */
+
 import { useState, useEffect } from "react";
-import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +28,7 @@ import { DollarSign, TrendingUp, Building2, BookOpen, PieChart } from "lucide-re
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
+import { getRevenueData } from "@/lib/superAdminApi";
 
 
 interface RevenueData {
@@ -45,25 +67,10 @@ export default function RevenueDashboard() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("auth_token");
-        
-        if (!token) {
-          setError("Authentication token not found");
-          return;
-        }
-
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/revenue?range=${timeRange}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await getRevenueData(timeRange);
         
         // Normalize response to avoid runtime errors if some fields are missing
-        const payload = response.data || {};
+        const payload = response.data || response;
         setData({
           total_revenue: Number(payload.total_revenue ?? 0),
           total_commission: Number(payload.total_commission ?? 0),
@@ -71,10 +78,21 @@ export default function RevenueDashboard() {
           exam_revenues: Array.isArray(payload.exam_revenues) ? payload.exam_revenues : [],
           monthly_revenues: Array.isArray(payload.monthly_revenues) ? payload.monthly_revenues : [],
         });
-         setError("");
+        setError("");
       } catch (err: any) {
         console.error("Error fetching revenue data:", err);
-        setError(err.response?.data?.message || "Failed to fetch revenue data");
+        
+        // Provide more helpful error messages
+        let errorMessage = "Failed to fetch revenue data";
+        if (err.status === 404) {
+          errorMessage = "Revenue endpoint not found. Please contact the administrator.";
+        } else if (err.status === 401 || err.status === 403) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
         setData(null);
       } finally {
         setLoading(false);
@@ -101,8 +119,37 @@ export default function RevenueDashboard() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-600 text-lg">{error}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <Card className="max-w-md w-full border-red-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Error Loading Revenue Data
+            </CardTitle>
+            <CardDescription>
+              Unable to fetch revenue information from the server
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-700">{error}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> This may be a backend configuration issue. 
+                Please ensure the <code className="bg-amber-100 px-1 rounded">/api/admin/revenue</code> endpoint 
+                is properly configured with super admin authentication.
+              </p>
+            </div>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="w-full"
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
