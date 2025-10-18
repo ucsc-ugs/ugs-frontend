@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -11,7 +14,9 @@ import {
   BookOpen,
   Trophy,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import axios from "axios";
 
@@ -24,6 +29,12 @@ interface ExamWithPivot {
   organization_id: number;
   created_at: string;
   updated_at: string;
+  available_exam_dates?: Array<{
+    id: number;
+    date: string;
+    location?: string;
+    status?: string;
+  }>;
   pivot: {
     student_id: number;
     exam_id: number;
@@ -34,7 +45,20 @@ interface ExamWithPivot {
     index_number: string;
     created_at: string;
     updated_at: string;
-    date: string | null; // ✅ added exam date
+    selected_exam_date: {
+      id: number;
+      date: string;
+      location?: string;
+      status?: string;
+    } | null;
+    selected_exam_date_id: number | null;
+    assigned_location: {
+      id: number;
+      location_name: string;
+      capacity: number;
+      organization_id: number;
+    } | null;
+    assigned_location_id: number | null;
   };
 }
 
@@ -44,6 +68,10 @@ const MyExams = () => {
   const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedExam, setSelectedExam] = useState<ExamWithPivot | null>(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleExam, setRescheduleExam] = useState<ExamWithPivot | null>(null);
+  const [selectedNewDateId, setSelectedNewDateId] = useState<string>('');
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
 
   useEffect(() => {
     const fetchRegisteredExams = async () => {
@@ -118,6 +146,54 @@ const MyExams = () => {
 
   const handleViewDetails = (exam: ExamWithPivot) => {
     setSelectedExam(exam);
+  };
+
+  const handleReschedule = (exam: ExamWithPivot) => {
+    setRescheduleExam(exam);
+    setSelectedNewDateId('');
+    setShowRescheduleModal(true);
+  };
+
+  const submitReschedule = async () => {
+    if (!rescheduleExam || !selectedNewDateId) return;
+
+    try {
+      setRescheduleLoading(true);
+      const token = localStorage.getItem("auth_token");
+      
+      await axios.post(
+        "http://localhost:8000/api/reschedule-exam",
+        {
+          exam_id: rescheduleExam.id,
+          new_exam_date_id: parseInt(selectedNewDateId)
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Refresh the exams list
+      const response = await axios.get("http://localhost:8000/api/my-exams", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      setRegisteredExams(response.data);
+      setShowRescheduleModal(false);
+      setRescheduleExam(null);
+      setSelectedNewDateId('');
+      
+    } catch (err: any) {
+      console.error("Reschedule error:", err);
+      setError(err.response?.data?.message || "Failed to reschedule exam");
+    } finally {
+      setRescheduleLoading(false);
+    }
   };
 
   if (loading) {
@@ -211,9 +287,21 @@ const MyExams = () => {
                         <div className="flex items-center gap-2 mt-3">
                           <Calendar className="h-4 w-4 text-blue-600" />
                           <span className="text-sm text-blue-700 font-medium">
-                            Exam Date: {exam.pivot.date ? new Date(exam.pivot.date).toLocaleDateString() : "Not Scheduled"}
+                            Exam Date: {exam.pivot.selected_exam_date 
+                              ? new Date(exam.pivot.selected_exam_date.date).toLocaleDateString() 
+                              : "Not Scheduled"}
                           </span>
                         </div>
+                        
+                        {/* Assigned Location (visible on card) */}
+                        {exam.pivot.assigned_location && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <MapPin className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-green-700 font-medium">
+                              Location: {exam.pivot.assigned_location.location_name}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-end gap-2">
@@ -253,18 +341,29 @@ const MyExams = () => {
                       )}
                     </div>
 
-                    {/* Bottom Section: Fee and Button */}
+                    {/* Bottom Section: Fee and Buttons */}
                     <div className="flex justify-between items-center mt-auto pt-4">
                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                         LKR {exam.price.toLocaleString()}
                       </span>
-                      <button
-                        onClick={() => handleViewDetails(exam)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View Details
-                      </button>
+                      <div className="flex gap-2">
+                        {(exam.pivot.status === 'pending' || exam.pivot.status === 'registered') && exam.available_exam_dates && exam.available_exam_dates.length > 1 && (
+                          <button
+                            onClick={() => handleReschedule(exam)}
+                            className="flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium shadow-sm"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Reschedule
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleViewDetails(exam)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -329,9 +428,21 @@ const MyExams = () => {
                   <div>
                     <h3 className="font-medium text-foreground mb-2">Exam Date</h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedExam.pivot.date ? new Date(selectedExam.pivot.date).toLocaleDateString() : "Not Scheduled"}
+                      {selectedExam.pivot.selected_exam_date 
+                        ? new Date(selectedExam.pivot.selected_exam_date.date).toLocaleDateString() 
+                        : "Not Scheduled"}
                     </p>
                   </div>
+
+                  {/* Assigned Location inside modal */}
+                  {selectedExam.pivot.assigned_location && (
+                    <div>
+                      <h3 className="font-medium text-foreground mb-2">Assigned Location</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedExam.pivot.assigned_location.location_name} (Capacity: {selectedExam.pivot.assigned_location.capacity})
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="font-medium text-foreground mb-2">Result</h3>
@@ -380,6 +491,129 @@ const MyExams = () => {
                   >
                     Close
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reschedule Modal */}
+        {showRescheduleModal && rescheduleExam && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">Reschedule Exam</h2>
+                  <button
+                    onClick={() => setShowRescheduleModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-2">{rescheduleExam.name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{rescheduleExam.description}</p>
+                  
+                  {rescheduleExam.pivot.selected_exam_date && (
+                    <div className="p-3 bg-blue-50 rounded-lg mb-4">
+                      <p className="text-sm text-blue-800">
+                        <strong>Current Date:</strong> {new Date(rescheduleExam.pivot.selected_exam_date.date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })} at {new Date(rescheduleExam.pivot.selected_exam_date.date).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                        {rescheduleExam.pivot.selected_exam_date.location && (
+                          <span> - {rescheduleExam.pivot.selected_exam_date.location}</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  <h4 className="font-medium text-gray-900 mb-3">Select New Date:</h4>
+                  {rescheduleExam.available_exam_dates && rescheduleExam.available_exam_dates.length > 0 ? (
+                    <RadioGroup value={selectedNewDateId} onValueChange={setSelectedNewDateId}>
+                      <div className="space-y-3">
+                        {rescheduleExam.available_exam_dates
+                          .filter(date => date.id !== rescheduleExam.pivot.selected_exam_date_id)
+                          .map((examDate) => {
+                            const date = new Date(examDate.date);
+                            const formattedDate = date.toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            });
+                            const formattedTime = date.toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            });
+                            
+                            return (
+                              <div key={examDate.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <RadioGroupItem value={examDate.id.toString()} id={`reschedule-date-${examDate.id}`} />
+                                <Label htmlFor={`reschedule-date-${examDate.id}`} className="flex-1 cursor-pointer">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Calendar className="h-4 w-4 text-blue-600" />
+                                      <span className="font-medium">{formattedDate}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 text-green-600" />
+                                      <span className="text-sm">{formattedTime}</span>
+                                      {examDate.location && (
+                                        <>
+                                          <MapPin className="h-4 w-4 text-gray-600 ml-2" />
+                                          <span className="text-sm text-gray-600">{examDate.location}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </Label>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </RadioGroup>
+                  ) : (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-yellow-600" />
+                        <p className="text-yellow-800">No alternative dates available for rescheduling.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setShowRescheduleModal(false)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={submitReschedule}
+                    disabled={!selectedNewDateId || rescheduleLoading}
+                    className="flex-1"
+                  >
+                    {rescheduleLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Rescheduling...
+                      </>
+                    ) : (
+                      'Confirm Reschedule'
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>

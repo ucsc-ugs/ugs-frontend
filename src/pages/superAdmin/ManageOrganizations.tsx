@@ -183,9 +183,11 @@ export default function ManageOrganizations() {
                       placeholder="Organization Name"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                      className={`w-full border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
                         formErrors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
+                        
                       }`}
+
                     />
                     {formErrors.name && <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>}
                   </div>
@@ -194,15 +196,17 @@ export default function ManageOrganizations() {
                     <Label htmlFor="description" className="text-sm font-medium text-gray-700">
                       Description
                     </Label>
-                    <Input
+                    <textarea
                       id="description"
                       placeholder="Description (optional)"
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                      rows={4}
+                      className={`w-full resize-none rounded-md border px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 transition-colors ${
                         formErrors.description ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
                       }`}
                     />
+                    
                     {formErrors.description && <p className="text-red-600 text-sm mt-1">{formErrors.description}</p>}
                   </div>
 

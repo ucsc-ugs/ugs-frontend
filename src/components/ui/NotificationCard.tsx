@@ -1,6 +1,6 @@
 // src/components/ui/NotificationCard.tsx
 import { cn } from "@/lib/utils";
-import { CheckCircle, Info, AlertTriangle, Clock } from "lucide-react";
+import { Bell, Clock } from "lucide-react";
 
 export interface Notification {
     id: number;
@@ -15,35 +15,10 @@ interface NotificationCardProps {
     notification: Notification;
     onToggleRead?: (id: number) => void;
     onDelete?: (id: number) => void;
+    isExamSpecific?: boolean;
 }
 
-const typeConfig = {
-    info: {
-        bg: "bg-blue-50 border-blue-200",
-        badge: "bg-blue-100 text-blue-800",
-        icon: Info,
-        iconBg: "bg-blue-100",
-        iconColor: "text-blue-600"
-    },
-    success: {
-        bg: "bg-green-50 border-green-200",
-        badge: "bg-green-100 text-green-800",
-        icon: CheckCircle,
-        iconBg: "bg-green-100",
-        iconColor: "text-green-600"
-    },
-    alert: {
-        bg: "bg-yellow-50 border-yellow-200",
-        badge: "bg-yellow-100 text-yellow-800",
-        icon: AlertTriangle,
-        iconBg: "bg-yellow-100",
-        iconColor: "text-yellow-600"
-    },
-};
-
-export const NotificationCard = ({ notification, onToggleRead, onDelete }: NotificationCardProps) => {
-    const config = typeConfig[notification.type];
-    const IconComponent = config.icon;
+export const NotificationCard = ({ notification, onToggleRead, onDelete, isExamSpecific = false }: NotificationCardProps) => {
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -58,25 +33,54 @@ export const NotificationCard = ({ notification, onToggleRead, onDelete }: Notif
 
     return (
         <div className={cn(
-            "relative p-4 border-l-4 transition-all duration-200 hover:shadow-md group",
+            "relative p-4 border-l-4 transition-all duration-200 hover:shadow-md group rounded-lg",
             !notification.read
-                ? `${config.bg} border-l-blue-500`
-                : "bg-white border-l-gray-300",
+                ? isExamSpecific
+                    ? "bg-orange-50 border-l-orange-500 border border-orange-200"
+                    : "bg-blue-50 border-l-blue-500 border border-blue-200"
+                : "bg-white border-l-gray-300 border border-gray-200",
         )}>
-            {/* Unread indicator dot */}
-            {!notification.read && (
-                <div className="absolute top-4 right-4 w-2 h-2 bg-blue-500 rounded-full"></div>
-            )}
+
+            {/* Top right actions: unread dot and Mark Read button */}
+            <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                {!notification.read && (
+                    <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        isExamSpecific ? "bg-orange-500" : "bg-blue-500"
+                    )}></div>
+                )}
+                {onToggleRead && !notification.read && (
+                    <button
+                        onClick={e => { e.stopPropagation(); onToggleRead(notification.id); }}
+                        className={cn(
+                            "text-xs px-2 py-1 rounded border transition-colors ml-2",
+                            isExamSpecific
+                                ? "text-orange-600 border-orange-300 hover:bg-orange-100 hover:text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                                : "text-blue-600 border-blue-300 hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        )}
+                    >
+                        Mark read
+                    </button>
+                )}
+            </div>
 
             <div className="flex items-start gap-3">
                 {/* Icon */}
                 <div className={cn(
                     "flex-shrink-0 p-2 rounded-full",
-                    notification.read ? "bg-gray-100" : config.iconBg
+                    notification.read
+                        ? "bg-gray-100"
+                        : isExamSpecific
+                            ? "bg-orange-100"
+                            : "bg-blue-100"
                 )}>
-                    <IconComponent className={cn(
+                    <Bell className={cn(
                         "w-4 h-4",
-                        notification.read ? "text-gray-500" : config.iconColor
+                        notification.read
+                            ? "text-gray-500"
+                            : isExamSpecific
+                                ? "text-orange-600"
+                                : "text-blue-600"
                     )} />
                 </div>
 
@@ -102,21 +106,8 @@ export const NotificationCard = ({ notification, onToggleRead, onDelete }: Notif
                         <span>{formatTimeAgo(notification.date)}</span>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions (delete only, bottom left) */}
                     <div className="flex items-center gap-2">
-                        {onToggleRead && (
-                            <button
-                                onClick={() => onToggleRead(notification.id)}
-                                className={cn(
-                                    "text-xs px-2 py-1 rounded border transition-colors",
-                                    notification.read
-                                        ? "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                        : "text-blue-600 border-blue-300 hover:bg-blue-50"
-                                )}
-                            >
-                                {notification.read ? "Mark unread" : "Mark read"}
-                            </button>
-                        )}
                         {onDelete && (
                             <button
                                 onClick={() => onDelete(notification.id)}

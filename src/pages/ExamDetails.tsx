@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { 
   Calendar, 
@@ -13,7 +15,8 @@ import {
   ArrowLeft, 
   Loader2, 
   AlertCircle,
-  LogIn
+  LogIn,
+  MapPin
 } from "lucide-react";
 import { getExamByCodeName, type PublicExamData } from "@/lib/publicApi";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +30,7 @@ const ExamDetailsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [selectedDateId, setSelectedDateId] = useState<number | null>(null);
 
   // Load exam data
   useEffect(() => {
@@ -61,6 +65,11 @@ const ExamDetailsPage = () => {
 
     if (!exam) return;
 
+    if (!selectedDateId) {
+      setError('Please select an exam date before registering');
+      return;
+    }
+
     try {
       setIsRegistering(true);
       setError('');
@@ -73,7 +82,8 @@ const ExamDetailsPage = () => {
           'Authorization': token ? `Bearer ${token}` : '',
         },
         body: JSON.stringify({
-          examId: exam.id 
+          examId: exam.id,
+          selectedExamDateId: selectedDateId
         }),
       });
 
@@ -169,21 +179,6 @@ const ExamDetailsPage = () => {
     );
   }
 
-  // Format exam date
-  const firstDate = exam.exam_dates?.[0];
-  const examDate = firstDate ? new Date(firstDate.date) : null;
-  const formattedDate = examDate ? examDate.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }) : 'Date TBA';
-  const formattedTime = examDate ? examDate.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  }) : 'Time TBA';
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto p-4 lg:p-6">
@@ -240,24 +235,6 @@ const ExamDetailsPage = () => {
                     </div>
                   </div>
 
-                  {/* Quick Info Grid */}
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm text-gray-600">Date</p>
-                        <p className="font-semibold text-gray-900">{formattedDate}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Clock className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-gray-600">Time</p>
-                        <p className="font-semibold text-gray-900">{formattedTime}</p>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Description */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">About This Exam</h3>
@@ -286,6 +263,64 @@ const ExamDetailsPage = () => {
 
             {/* Right Column - Registration */}
             <div className="space-y-6">
+              {/* Available Exam Dates */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Exam Dates</h3>
+                  {exam.exam_dates && exam.exam_dates.length > 0 ? (
+                    <RadioGroup value={selectedDateId?.toString()} onValueChange={(value) => setSelectedDateId(parseInt(value))}>
+                      <div className="space-y-3">
+                        {exam.exam_dates.map((examDate, index) => {
+                          const date = new Date(examDate.date);
+                          const formattedDate = date.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          });
+                          const formattedTime = date.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          });
+                          
+                          return (
+                            <div key={index} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                              <RadioGroupItem value={examDate.id?.toString() || index.toString()} id={`date-${index}`} className="mt-1" />
+                              <Label htmlFor={`date-${index}`} className="flex-1 cursor-pointer">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                    <span className="font-medium text-sm">{formattedDate}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    <span className="text-sm">{formattedTime}</span>
+                                  </div>
+                                  {examDate.location && (
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                                      <span className="text-sm text-gray-600 break-words">{examDate.location}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </RadioGroup>
+                  ) : (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-yellow-600" />
+                        <p className="text-yellow-800 text-sm">No exam dates available at the moment.</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Registration Card */}
               <Card className="sticky top-6">
                 <CardContent className="p-6">
@@ -301,14 +336,14 @@ const ExamDetailsPage = () => {
 
                   {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-red-700 text-sm">{error}</p>
+                      <p className="text-red-700 text-sm break-words">{error}</p>
                     </div>
                   )}
 
                   <Button 
                     onClick={handleRegister}
-                    disabled={isRegistering}
-                    className="w-full h-12 text-lg font-semibold"
+                    disabled={isRegistering || (!selectedDateId && isAuthenticated)}
+                    className="w-full h-12 text-base font-semibold"
                     size="lg"
                   >
                     {isRegistering ? (
@@ -318,17 +353,26 @@ const ExamDetailsPage = () => {
                     ) : (
                       <Users className="h-5 w-5 mr-2" />
                     )}
-                    {isRegistering 
-                      ? 'Processing...' 
-                      : !isAuthenticated 
-                        ? 'Sign In to Register' 
-                        : 'Register Now'
-                    }
+                    <span className="truncate">
+                      {isRegistering 
+                        ? 'Processing...' 
+                        : !isAuthenticated 
+                          ? 'Sign In to Register' 
+                          : !selectedDateId
+                            ? 'Select Date First'
+                            : 'Register Now'
+                      }
+                    </span>
                   </Button>
 
                   {!isAuthenticated && (
-                    <p className="text-xs text-gray-600 text-center mt-3">
+                    <p className="text-xs text-gray-600 text-center mt-3 leading-relaxed">
                       You need to sign in to register for this exam
+                    </p>
+                  )}
+                  {isAuthenticated && !selectedDateId && (
+                    <p className="text-xs text-gray-600 text-center mt-3 leading-relaxed">
+                      Please select an exam date above to continue with registration
                     </p>
                   )}
                 </CardContent>
