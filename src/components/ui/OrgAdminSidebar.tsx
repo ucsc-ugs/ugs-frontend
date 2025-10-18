@@ -3,7 +3,6 @@ import {
   Home,
   Users,
   BookOpen,
-  Bell,
   Settings,
   LogOut,
   GraduationCap,
@@ -60,20 +59,20 @@ export function OrgAdminSidebar() {
     const apiUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
       ? import.meta.env.VITE_API_URL
       : 'http://localhost:8000');
-    
+
     // First get user info from admin endpoint
     axios.get(`${apiUrl}/api/admin/user`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(async (userRes) => {
         const userData = userRes.data;
-        
+
         // Then get organization info
         try {
           const orgRes = await axios.get(`${apiUrl}/api/admin/my-organization`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          
+
           setUser({
             id: String(userData.id),
             name: userData.data?.name || userData.name,
@@ -82,7 +81,7 @@ export function OrgAdminSidebar() {
             university: orgRes.data.data?.name || 'Unknown Organization',
             avatar: orgRes.data.data?.logo ? `${apiUrl}/storage${orgRes.data.data.logo}` : profileSample
           });
-        } catch (orgError) {
+        } catch {
           // Fallback if org data fails
           setUser({
             id: String(userData.id),
@@ -100,7 +99,6 @@ export function OrgAdminSidebar() {
   const mainLinks = [
     { name: "Dashboard", path: "/admin", icon: Home },
     { name: "Finance Dashboard", path: "/admin/finance", icon: DollarSign },
-    { name: "Notifications", path: "/admin/notifications", icon: Bell, hasBell: true },
     { name: "Set Announcements", path: "/admin/set-announcements", icon: Megaphone },
     { name: "Settings", path: "/admin/settings", icon: Settings },
   ];
@@ -133,7 +131,7 @@ export function OrgAdminSidebar() {
         {/* Navigation Links */}
         <div className="flex flex-col space-y-2">
           {/* Dashboard */}
-          {mainLinks.slice(0, 1).map(({ name, path, icon: Icon, hasBell }) => (
+          {mainLinks.slice(0, 1).map(({ name, path, icon: Icon }) => (
             <NavLink
               key={name}
               to={path}
@@ -149,9 +147,6 @@ export function OrgAdminSidebar() {
             >
               <div className="relative flex-shrink-0">
                 <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                {hasBell && (
-                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 rounded-full" />
-                )}
               </div>
               <span className="hidden lg:inline transition-all duration-300 text-sm xl:text-base truncate">{name}</span>
             </NavLink>
@@ -247,8 +242,8 @@ export function OrgAdminSidebar() {
             )}
           </div>
 
-          {/* Remaining Links in new order: Finance Dashboard, Notifications, Set Announcements, Settings */}
-          {[mainLinks[1], ...mainLinks.slice(2)].map(({ name, path, icon: Icon, hasBell }) => (
+          {/* Remaining Links in new order: Finance Dashboard, Set Announcements, Settings */}
+          {[mainLinks[1], ...mainLinks.slice(2)].map(({ name, path, icon: Icon }) => (
             <NavLink
               key={name}
               to={path}
@@ -271,9 +266,6 @@ export function OrgAdminSidebar() {
             >
               <div className="relative flex-shrink-0">
                 <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                {hasBell && (
-                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-red-500 rounded-full" />
-                )}
               </div>
               <span className="hidden lg:inline transition-all duration-300 text-sm xl:text-base truncate">{name}</span>
             </NavLink>
