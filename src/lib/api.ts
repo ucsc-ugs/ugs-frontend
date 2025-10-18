@@ -175,8 +175,3 @@ export const verifyPayment = async (orderId: string): Promise<{
 export const getDashboard = async (): Promise<any> => {
   return await apiRequest('/dashboard');
 };
-
-// Fetch exams registered by the current authenticated user
-export const getMyExams = async (): Promise<any> => {
-  return await apiRequest('/my-exams');
-};
