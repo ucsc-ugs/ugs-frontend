@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, Trash2, Plus, BookOpen, Clock, Calendar, Filter } from "lucide-react";
+import { Search, Edit, Trash2, Plus, BookOpen, Calendar, Filter, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getSuperAdminExams, deleteSuperAdminExam } from "@/lib/superAdminApi";
 
 interface Exam {
   id: number;
@@ -20,7 +20,9 @@ interface Exam {
   };
   is_active: boolean;
   created_at: string;
-  registered_students_count: number;
+  registered_students_count?: number; // Keep for backward compatibility
+  students_count?: number; // New field from backend
+  total_students_enrolled?: number; // Alternative field from backend
   passing_rate: number;
 }
 
@@ -28,37 +30,80 @@ export default function SuperAdminExams() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
-  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [organizationFilter, setOrganizationFilter] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const API_BASE = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8000/api";
+  // Using centralized Super Admin API service for all exam operations
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Toggle auto refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(prev => !prev);
+  };
+
+  // Auto refresh effect
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing exam data...");
+      setRefreshKey(prev => prev + 1);
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   useEffect(() => {
     const fetchExams = async () => {
       setLoading(true);
       setError("");
       try {
-        const token = localStorage.getItem("auth_token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-
-        const res = await axios.get(`${API_BASE}/exams`, { headers });
-        // Support common response shapes: array directly or { data: [...] }
-        const payload = Array.isArray(res.data) ? res.data : res.data?.data ?? res.data;
-        setExams(payload ?? []);
-      } catch (err: any) {
-        console.error("Failed to fetch exams:", err);
-        setError(err?.response?.data?.message || "Failed to load exams");
+        // Use the centralized API service
+        const response = await getSuperAdminExams();
+        
+        // Extract data from response - expecting { message: "...", data: [...] }
+        const examsData = Array.isArray(response?.data) ? response.data : [];
+        
+        console.log("✅ Successfully fetched exams:", {
+          count: examsData.length,
+          firstExam: examsData.length > 0 ? {
+            id: examsData[0].id,
+            name: examsData[0].name,
+            students_count: examsData[0].students_count,
+            total_students_enrolled: examsData[0].total_students_enrolled
+          } : null
+        });
+        
+        setExams(examsData);
+        setLastUpdated(new Date());
+        
+      } catch (err: unknown) {
+        console.error("❌ Failed to fetch exams:", err);
+        
+        // Handle API errors from centralized service
+        if (err && typeof err === 'object' && 'message' in err) {
+          setError((err as { message: string }).message);
+        } else if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unexpected error occurred while loading exams");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchExams();
-  }, [API_BASE]);
+  }, [refreshKey]);
 
   // Unique organizations for filter dropdown
   const organizations = Array.from(new Set(exams.map(exam => exam.organization?.name).filter(Boolean)));
@@ -67,36 +112,31 @@ export default function SuperAdminExams() {
     if (!deleteExamId) return;
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("auth_token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-      await axios.delete(`${API_BASE}/exams/${deleteExamId}`, { headers });
+      // Use the centralized API service
+      await deleteSuperAdminExam(deleteExamId);
+      
       setExams(prev => prev.filter(e => e.id !== deleteExamId));
       setDeleteExamId(null);
-    } catch (err: any) {
-      console.error("Delete failed:", err);
-      setError(err?.response?.data?.message || "Failed to delete exam");
+      
+      console.log("✅ Successfully deleted exam:", deleteExamId);
+      
+    } catch (err: unknown) {
+      console.error("❌ Delete failed:", err);
+      
+      // Handle API errors from centralized service
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError((err as { message: string }).message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unexpected error occurred while deleting exam");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // const toggleExamStatus = async (examId: number) => {
-  //   const target = exams.find(e => e.id === examId);
-  //   if (!target) return;
-  //   const newStatus = !target.is_active;
-  //   // Optimistic update
-  //   setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: newStatus } : e));
-  //   try {
-  //     const token = localStorage.getItem("auth_token");
-  //     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  //     await axios.patch(`${API_BASE}/exams/${examId}`, { is_active: newStatus }, { headers });
-  //   } catch (err) {
-  //     console.error("Failed to update status:", err);
-  //     // rollback on failure
-  //     setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: target.is_active } : e));
-  //     setError("Failed to update exam status");
-  //   }
-  // };
+  // Note: Exam status toggle functionality can be implemented using updateSuperAdminExamStatus from the API service
 
   const filteredExams = exams.filter(exam => {
     const matchesSearch =
@@ -182,12 +222,31 @@ export default function SuperAdminExams() {
               </CardTitle>
               <CardDescription className="text-gray-600">
                 Showing {filteredExams.length} of {exams.length} total exams
+                {lastUpdated && (
+                  <span className="ml-2 text-xs">
+                    • Last updated: {lastUpdated.toLocaleTimeString()}
+                  </span>
+                )}
               </CardDescription>
             </div>
-            <Button variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Export Data
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant={autoRefresh ? "default" : "outline"} 
+                className="gap-2" 
+                onClick={toggleAutoRefresh}
+              >
+                <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+                {autoRefresh ? 'Auto-Refresh ON' : 'Auto-Refresh OFF'}
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4" />
+                Refresh Now
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Export Data
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -229,7 +288,12 @@ export default function SuperAdminExams() {
                     
                     <TableCell>
                       <div className="text-center">
-                        {exam.registered_students_count}
+                        <div className="font-semibold text-lg">
+                          {exam.students_count || exam.total_students_enrolled || exam.registered_students_count || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          students enrolled
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -258,7 +322,8 @@ export default function SuperAdminExams() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setEditingExam(exam)}
+                          onClick={() => console.log("Edit exam:", exam.id)}
+                          title="Edit exam (feature coming soon)"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

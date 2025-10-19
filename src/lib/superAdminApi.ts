@@ -35,10 +35,16 @@ interface OrgAdmin {
   };
 }
 
-interface SuperAdminApiResponse<T = any> {
+interface SuperAdminApiResponse<T = unknown> {
   // Legacy response format
   message?: string;
-  user?: any;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    created_at: string;
+    updated_at: string;
+  };
   token?: string;
   errors?: Record<string, string[]>;
   // New API response format (for login endpoints)
@@ -75,7 +81,7 @@ export const removeAuthToken = (): void => {
 };
 
 // API request helper for super admin
-const adminApiRequest = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
+const adminApiRequest = async <T = unknown>(endpoint: string, options: RequestInit = {}): Promise<SuperAdminApiResponse<T>> => {
   const token = getAuthToken();
   
   const config: RequestInit = {
@@ -131,18 +137,18 @@ export const getSuperAdminDashboard = async (): Promise<SuperAdminApiResponse> =
 
 // Organizations
 export const getOrganizations = async (): Promise<SuperAdminApiResponse<Organization[]>> => {
-  return await adminApiRequest('/organizations');
+  return await adminApiRequest<Organization[]>('/organizations');
 };
 
 export const createOrganization = async (orgData: Omit<Organization, 'id' | 'created_at' | 'updated_at'>): Promise<SuperAdminApiResponse<Organization>> => {
-  return await adminApiRequest('/organizations', {
+  return await adminApiRequest<Organization>('/organizations', {
     method: 'POST',
     body: JSON.stringify(orgData),
   });
 };
 
 export const updateOrganization = async (id: number, orgData: Omit<Organization, 'id' | 'created_at' | 'updated_at'>): Promise<SuperAdminApiResponse<Organization>> => {
-  return await adminApiRequest(`/organizations/${id}`, {
+  return await adminApiRequest<Organization>(`/organizations/${id}`, {
     method: 'PUT',
     body: JSON.stringify(orgData),
   });
@@ -185,7 +191,7 @@ export const uploadOrganizationLogo = async (id: number, logoFile: File): Promis
 
 // Org Admins
 export const getOrgAdmins = async (): Promise<SuperAdminApiResponse<OrgAdmin[]>> => {
-  return await adminApiRequest('/org-admins');
+  return await adminApiRequest<OrgAdmin[]>('/org-admins');
 };
 
 export const createOrgAdmin = async (adminData: {
@@ -194,7 +200,7 @@ export const createOrgAdmin = async (adminData: {
   password: string;
   organization_id: number;
 }): Promise<SuperAdminApiResponse<OrgAdmin>> => {
-  return await adminApiRequest('/org-admins', {
+  return await adminApiRequest<OrgAdmin>('/org-admins', {
     method: 'POST',
     body: JSON.stringify(adminData),
   });
@@ -205,7 +211,7 @@ export const updateOrgAdmin = async (id: number, adminData: {
   email: string;
   organization_id: number;
 }): Promise<SuperAdminApiResponse<OrgAdmin>> => {
-  return await adminApiRequest(`/org-admins/${id}`, {
+  return await adminApiRequest<OrgAdmin>(`/org-admins/${id}`, {
     method: 'PUT',
     body: JSON.stringify(adminData),
   });
@@ -217,6 +223,83 @@ export const deleteOrgAdmin = async (id: number): Promise<SuperAdminApiResponse>
   });
 };
 
+// Exam Management Types
+interface SuperAdminExam {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  organization: {
+    id: number;
+    name: string;
+  };
+  is_active: boolean;
+  created_at: string;
+  students_count: number;
+  total_students_enrolled: number;
+  passing_rate: number;
+  exam_dates?: Array<{
+    id: number;
+    exam_id: number;
+    date: string;
+    current_registrations: number;
+    max_participants: number;
+    locations: Array<{
+      id: number;
+      location_name: string;
+      capacity: number;
+    }>;
+  }>;
+}
+
+// Exam Management Functions
+export const getSuperAdminExams = async (): Promise<SuperAdminApiResponse<SuperAdminExam[]>> => {
+  try {
+    console.log("🔍 Fetching exams from /admin/exam endpoint...");
+    const response = await adminApiRequest<SuperAdminExam[]>('/exam');
+    
+    console.log("✅ Successfully fetched exams:", {
+      count: Array.isArray(response?.data) ? response.data.length : 0,
+      endpoint: "/admin/exam"
+    });
+    
+    return response;
+  } catch (error) {
+    console.error("❌ Failed to fetch exams:", error);
+    throw error;
+  }
+};
+
+export const deleteSuperAdminExam = async (examId: number): Promise<SuperAdminApiResponse> => {
+  try {
+    console.log(`🗑️ Deleting exam with ID: ${examId}`);
+    const response = await adminApiRequest(`/exam/${examId}`, {
+      method: 'DELETE'
+    });
+    
+    console.log("✅ Successfully deleted exam:", examId);
+    return response;
+  } catch (error) {
+    console.error("❌ Failed to delete exam:", error);
+    throw error;
+  }
+};
+
+export const updateSuperAdminExamStatus = async (examId: number, isActive: boolean): Promise<SuperAdminApiResponse<SuperAdminExam>> => {
+  try {
+    console.log(`🔄 Updating exam ${examId} status to: ${isActive}`);
+    const response = await adminApiRequest<SuperAdminExam>(`/exam/${examId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive })
+    });
+    
+    console.log("✅ Successfully updated exam status");
+    return response;
+  } catch (error) {
+    console.error("❌ Failed to update exam status:", error);
+    throw error;
+  }
 // Revenue
 export const getRevenueData = async (timeRange: string = 'all_time'): Promise<SuperAdminApiResponse> => {
   return await adminApiRequest(`/revenue?range=${timeRange}`);
