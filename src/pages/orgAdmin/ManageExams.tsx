@@ -1469,85 +1469,87 @@ export default function ManageExams() {
                             }
                         }}
                     >
-                        <div className="bg-white rounded-lg w-full max-w-md shadow-xl border">
+                        {/* Update the width classes here */}
+                        <div className="bg-white rounded-lg w-full max-w-6xl shadow-xl border max-h-[90vh] overflow-y-auto">
                             <div className="p-6">
                                 <h3 className="text-lg font-semibold mb-4">
                                     {editingExam ? 'Edit Exam' : 'Create New Exam'}
                                 </h3>
                                 
-                                {error && (
-                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <p className="text-red-700 text-sm">{error}</p>
-                                    </div>
-                                )}
+                                {/* ... error display ... */}
 
-                                <div className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="examName">Exam Name</Label>
-                                        <Input
-                                            id="examName"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                            placeholder="Enter exam name"
-                                            className="mt-1"
-                                        />
+                                {/* Update the form layout to use a grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Left column */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="examName">Exam Name</Label>
+                                            <Input
+                                                id="examName"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                                placeholder="Enter exam name"
+                                                className="mt-1"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="examCodeName">Exam Code Name</Label>
+                                            <Input
+                                                id="examCodeName"
+                                                value={formData.code_name}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, code_name: e.target.value }))}
+                                                placeholder="e.g., GCAT, GCCT"
+                                                className="mt-1"
+                                            />
+                                        </div>
+                                        
+                                        <div>
+                                            <Label htmlFor="examDescription">Description (Optional)</Label>
+                                            <Textarea
+                                                id="examDescription"
+                                                value={formData.description}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                                placeholder="Enter exam description"
+                                                className="mt-1"
+                                                rows={4}
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label htmlFor="examPrice">Price ($)</Label>
+                                                <Input
+                                                    id="examPrice"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.price}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                                                    placeholder="Enter exam price"
+                                                    className="mt-1"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="registrationDeadline">Registration Deadline</Label>
+                                                <Input
+                                                    id="registrationDeadline"
+                                                    type="datetime-local"
+                                                    value={formData.registration_deadline}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, registration_deadline: e.target.value }))}
+                                                    min={getCurrentDateTimeLocal()}
+                                                    max={formData.exam_dates.length > 0 && formData.exam_dates[0].date ? formData.exam_dates[0].date : undefined}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
 
+                                    {/* Right column - Exam Dates */}
                                     <div>
-                                        <Label htmlFor="examCodeName">Exam Code Name</Label>
-                                        <Input
-                                            id="examCodeName"
-                                            value={formData.code_name}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, code_name: e.target.value }))}
-                                            placeholder="e.g., GCAT, GCCT"
-                                            className="mt-1"
-                                        />
-                                    </div>
-                                    
-                                    <div>
-                                        <Label htmlFor="examDescription">Description (Optional)</Label>
-                                        <Textarea
-                                            id="examDescription"
-                                            value={formData.description}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                            placeholder="Enter exam description"
-                                            className="mt-1"
-                                            rows={3}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="examPrice">Price ($)</Label>
-                                        <Input
-                                            id="examPrice"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={formData.price}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                                            placeholder="Enter exam price"
-                                            className="mt-1"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="registrationDeadline">Registration Deadline</Label>
-                                        <Input
-                                            id="registrationDeadline"
-                                            type="datetime-local"
-                                            value={formData.registration_deadline}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, registration_deadline: e.target.value }))}
-                                            min={getCurrentDateTimeLocal()}
-                                            max={formData.exam_dates.length > 0 && formData.exam_dates[0].date ? formData.exam_dates[0].date : undefined}
-                                            className="mt-1"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Must be before the exam date and cannot be in the past</p>
-                                    </div>
-
-                                    {/* Exam Dates Section */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <Label>Exam Dates</Label>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <Label className="text-base font-semibold">Exam Dates</Label>
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -1562,88 +1564,85 @@ export default function ManageExams() {
                                             </Button>
                                         </div>
                                         
-                                        {formData.exam_dates.map((examDate, index) => (
-                                            <div key={index} className="flex gap-2 mb-2">
-                                                <div className="flex-1">
-                                                    <Input
-                                                        type="datetime-local"
-                                                        value={examDate.date}
-                                                        onChange={(e) => {
-                                                            const newExamDates = [...formData.exam_dates];
-                                                            newExamDates[index] = { ...newExamDates[index], date: e.target.value };
-                                                            setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
-                                                        }}
-                                                        min={getCurrentDateTimeLocal()}
-                                                        className="text-sm"
-                                                    />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="border rounded-lg p-3 space-y-2">
-                                                        <label className="text-sm font-medium text-gray-700">
-                                                            Select Halls (Multiple halls allowed)
-                                                        </label>
-                                                        {locationsLoading ? (
-                                                            <div className="text-sm text-gray-500">Loading locations...</div>
-                                                        ) : locations.length === 0 ? (
-                                                            <div className="text-sm text-gray-500">No locations available. Create locations first.</div>
-                                                        ) : (
-                                                            <div className="space-y-2 max-h-32 overflow-y-auto">
-                                                                {locations.map(location => (
-                                                                    <label key={location.id} className="flex items-center space-x-2 cursor-pointer">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={examDate.location_ids.includes(location.id)}
-                                                                            onChange={(e) => {
-                                                                                const newExamDates = [...formData.exam_dates];
-                                                                                if (e.target.checked) {
-                                                                                    // Add location
-                                                                                    newExamDates[index] = {
-                                                                                        ...newExamDates[index],
-                                                                                        location_ids: [...examDate.location_ids, location.id]
-                                                                                    };
-                                                                                } else {
-                                                                                    // Remove location
-                                                                                    newExamDates[index] = {
-                                                                                        ...newExamDates[index],
-                                                                                        location_ids: examDate.location_ids.filter(id => id !== location.id)
-                                                                                    };
-                                                                                }
-                                                                                setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
-                                                                            }}
-                                                                            className="rounded border-gray-300"
-                                                                        />
-                                                                        <span className="text-sm">
-                                                                            {location.location_name} 
-                                                                            <span className="text-gray-500 ml-1">(Capacity: {location.capacity})</span>
-                                                                        </span>
-                                                                    </label>
-                                                                ))}
+                                        <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+                                            {formData.exam_dates.map((examDate, index) => (
+                                                <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <Label>Date & Time</Label>
+                                                            <Input
+                                                                type="datetime-local"
+                                                                value={examDate.date}
+                                                                onChange={(e) => {
+                                                                    const newExamDates = [...formData.exam_dates];
+                                                                    newExamDates[index] = { ...newExamDates[index], date: e.target.value };
+                                                                    setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                                }}
+                                                                min={getCurrentDateTimeLocal()}
+                                                                className="mt-1"
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Label>Select Halls</Label>
+                                                            <div className="mt-1 p-3 bg-white border rounded-lg">
+                                                                <div className="max-h-32 overflow-y-auto space-y-2">
+                                                                    {locations.map(location => (
+                                                                        <label key={location.id} className="flex items-center space-x-2">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={examDate.location_ids.includes(location.id)}
+                                                                                onChange={(e) => {
+                                                                                    const newExamDates = [...formData.exam_dates];
+                                                                                    if (e.target.checked) {
+                                                                                        newExamDates[index] = {
+                                                                                            ...newExamDates[index],
+                                                                                            location_ids: [...examDate.location_ids, location.id]
+                                                                                        };
+                                                                                    } else {
+                                                                                        newExamDates[index] = {
+                                                                                            ...newExamDates[index],
+                                                                                            location_ids: examDate.location_ids.filter(id => id !== location.id)
+                                                                                        };
+                                                                                    }
+                                                                                    setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                                                }}
+                                                                                className="rounded border-gray-300"
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                {location.location_name} 
+                                                                                <span className="text-gray-500 ml-1">(Capacity: {location.capacity})</span>
+                                                                            </span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                        )}
-                                                        {locationsError && (
-                                                            <p className="text-red-500 text-xs mt-1">{locationsError}</p>
+                                                        </div>
+
+                                                        {formData.exam_dates.length > 1 && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    const newExamDates = formData.exam_dates.filter((_, i) => i !== index);
+                                                                    setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
+                                                                }}
+                                                                className="w-full text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                Remove Date
+                                                            </Button>
                                                         )}
                                                     </div>
                                                 </div>
-                                                {formData.exam_dates.length > 1 && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            const newExamDates = formData.exam_dates.filter((_, i) => i !== index);
-                                                            setFormData(prev => ({ ...prev, exam_dates: newExamDates }));
-                                                        }}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-3 mt-6">
+                                {/* Actions */}
+                                <div className="flex gap-3 mt-6 pt-4 border-t">
                                     <Button
                                         variant="outline"
                                         onClick={closeModals}
