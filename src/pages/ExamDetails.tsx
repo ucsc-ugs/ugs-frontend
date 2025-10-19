@@ -467,7 +467,7 @@ const ExamDetailsPage = () => {
               </Card>
 
               {/* Additional Info */}
-              <Card>
+              {/* <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Exam Information</h3>
                   <div className="space-y-3">
@@ -491,7 +491,7 @@ const ExamDetailsPage = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
             </div>
           </div>
         </motion.div>
