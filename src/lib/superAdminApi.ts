@@ -217,6 +217,23 @@ export const deleteOrgAdmin = async (id: number): Promise<SuperAdminApiResponse>
   });
 };
 
+// Revenue
+export const getRevenueData = async (timeRange: string = 'all_time'): Promise<SuperAdminApiResponse> => {
+  return await adminApiRequest(`/revenue?range=${timeRange}`);
+};
+
+// Profile Management
+export const updateSuperAdminPassword = async (passwordData: { 
+  current_password: string; 
+  password: string; 
+  password_confirmation: string; 
+}): Promise<any> => {
+  return await adminApiRequest('/profile/password', {
+    method: 'PUT',
+    body: JSON.stringify(passwordData),
+  });
+};
+
 // Check if user is authenticated
 export const isSuperAdminAuthenticated = (): boolean => {
   return getAuthToken() !== null;

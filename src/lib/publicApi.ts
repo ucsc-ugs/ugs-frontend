@@ -9,17 +9,21 @@ interface ExamDate {
   updated_at?: string;
 }
 
-interface Organization {
+export interface Organization {
   id: number;
   name: string;
   description?: string;
   logo?: string;
   status?: string;
+  contact_email?: string;
+  phone_number?: string;
+  website?: string;
+  address?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-interface PublicExamData {
+export interface PublicExamData {
   id: number;
   name: string;
   code_name?: string;
@@ -72,4 +76,4 @@ export const getExamByCodeName = async (codeName: string): Promise<ApiResponse<P
   return await publicApiRequest(`/exams/${codeName}`);
 };
 
-export type { PublicExamData, ExamDate, Organization, ApiResponse };
+export type { ExamDate, ApiResponse };

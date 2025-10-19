@@ -26,8 +26,9 @@ export default function UniversitiesPage() {
   const loadOrganizations = async () => {
     try {
       setIsLoading(true);
-      const response = await getOrganizations();
-      setOrganizations(response.data || []);
+  const response = await getOrganizations();
+  const orgs: Organization[] = Array.isArray(response.data) ? response.data : [];
+  setOrganizations(orgs);
     } catch (err: any) {
       console.error("Load organizations error:", err);
       setError(err.message || "Failed to load organizations");

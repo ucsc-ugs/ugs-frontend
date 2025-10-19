@@ -1,4 +1,5 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,105 +20,112 @@ interface Exam {
   };
   is_active: boolean;
   created_at: string;
-  total_students: number;
+  registered_students_count: number;
   passing_rate: number;
 }
 
 export default function SuperAdminExams() {
-  // Dummy data
-  const dummyExams: Exam[] = [
-    {
-      id: 1,
-      name: "GCAT",
-      description: "General Computer Aptitude Test",
-      price: 3000,
-      duration: 90,
-      organization: { id: 1, name: "UCSC" },
-      is_active: true,
-      created_at: "2023-10-15T09:30:00Z",
-      total_students: 150,
-      passing_rate: 72
-    },
-    {
-      id: 2,
-      name: "GCCT",
-      description: "General Computer Competency Test",
-      price: 3000,
-      duration: 120,
-      organization: { id: 2, name: "UCSC" },
-      is_active: true,
-      created_at: "2023-09-22T14:15:00Z",
-      total_students: 210,
-      passing_rate: 68
-    },
-    {
-      id: 3,
-      name: "FIT",
-      description: "Foundation in IT",
-      price: 3000,
-      duration: 60,
-      organization: { id: 3, name: "IIT" },
-      is_active: false,
-      created_at: "2023-11-05T10:45:00Z",
-      total_students: 95,
-      passing_rate: 81
-    },
-    {
-      id: 4,
-      name: "AIT",
-      description: "Advanced IT Certification",
-      price: 4500,
-      duration: 180,
-      organization: { id: 1, name: "UCSC" },
-      is_active: true,
-      created_at: "2023-12-10T11:20:00Z",
-      total_students: 75,
-      passing_rate: 65
-    },
-  ];
-
-  const [exams, setExams] = useState<Exam[]>(dummyExams);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [organizationFilter, setOrganizationFilter] = useState<string>("all");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
 
-  // Get unique organizations for filter dropdown
-  const organizations = Array.from(new Set(exams.map(exam => exam.organization.name)));
+  const API_BASE = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8000/api";
 
-  const handleStatusChange = (examId: number, newStatus: boolean) => {
-    setExams(exams.map(exam => 
-      exam.id === examId ? { ...exam, is_active: newStatus } : exam
-    ));
-  };
+  useEffect(() => {
+    const fetchExams = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = localStorage.getItem("auth_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-  const handleDelete = () => {
+        const res = await axios.get(`${API_BASE}/exams`, { headers });
+        // Support common response shapes: array directly or { data: [...] }
+        const payload = Array.isArray(res.data) ? res.data : res.data?.data ?? res.data;
+        setExams(payload ?? []);
+      } catch (err: any) {
+        console.error("Failed to fetch exams:", err);
+        setError(err?.response?.data?.message || "Failed to load exams");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExams();
+  }, [API_BASE]);
+
+  // Unique organizations for filter dropdown
+  const organizations = Array.from(new Set(exams.map(exam => exam.organization?.name).filter(Boolean)));
+
+  const handleDelete = async () => {
     if (!deleteExamId) return;
-    setExams(exams.filter(exam => exam.id !== deleteExamId));
-    setDeleteExamId(null);
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      await axios.delete(`${API_BASE}/exams/${deleteExamId}`, { headers });
+      setExams(prev => prev.filter(e => e.id !== deleteExamId));
+      setDeleteExamId(null);
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+      setError(err?.response?.data?.message || "Failed to delete exam");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // const toggleExamStatus = async (examId: number) => {
+  //   const target = exams.find(e => e.id === examId);
+  //   if (!target) return;
+  //   const newStatus = !target.is_active;
+  //   // Optimistic update
+  //   setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: newStatus } : e));
+  //   try {
+  //     const token = localStorage.getItem("auth_token");
+  //     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  //     await axios.patch(`${API_BASE}/exams/${examId}`, { is_active: newStatus }, { headers });
+  //   } catch (err) {
+  //     console.error("Failed to update status:", err);
+  //     // rollback on failure
+  //     setExams(prev => prev.map(e => e.id === examId ? { ...e, is_active: target.is_active } : e));
+  //     setError("Failed to update exam status");
+  //   }
+  // };
 
   const filteredExams = exams.filter(exam => {
-    const matchesSearch = exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         exam.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "active" && exam.is_active) || 
-                         (statusFilter === "inactive" && !exam.is_active);
-    
-    const matchesOrganization = organizationFilter === "all" || 
-                               exam.organization.name === organizationFilter;
-    
-    return matchesSearch && matchesStatus && matchesOrganization;
+    const matchesSearch =
+      exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exam.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+  
+
+    const matchesOrganization =
+      organizationFilter === "all" || exam.organization.name === organizationFilter;
+
+    return matchesSearch && matchesOrganization;
   });
 
-  const toggleExamStatus = (examId: number) => {
-    setExams(exams.map(exam => 
-      exam.id === examId ? { ...exam, is_active: !exam.is_active } : exam
-    ));
-  };
+  if (loading) {
+    return (
+      <div className="p-6 min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading exams…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 min-h-screen flex items-center justify-center">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -132,16 +140,16 @@ export default function SuperAdminExams() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4 space-y-4 md:space-y-0 md:flex md:space-x-4">
-          <div className="relative flex-1">
+          <div className="relative md:flex-[2] flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search exams by name or description..."
+              placeholder="Search exams by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
             />
           </div>
-          
+
           <div className="flex space-x-2">
             <Select value={organizationFilter} onValueChange={setOrganizationFilter}>
               <SelectTrigger className="w-[180px]">
@@ -158,19 +166,7 @@ export default function SuperAdminExams() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-400" />
-                  <SelectValue placeholder="Filter by status" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            
           </div>
         </CardContent>
       </Card>
@@ -206,11 +202,9 @@ export default function SuperAdminExams() {
                 <TableRow>
                   <TableHead>Exam</TableHead>
                   <TableHead>Organization</TableHead>
-                  <TableHead>Price (LKR)</TableHead>
-                  <TableHead>Duration</TableHead>
+                  <TableHead>Price (LKR)</TableHead>              
                   <TableHead>Students</TableHead>
                   <TableHead>Pass Rate</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -223,7 +217,6 @@ export default function SuperAdminExams() {
                         <BookOpen className="h-4 w-4 text-blue-600" />
                         {exam.name}
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{exam.description}</p>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{exam.organization.name}</Badge>
@@ -233,15 +226,10 @@ export default function SuperAdminExams() {
                         {exam.price.toLocaleString('en-LK')} LKR
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        {exam.duration} mins
-                      </div>
-                    </TableCell>
+                    
                     <TableCell>
                       <div className="text-center">
-                        {exam.total_students}
+                        {exam.registered_students_count}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -258,16 +246,7 @@ export default function SuperAdminExams() {
                         <span className="text-sm">{exam.passing_rate}%</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Button
-                        variant={exam.is_active ? "default" : "secondary"}
-                        size="sm"
-                        onClick={() => toggleExamStatus(exam.id)}
-                        className="w-24"
-                      >
-                        {exam.is_active ? "Active" : "Inactive"}
-                      </Button>
-                    </TableCell>
+                    
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
                         <Calendar className="h-4 w-4" />
@@ -316,8 +295,9 @@ export default function SuperAdminExams() {
                 <Button
                   onClick={handleDelete}
                   className="flex-1 bg-red-600 hover:bg-red-700"
+                  disabled={isSubmitting}
                 >
-                  Delete Exam
+                  {isSubmitting ? "Deleting…" : "Delete Exam"}
                 </Button>
                 <Button
                   variant="outline"

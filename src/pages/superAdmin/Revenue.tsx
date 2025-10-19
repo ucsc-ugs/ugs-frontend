@@ -1,11 +1,35 @@
-import { useState } from "react";
+/**
+ * Revenue Dashboard Component
+ * 
+ * BACKEND REQUIREMENT:
+ * This component requires a backend endpoint at: GET /api/admin/revenue?range={timeRange}
+ * 
+ * The endpoint must:
+ * 1. Be protected by super admin authentication middleware
+ * 2. Accept a 'range' query parameter (last_7_days, last_30_days, last_quarter, last_year, all_time)
+ * 3. Return JSON with the following structure:
+ *    {
+ *      "total_revenue": number,
+ *      "total_commission": number,
+ *      "organization_revenues": [{ id, name, revenue, commission, exam_count }],
+ *      "exam_revenues": [{ id, name, organization_name, revenue, commission, attempt_count }],
+ *      "monthly_revenues": [{ month, revenue, commission }]
+ *    }
+ * 
+ * Current Error: "Call to a member function isSuperAdmin() on null"
+ * This suggests the backend authentication middleware is not properly retrieving the user.
+ */
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Building2, BookOpen, Calendar, PieChart } from "lucide-react";
+import { DollarSign, TrendingUp, Building2, BookOpen, PieChart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
+import { getRevenueData } from "@/lib/superAdminApi";
+
 
 interface RevenueData {
   total_revenue: number;
@@ -33,88 +57,116 @@ interface RevenueData {
 }
 
 export default function RevenueDashboard() {
-  const dummyRevenueData: RevenueData = {
-    total_revenue: 2105000,
-    total_commission: 315000,
-    organization_revenues: [
-      {
-        id: 1,
-        name: "UCSC",
-        revenue: 780000,
-        commission: 32500,
-        exam_count: 3
-      },
-      {
-        id: 2,
-        name: "UOM",
-        revenue: 980000,
-        commission: 75400,
-        exam_count: 2
-      },
-      {
-        id: 3,
-        name: "UOK",
-        revenue: 1254000,
-        commission: 98000,
-        exam_count: 1
-      }
-    ],
-    exam_revenues: [
-      {
-        id: 1,
-        name: "GCAT",
-        organization_name: "UCSC",
-        revenue: 4500.75,
-        commission: 675.11,
-        attempt_count: 90
-      },
-      {
-        id: 2,
-        name: "FIT",
-        organization_name: "UCSC",
-        revenue: 3500.50,
-        commission: 700.10,
-        attempt_count: 70
-      },
-      {
-        id: 3,
-        name: "GCCT",
-        organization_name: "Business College",
-        revenue: 2500.00,
-        commission: 200.00,
-        attempt_count: 50
-      },
-      {
-        id: 4,
-        name: "MAT",
-        organization_name: "UOM",
-        revenue: 2000.00,
-        commission: 300.00,
-        attempt_count: 40
-      }
-    ],
-    monthly_revenues: [
-      { month: "Jan", revenue: 12000, commission: 1800 },
-      { month: "Feb", revenue: 19000, commission: 2850 },
-      { month: "Mar", revenue: 15000, commission: 2250 },
-      { month: "Apr", revenue: 18000, commission: 2700 },
-      { month: "May", revenue: 21000, commission: 3150 },
-      { month: "Jun", revenue: 24000, commission: 3600 },
-      { month: "Jul", revenue: 16000, commission: 2400 }
-    ]
-  };
-
-  const [data] = useState<RevenueData>(dummyRevenueData);
+  const [data, setData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [timeRange, setTimeRange] = useState("all_time");
   const [activeTab, setActiveTab] = useState("overview");
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await getRevenueData(timeRange);
+        
+        // Normalize response to avoid runtime errors if some fields are missing
+        const payload = response.data || response;
+        setData({
+          total_revenue: Number(payload.total_revenue ?? 0),
+          total_commission: Number(payload.total_commission ?? 0),
+          organization_revenues: Array.isArray(payload.organization_revenues) ? payload.organization_revenues : [],
+          exam_revenues: Array.isArray(payload.exam_revenues) ? payload.exam_revenues : [],
+          monthly_revenues: Array.isArray(payload.monthly_revenues) ? payload.monthly_revenues : [],
+        });
+        setError("");
+      } catch (err: any) {
+        console.error("Error fetching revenue data:", err);
+        
+        // Provide more helpful error messages
+        let errorMessage = "Failed to fetch revenue data";
+        if (err.status === 404) {
+          errorMessage = "Revenue endpoint not found. Please contact the administrator.";
+        } else if (err.status === 401 || err.status === 403) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [timeRange]);
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'LKR'
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "LKR",
     }).format(amount);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600 text-lg">Loading revenue data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <Card className="max-w-md w-full border-red-200 bg-white">
+          <CardHeader>
+            <CardTitle className="text-red-600 flex items-center gap-2">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Error Loading Revenue Data
+            </CardTitle>
+            <CardDescription>
+              Unable to fetch revenue information from the server
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-700">{error}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> This may be a backend configuration issue. 
+                Please ensure the <code className="bg-amber-100 px-1 rounded">/api/admin/revenue</code> endpoint 
+                is properly configured with super admin authentication.
+              </p>
+            </div>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="w-full"
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-red-500 text-lg">No data found.</p>
+      </div>
+    );
+  }
+
+  // Guarded local arrays to avoid runtime errors when mapping
+  const orgs = data.organization_revenues ?? [];
+  const exams = data.exam_revenues ?? [];
+  const months = data.monthly_revenues ?? [];
+  
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -141,28 +193,23 @@ export default function RevenueDashboard() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        <button
-          className={`px-4 py-2 font-medium ${activeTab === 'overview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${activeTab === 'organizations' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setActiveTab('organizations')}
-        >
-          By Organization
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${activeTab === 'exams' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-          onClick={() => setActiveTab('exams')}
-        >
-          By Exam
-        </button>
+        {["overview", "organizations", "exams"].map((tab) => (
+          <button
+            key={tab}
+            className={`px-4 py-2 font-medium ${
+              activeTab === tab
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === "overview" ? "Overview" : tab === "organizations" ? "By Organization" : "By Exam"}
+          </button>
+        ))}
       </div>
 
       {/* Overview Tab */}
-      {activeTab === 'overview' && (
+      {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -228,14 +275,11 @@ export default function RevenueDashboard() {
             </CardHeader>
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.monthly_revenues}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
+                <BarChart data={months} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value) => formatCurrency(Number(value))}
                     labelFormatter={(label) => `Month: ${label}`}
                   />
@@ -250,7 +294,7 @@ export default function RevenueDashboard() {
       )}
 
       {/* Organizations Tab */}
-      {activeTab === 'organizations' && (
+      {activeTab === "organizations" && (
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -274,7 +318,7 @@ export default function RevenueDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.organization_revenues.map((org) => (
+                {orgs.map((org) => (
                   <TableRow key={org.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
@@ -308,7 +352,7 @@ export default function RevenueDashboard() {
       )}
 
       {/* Exams Tab */}
-      {activeTab === 'exams' && (
+      {activeTab === "exams" && (
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -333,7 +377,7 @@ export default function RevenueDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.exam_revenues.map((exam) => (
+                {exams.map((exam) => (
                   <TableRow key={exam.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">

@@ -62,8 +62,8 @@ export default function ManageOrgAdmins() {
         getOrgAdmins(),
         getOrganizations()
       ]);
-      setOrgAdmins(adminsResponse.data || []);
-      setOrganizations(orgsResponse.data || []);
+  setOrgAdmins(adminsResponse.data as any || []);
+  setOrganizations(orgsResponse.data as any || []);
     } catch (err: any) {
       console.error('Load data error:', err);
       setError(err.message || 'Failed to load data');
@@ -163,7 +163,7 @@ export default function ManageOrgAdmins() {
         </div>
         <Button 
           onClick={() => setShowForm(true)}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-blue-600 hover:bg-blue-700"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Org Admin
@@ -185,11 +185,11 @@ export default function ManageOrgAdmins() {
           <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-white p-4 rounded-lg max-w-md w-full">
             <Card className="w-full shadow-xl border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="text-center space-y-4 pb-8">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-lg">
                   <UserPlus className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                     {editingAdmin ? "Edit Org Admin" : "Create Org Admin"}
                   </CardTitle>
                   <CardDescription className="text-gray-600 mt-2">
@@ -214,7 +214,7 @@ export default function ManageOrgAdmins() {
                       placeholder="Full Name"
                       value={formData.name}
                       onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      className={`border-gray-200 focus:border-purple-400 focus:ring-purple-400/20 transition-colors ${
+                      className={`w-full border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
                         formErrors.name ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
                       }`}
                     />
@@ -231,7 +231,7 @@ export default function ManageOrgAdmins() {
                       placeholder="Email Address"
                       value={formData.email}
                       onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                      className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                      className={`w-full border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
                         formErrors.email ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
                       }`}
                     />
@@ -249,7 +249,7 @@ export default function ManageOrgAdmins() {
                         placeholder="Password"
                         value={formData.password}
                         onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                        className={`border-gray-200 focus:border-purple-400 focus:ring-purple-400/20 transition-colors ${
+                        className={`w-full border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
                           formErrors.password ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
                         }`}
                       />
@@ -266,7 +266,7 @@ export default function ManageOrgAdmins() {
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, organization_id: value }))}
                     >
                       <SelectTrigger
-                        className={`border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
+                        className={`w-full border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
                           formErrors.organization_id ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
                         }`}
                       >
@@ -290,7 +290,7 @@ export default function ManageOrgAdmins() {
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:transform-none"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:transform-none"
                     >
                       {isSubmitting ? "Saving..." : editingAdmin ? "Update" : "Create"}
                     </Button>

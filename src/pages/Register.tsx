@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { motion } from "framer-motion";
 import { Search, Filter, UserPlus as UserPlusIcon, Loader2, AlertCircle } from "lucide-react";
 import { getPublicExams, type PublicExamData } from "@/lib/publicApi";
+import { useAuth } from "@/contexts/AuthContext";
+import axios from "axios";
 
 interface ExamCardData {
   id: number;
@@ -29,6 +31,7 @@ interface ExamCardData {
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState('all');
   const [exams, setExams] = useState<ExamCardData[]>([]);
@@ -37,57 +40,86 @@ const RegisterPage = () => {
   const [selectedExam, setSelectedExam] = useState<ExamCardData | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // Fetch registered exam IDs for current user
+  const getRegisteredExamIds = async (): Promise<number[]> => {
+    if (!isAuthenticated) return [];
+    
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) return [];
+
+      const response = await axios.get("http://localhost:8000/api/my-exams", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      return response.data.map((exam: any) => exam.id);
+    } catch (error) {
+      console.error("Failed to fetch registered exams:", error);
+      return [];
+    }
+  };
+
   // Load exams from API
   useEffect(() => {
     const loadExams = async () => {
       try {
         setIsLoading(true);
-        const response = await getPublicExams();
         
-        // Convert API data to component format
-        const examData: ExamCardData[] = response.data.map((exam: PublicExamData) => {
-          const firstDate = exam.exam_dates?.[0];
-          const examDate = firstDate ? new Date(firstDate.date) : new Date();
-          
-          // Format registration deadline if it exists
-          const registrationDeadline = exam.registration_deadline 
-            ? new Date(exam.registration_deadline).toLocaleDateString('en-US', {
+        // Fetch both public exams and registered exam IDs
+        const [examResponse, registeredExamIds] = await Promise.all([
+          getPublicExams(),
+          getRegisteredExamIds()
+        ]);
+        
+        // Convert API data to component format and filter out registered exams
+        const examData: ExamCardData[] = examResponse.data
+          .filter((exam: PublicExamData) => !registeredExamIds.includes(exam.id))
+          .map((exam: PublicExamData) => {
+            const firstDate = exam.exam_dates?.[0];
+            const examDate = firstDate ? new Date(firstDate.date) : new Date();
+            
+            // Format registration deadline if it exists
+            const registrationDeadline = exam.registration_deadline 
+              ? new Date(exam.registration_deadline).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+                }) + ' ' + new Date(exam.registration_deadline).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                })
+              : undefined;
+            
+            return {
+              id: exam.id,
+              testName: exam.name,
+              fullName: exam.description || exam.name,
+              university: exam.organization?.name || 'Unknown Organization',
+              date: examDate.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit'
-              }) + ' ' + new Date(exam.registration_deadline).toLocaleTimeString('en-US', {
+              }),
+              time: examDate.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: true
-              })
-            : undefined;
-          
-          return {
-            id: exam.id,
-            testName: exam.name,
-            fullName: exam.description || exam.name,
-            university: exam.organization?.name || 'Unknown Organization',
-            date: examDate.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit'
-            }),
-            time: examDate.toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            }),
-            fee: `LKR ${Math.round(exam.price)}`,
-            registrationDeadline,
-            image: exam.organization?.logo 
-              ? `http://localhost:8000/storage${exam.organization.logo}` 
-              : "/ucsclogo.png", // Fallback image
-            description: exam.description || 'No description available',
-            duration: "2 hours", // Default duration (could be added to database later)
-            questions: 50, // Default questions (could be added to database later)
-            codeName: exam.code_name
-          };
-        });
+              }),
+              fee: `LKR ${Math.round(exam.price)}`,
+              registrationDeadline,
+              image: exam.organization?.logo 
+                ? `http://localhost:8000/storage${exam.organization.logo}` 
+                : "/ucsclogo.png", // Fallback image
+              description: exam.description || 'No description available',
+              duration: "2 hours", // Default duration (could be added to database later)
+              questions: 50, // Default questions (could be added to database later)
+              codeName: exam.code_name
+            };
+          });
         
         setExams(examData);
       } catch (err: any) {
@@ -99,7 +131,7 @@ const RegisterPage = () => {
     };
 
     loadExams();
-  }, []);
+  }, [isAuthenticated]);
 
   // Get unique universities for filter
   const universities = [...new Set(exams.map(exam => exam.university))];
@@ -282,61 +314,69 @@ const RegisterPage = () => {
                     transition={{ duration: 0.4, delay: index * 0.1 }}
                   >
                     <Card className="hover:scale-[1.02] transition-all duration-200 shadow-sm border-0 bg-card h-full">
-                      <CardContent className="p-4">
-                        <div className="flex gap-3 h-full">
+                      <CardContent className="p-4 h-full">
+                        <div className="flex gap-3 h-full min-h-[280px]">
                           <div className="flex-1 min-w-0 flex flex-col">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-lg text-foreground leading-tight mb-2">
+                            {/* Header Section */}
+                            <div className="mb-3">
+                              <h3 className="font-bold text-lg text-foreground leading-tight mb-1 overflow-hidden" style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical'
+                              }}>
                                 {exam.testName}
                               </h3>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {exam.fullName}
+                              <p className="text-xs text-muted-foreground font-semibold mb-2">
+                                {exam.university}
                               </p>
-
-                              <div className="mb-3">
-                                <p className="text-sm text-muted-foreground font-medium">
-                                  {exam.university}
-                                </p>
-                              </div>
-
-                              <div className="mb-3">
-                                <p className="text-sm text-foreground">
-                                  {exam.date} • {exam.time}
-                                </p>
-                              </div>
-
-                              {exam.registrationDeadline && (
-                                <div className="mb-3">
-                                  <p className="text-xs text-orange-600 font-medium">
-                                    📅 Registration Deadline: {exam.registrationDeadline}
-                                  </p>
-                                </div>
-                              )}
-
-                              <div className="mb-3">
-                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                  {exam.fee}
-                                </span>
-                              </div>
                             </div>
 
-                            <button 
-                              className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm mt-auto"
-                              onClick={() => handleViewDetails(exam)}
-                            >
-                              View Details
-                            </button>
+                            {/* Description Section - More visible */}
+                            <div className="flex-1 mb-3">
+                              <p className="text-sm text-muted-foreground overflow-hidden" style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 6,
+                                WebkitBoxOrient: 'vertical'
+                              }}>
+                                {exam.fullName}
+                              </p>
+                            </div>
+
+                            {/* Registration Deadline - Above button */}
+                            <div className="mb-3">
+                              {exam.registrationDeadline && (
+                                <div className="flex items-center justify-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-200">
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                  <span className="text-xs font-medium text-orange-700">
+                                    Deadline: {exam.registrationDeadline.split(' ')[0]}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Button - Always at bottom */}
+                            <div className="mt-auto">
+                              <button 
+                                className="w-full bg-primary text-primary-foreground py-2.5 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-sm"
+                                onClick={() => handleViewDetails(exam)}
+                              >
+                                View Details
+                              </button>
+                            </div>
                           </div>
 
-                          <img
-                            src={exam.image}
-                            alt={`${exam.university} logo`}
-                            className="w-30 h-30 rounded-lg object-cover flex-shrink-0"
-                            onError={(e) => {
-                              // Fallback to default image if logo fails to load
-                              e.currentTarget.src = "/ucsclogo.png";
-                            }}
-                          />
+                          {/* Logo - Fixed Size */}
+                          <div className="flex-shrink-0">
+                            <img
+                              src={exam.image}
+                              alt={`${exam.university} logo`}
+                              className="w-20 h-20 rounded-lg object-cover"
+                              onError={(e) => {
+                                // Fallback to default image if logo fails to load
+                                e.currentTarget.src = "/ucsclogo.png";
+                              }}
+                            />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

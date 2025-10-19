@@ -4,7 +4,6 @@ import {
   Home,
   UserPlus,
   BookOpen,
-  Award,
   Bell,
   LogOut,
 } from "lucide-react";
@@ -23,11 +22,6 @@ function Sidebar() {
     { name: "Home", path: "/portal", icon: Home },
     { name: "Register", path: "/portal/register", icon: UserPlus },
     { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
-    {
-      name: "Announcements",
-      path: "/portal/announcements",
-      icon: Award,
-    },
     {
       name: "Notifications",
       path: "/portal/notifications",
@@ -54,12 +48,9 @@ function Sidebar() {
     navigate("/portal/profile");
   };
 
-  // Generate user's registration number or ID for display
-  const getUserDisplayId = () => {
-    if (user?.student?.passport_nic) {
-      return user.email;
-    }
-    return `ID: ${user?.id || 'N/A'}`;
+  // Generate user's email for display
+  const getUserDisplayInfo = () => {
+    return user?.email || 'No email';
   };
 
   return (
@@ -129,7 +120,7 @@ function Sidebar() {
               {user?.name || "Loading..."}
             </span>
             <span className="text-gray-500 text-xs">
-              {getUserDisplayId()}
+              {getUserDisplayInfo()}
             </span>
           </div>
         </button>
