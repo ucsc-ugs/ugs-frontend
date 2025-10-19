@@ -350,7 +350,6 @@ export default function Locations() {
                               <MapPin className="w-4 h-4 text-gray-400" />
                               <div>
                                 <div className="font-medium">{location.location_name}</div>
-                                <div className="text-sm text-gray-500">ID: {location.id}</div>
                               </div>
                             </div>
                           </TableCell>

@@ -313,11 +313,8 @@ export function OrgAdminSidebar() {
           </Avatar>
           <div className="hidden lg:flex flex-col text-xs xl:text-sm text-center leading-tight">
             <span className="font-medium text-blue-800 truncate max-w-full">{authUser?.name || user?.name || mockAdmin.name}</span>
-            <span className="text-gray-500 truncate max-w-full">{authUser?.role || user?.role || mockAdmin.role}</span>
+            <span className="text-gray-500 truncate max-w-full">Admin</span>
             <span className="text-gray-400 text-xs mt-1 truncate max-w-full">{user?.university || mockAdmin.university}</span>
-            {(authUser?.id || user?.id) && (
-              <span className="text-gray-400 text-xs mt-1 truncate max-w-full">ID: {authUser?.id || user?.id}</span>
-            )}
           </div>
         </div>
 
