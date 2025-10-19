@@ -117,7 +117,7 @@ export default function SignUpPage() {
       authLogin(userData, () => {
         // Small delay to ensure state is fully updated
         setTimeout(() => {
-          navigate("/portal/", { replace: true });
+          navigate("/portal/register", { replace: true });
         }, 100);
       });
       

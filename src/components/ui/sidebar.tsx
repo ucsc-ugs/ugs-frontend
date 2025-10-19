@@ -2,7 +2,6 @@
 import { useState } from "react";
 import {
   Home,
-  UserPlus,
   BookOpen,
   Bell,
   LogOut,
@@ -19,8 +18,7 @@ function Sidebar() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const mainLinks = [
-    { name: "Home", path: "/portal", icon: Home },
-    { name: "Register", path: "/portal/register", icon: UserPlus },
+    { name: "Home", path: "/portal/register", icon: Home },
     { name: "My Exams", path: "/portal/my-exams", icon: BookOpen },
     {
       name: "Notifications",

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
@@ -7,7 +7,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
 import Home from "@/pages/Home";
-import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
 import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
@@ -99,8 +98,8 @@ function App() {
                   {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
                   <div className="ml-20 md:ml-64 p-6">
                     <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/register" element={<Register />} />
+                      <Route path="/" element={<Navigate to="/portal/register" replace />} />
+                      <Route path="/register" element={<Home />} />
                       <Route path="/my-exams" element={<MyExams />} />
                       <Route path="/my-results" element={<MyResults />} />
                       <Route path="/notifications" element={<Notifications />} />
