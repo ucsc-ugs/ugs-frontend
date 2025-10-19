@@ -90,6 +90,10 @@ export default function ManageStudents() {
         setLoading(true);
         setError(null);
         try {
+            // Check if user is authenticated
+            const token = localStorage.getItem('auth_token');
+            console.log('Auth token exists:', !!token);
+            
             // Construct query parameters for pagination and search
             const params = new URLSearchParams({
                 page: String(currentPage),
@@ -99,8 +103,10 @@ export default function ManageStudents() {
                 params.append('q', query);
             }
 
+            console.log('Fetching students with params:', params.toString());
             const response = await apiClient.get(`/students?${params.toString()}`);
             
+            console.log('Students API response:', response.data);
             setStudents(response.data.data);
             setMeta(response.data.meta);
             
@@ -109,7 +115,23 @@ export default function ManageStudents() {
             console.error("Response data:", err.response?.data);
             console.error("Response status:", err.response?.status);
             console.error("Request URL:", err.config?.url);
-            setError(err.response?.data?.message || err.message || "An error occurred while fetching data.");
+            console.error("Request headers:", err.config?.headers);
+            
+            // More detailed error handling
+            let errorMessage = "An error occurred while fetching data.";
+            if (err.response?.status === 401) {
+                errorMessage = "Authentication failed. Please log in again.";
+            } else if (err.response?.status === 403) {
+                errorMessage = "Access denied. You don't have permission to view students.";
+            } else if (err.response?.status === 404) {
+                errorMessage = "Students endpoint not found.";
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

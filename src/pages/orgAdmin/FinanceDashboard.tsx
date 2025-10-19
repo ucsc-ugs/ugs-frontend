@@ -304,10 +304,6 @@ export default function FinanceDashboard() {
                             <Download className="w-4 h-4 mr-2" />
                             Export CSV
                         </Button>
-                        <Button variant="outline" onClick={exportToPDF}>
-                            <FileText className="w-4 h-4 mr-2" />
-                            Export PDF
-                        </Button>
                     </div>
                 </div>
 
