@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, Trash2, Plus, BookOpen, Calendar, Filter, RefreshCw } from "lucide-react";
+import { Search, Plus, BookOpen, Calendar, Filter, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getSuperAdminExams, deleteSuperAdminExam } from "@/lib/superAdminApi";
+import { getSuperAdminExams } from "@/lib/superAdminApi";
 
 interface Exam {
   id: number;
@@ -29,8 +29,6 @@ interface Exam {
 export default function SuperAdminExams() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [organizationFilter, setOrganizationFilter] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
@@ -108,35 +106,87 @@ export default function SuperAdminExams() {
   // Unique organizations for filter dropdown
   const organizations = Array.from(new Set(exams.map(exam => exam.organization?.name).filter(Boolean)));
 
-  const handleDelete = async () => {
-    if (!deleteExamId) return;
-    setIsSubmitting(true);
+  // Note: Exam status toggle functionality can be implemented using updateSuperAdminExamStatus from the API service
+
+  // Export functionality
+  const handleExportData = () => {
     try {
-      // Use the centralized API service
-      await deleteSuperAdminExam(deleteExamId);
-      
-      setExams(prev => prev.filter(e => e.id !== deleteExamId));
-      setDeleteExamId(null);
-      
-      console.log("✅ Successfully deleted exam:", deleteExamId);
-      
-    } catch (err: unknown) {
-      console.error("❌ Delete failed:", err);
-      
-      // Handle API errors from centralized service
-      if (err && typeof err === 'object' && 'message' in err) {
-        setError((err as { message: string }).message);
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred while deleting exam");
+      // Check if there's data to export
+      if (filteredExams.length === 0) {
+        alert('No exam data available to export');
+        return;
       }
-    } finally {
-      setIsSubmitting(false);
+
+      // Prepare data for export with comprehensive information
+      const exportData = filteredExams.map(exam => ({
+        'Exam ID': exam.id,
+        'Exam Name': exam.name,
+        'Organization': exam.organization.name,
+        'Description': exam.description || 'N/A',
+        'Price (LKR)': exam.price,
+        'Duration (minutes)': exam.duration,
+        'Students Enrolled': exam.students_count || exam.total_students_enrolled || exam.registered_students_count || 0,
+        'Pass Rate (%)': exam.passing_rate,
+        'Status': exam.is_active ? 'Active' : 'Inactive',
+        'Created Date': new Date(exam.created_at).toLocaleDateString('en-LK'),
+        'Created Time': new Date(exam.created_at).toLocaleTimeString('en-LK'),
+        'Organization ID': exam.organization.id
+      }));
+
+      // Convert to CSV with proper escaping
+      const headers = Object.keys(exportData[0]);
+      const csvContent = [
+        // Add BOM for proper UTF-8 handling in Excel
+        '\uFEFF',
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            // Escape commas, quotes, and newlines in CSV
+            if (typeof value === 'string') {
+              if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                return `"${value.replace(/"/g, '""')}"`;
+              }
+            }
+            return value;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with timestamp and filter info
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const filterSuffix = organizationFilter !== 'all' ? `-${organizationFilter.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const searchSuffix = searchTerm ? `-search` : '';
+      const filename = `super-admin-exams${filterSuffix}${searchSuffix}-${timestamp}.csv`;
+      link.setAttribute('download', filename);
+      
+      // Trigger download
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up object URL
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      console.log(`✅ Successfully exported ${exportData.length} exams to ${filename}`);
+      
+      // Show success message
+      const message = `Successfully exported ${exportData.length} exam${exportData.length === 1 ? '' : 's'} to CSV file`;
+      // You can replace alert with a toast notification if available
+      alert(message);
+      
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      alert('Failed to export data. Please try again.');
     }
   };
-
-  // Note: Exam status toggle functionality can be implemented using updateSuperAdminExamStatus from the API service
 
   const filteredExams = exams.filter(exam => {
     const matchesSearch =
@@ -242,7 +292,13 @@ export default function SuperAdminExams() {
                 <RefreshCw className="h-4 w-4" />
                 Refresh Now
               </Button>
-              <Button variant="outline" className="gap-2">
+              <Button 
+                variant="outline" 
+                className="gap-2" 
+                onClick={handleExportData}
+                disabled={loading || filteredExams.length === 0}
+                title={filteredExams.length === 0 ? "No data to export" : `Export ${filteredExams.length} exams to CSV`}
+              >
                 <Plus className="h-4 w-4" />
                 Export Data
               </Button>
@@ -265,7 +321,6 @@ export default function SuperAdminExams() {
                   <TableHead>Students</TableHead>
                   <TableHead>Pass Rate</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -317,26 +372,6 @@ export default function SuperAdminExams() {
                         {new Date(exam.created_at).toLocaleDateString('en-LK')}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => console.log("Edit exam:", exam.id)}
-                          title="Edit exam (feature coming soon)"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDeleteExamId(exam.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -344,38 +379,6 @@ export default function SuperAdminExams() {
           )}
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation */}
-      {deleteExamId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md bg-white">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Delete Exam</CardTitle>
-              <CardDescription className="text-gray-600">
-                Are you sure you want to delete this exam? This will remove all associated data.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleDelete}
-                  className="flex-1 bg-red-600 hover:bg-red-700"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Deleting…" : "Delete Exam"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteExamId(null)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
