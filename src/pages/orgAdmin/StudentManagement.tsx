@@ -131,6 +131,8 @@ export default function ManageStudents() {
             const res = await apiClient.get(`/students/${student.id}`);
             // API returns { message, data }
             const data = res.data?.data ?? student;
+            console.log('Student detail data:', data);
+            console.log('Exam registrations:', data?.exam_registrations);
             setDetailData(data);
         } catch (e: any) {
             console.error('Failed to fetch student detail', e);
@@ -369,45 +371,43 @@ export default function ManageStudents() {
                                                 <div className="text-sm text-gray-500">Joined</div>
                                                 <div className="font-medium">{detailData?.created_at ? formatDate(detailData.created_at) : '—'}</div>
                                             </div>
-                                            <div>
-                                                <div className="text-sm text-gray-500">Exam Registrations</div>
-                                                <div className="font-medium">
-                                                    {detailData?.exams_count
-                                                        ?? (Array.isArray(detailData?.exam_registrations) ? detailData.exam_registrations.length : undefined)
-                                                        ?? (Array.isArray(detailData?.exams) ? detailData.exams.length : 0)}
-                                                </div>
-                                            </div>
                                         </div>
 
-                                        {/* Exams list from API with status */}
+                                        {/* Exam registrations with status */}
                                         {Array.isArray(detailData?.exam_registrations) && detailData.exam_registrations.length > 0 && (
-                                            <div className="pt-2">
-                                                <div className="text-sm text-gray-500 mb-2">Registered Exams</div>
-                                                <div className="border rounded-md overflow-hidden">
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead>Exam</TableHead>
-                                                                <TableHead>Code</TableHead>
-                                                                <TableHead>Exam Date</TableHead>
-                                                                <TableHead>Status</TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {detailData.exam_registrations.map((ex: any, idx: number) => (
-                                                                <TableRow key={ex.id ?? idx}>
-                                                                    <TableCell className="whitespace-nowrap">{ex.name ?? ex.title ?? `Exam #${ex.id ?? idx + 1}`}</TableCell>
-                                                                    <TableCell className="whitespace-nowrap text-gray-700">{ex.code ?? '—'}</TableCell>
-                                                                    <TableCell className="whitespace-nowrap text-gray-700">{ex.exam_date ? new Date(ex.exam_date).toLocaleDateString() : '—'}</TableCell>
-                                                                    <TableCell>
-                                                                        <Badge className={ex.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                                                                            {ex.completed ? 'Completed' : 'Upcoming'}
-                                                                        </Badge>
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
+                                            <div className="pt-4 border-t">
+                                                <div className="text-sm text-gray-500 mb-3 font-medium">Exam Registrations</div>
+                                                <div className="space-y-2">
+                                                    {detailData.exam_registrations.map((ex: any, idx: number) => (
+                                                        <div key={ex.id ?? idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                                                            <div className="flex-1">
+                                                                <div className="font-medium text-sm">{ex.name ?? ex.title ?? `Exam #${ex.id ?? idx + 1}`}</div>
+                                                                <div className="text-xs text-gray-600 mt-1 space-y-0.5">
+                                                                    {ex.registered_at && (
+                                                                        <div>
+                                                                            <span className="font-medium">Registered:</span> {new Date(ex.registered_at).toLocaleDateString('en-US', { 
+                                                                                year: 'numeric', 
+                                                                                month: 'short', 
+                                                                                day: 'numeric' 
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                    {ex.exam_date && (
+                                                                        <div>
+                                                                            <span className="font-medium">Exam Date:</span> {new Date(ex.exam_date).toLocaleDateString('en-US', { 
+                                                                                year: 'numeric', 
+                                                                                month: 'short', 
+                                                                                day: 'numeric' 
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <Badge className={ex.completed ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
+                                                                {ex.completed ? 'Completed' : 'Upcoming'}
+                                                            </Badge>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                         )}
