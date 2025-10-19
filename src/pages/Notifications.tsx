@@ -188,6 +188,68 @@ function NotificationsPage() {
     }
   };
 
+  // Mark all general announcements as read
+  const handleMarkAllGeneralAsRead = async () => {
+    if (!studentId) return;
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!token) return;
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+
+    const unreadAnnouncements = generalAnnouncements.filter(a => !a.is_read);
+    if (unreadAnnouncements.length === 0) return;
+
+    try {
+      // Mark all unread announcements as read
+      await Promise.all(
+        unreadAnnouncements.map(a =>
+          fetch("http://localhost:8000/api/announcements/mark-as-read", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ announcement_id: a.id }),
+          })
+        )
+      );
+      // Update UI
+      setGeneralAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Mark all exam announcements as read
+  const handleMarkAllExamAsRead = async () => {
+    if (!studentId) return;
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!token) return;
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+
+    const unreadAnnouncements = examAnnouncements.filter(a => !a.is_read);
+    if (unreadAnnouncements.length === 0) return;
+
+    try {
+      // Mark all unread announcements as read
+      await Promise.all(
+        unreadAnnouncements.map(a =>
+          fetch("http://localhost:8000/api/announcements/mark-as-read", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ announcement_id: a.id }),
+          })
+        )
+      );
+      // Update UI
+      setExamAnnouncements(prev => prev.map(a => ({ ...a, is_read: true })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Mark general notification as read
   const handleMarkNotificationAsRead = async (id: number) => {
     const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
@@ -282,6 +344,22 @@ function NotificationsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   {generalAnnouncements.filter(a => !a.is_read).length > 0 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAllGeneralAsRead();
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                      <span className="bg-blue-600/20 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full">
+                        {generalAnnouncements.filter(a => !a.is_read).length}
+                      </span>
+                    </>
+                  )}
+                  {generalAnnouncements.filter(a => !a.is_read).length === 0 && (
                     <span className="bg-blue-600/20 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full">
                       {generalAnnouncements.filter(a => !a.is_read).length}
                     </span>
@@ -362,6 +440,22 @@ function NotificationsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   {examAnnouncements.filter(a => !a.is_read).length > 0 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAllExamAsRead();
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                      <span className="bg-orange-600/20 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-full">
+                        {examAnnouncements.filter(a => !a.is_read).length}
+                      </span>
+                    </>
+                  )}
+                  {examAnnouncements.filter(a => !a.is_read).length === 0 && (
                     <span className="bg-orange-600/20 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-full">
                       {examAnnouncements.filter(a => !a.is_read).length}
                     </span>
