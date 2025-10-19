@@ -194,12 +194,19 @@ export default function SuperAdminExams() {
       exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-  
-
     const matchesOrganization =
       organizationFilter === "all" || exam.organization.name === organizationFilter;
 
     return matchesSearch && matchesOrganization;
+  });
+
+  // Debug logging for filter functionality
+  console.log("🔍 Filter Debug:", {
+    totalExams: exams.length,
+    filteredExams: filteredExams.length,
+    organizationFilter,
+    searchTerm,
+    availableOrganizations: organizations
   });
 
   if (loading) {
@@ -243,11 +250,9 @@ export default function SuperAdminExams() {
 
           <div className="flex space-x-2">
             <Select value={organizationFilter} onValueChange={setOrganizationFilter}>
-              <SelectTrigger className="w-[180px]">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-400" />
-                  <SelectValue placeholder="Filter by organization" />
-                </div>
+              <SelectTrigger className="w-[220px]">
+                <Filter className="h-4 w-4 text-gray-400 mr-2" />
+                <SelectValue placeholder="All Organizations" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Organizations</SelectItem>
@@ -257,7 +262,19 @@ export default function SuperAdminExams() {
               </SelectContent>
             </Select>
 
-            
+            {(organizationFilter !== "all" || searchTerm) && (
+              <Button 
+                variant="outline" 
+                size="default"
+                onClick={() => {
+                  setOrganizationFilter("all");
+                  setSearchTerm("");
+                }}
+                className="gap-2"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -271,10 +288,20 @@ export default function SuperAdminExams() {
                 <BookOpen className="h-5 w-5 text-gray-600" />
                 Exams ({filteredExams.length})
               </CardTitle>
-              <CardDescription className="text-gray-600">
-                Showing {filteredExams.length} of {exams.length} total exams
+              <CardDescription className="text-gray-600 flex flex-wrap items-center gap-2">
+                <span>Showing {filteredExams.length} of {exams.length} total exams</span>
+                {organizationFilter !== "all" && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-300 font-semibold px-3 py-1 shadow-sm">
+                    🏢 Filtered by: {organizationFilter}
+                  </Badge>
+                )}
+                {searchTerm && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300 font-semibold px-3 py-1 shadow-sm">
+                    🔍 Search: "{searchTerm}"
+                  </Badge>
+                )}
                 {lastUpdated && (
-                  <span className="ml-2 text-xs">
+                  <span className="text-xs text-gray-500">
                     • Last updated: {lastUpdated.toLocaleTimeString()}
                   </span>
                 )}
