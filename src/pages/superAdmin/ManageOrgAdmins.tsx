@@ -264,21 +264,25 @@ export default function ManageOrgAdmins() {
                     <Select
                       value={formData.organization_id}
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, organization_id: value }))}
+                      getDisplayValue={(value) => {
+                        const org = organizations.find(org => org.id.toString() === value);
+                        return org ? org.name : value;
+                      }}
                     >
                       <SelectTrigger
                         className={`w-full border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-colors ${
                           formErrors.organization_id ? "border-red-300 focus:border-red-400 focus:ring-red-400/20" : ""
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                          <SelectValue placeholder="Select Organization" />
-                        </div>
+                        <SelectValue placeholder="Select Organization" />
                       </SelectTrigger>
                       <SelectContent>
                         {organizations.map((org) => (
                           <SelectItem key={org.id} value={org.id.toString()}>
-                            {org.name}
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-gray-400" />
+                              {org.name}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

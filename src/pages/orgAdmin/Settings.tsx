@@ -62,7 +62,6 @@ export default function Settings() {
     // Logo upload states
     const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string>('');
-    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
@@ -96,6 +95,16 @@ export default function Settings() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            // First, upload logo if there's a new one selected
+            if (selectedLogo) {
+                await orgAdminApi.uploadOrganizationLogo(selectedLogo);
+                // Clear selected logo after successful upload
+                setSelectedLogo(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
+            
             const updateData = {
                 name: settings.name,
                 description: settings.description,
@@ -114,6 +123,11 @@ export default function Settings() {
             console.log('Filtered data to send:', filteredData);
             
             await orgAdminApi.updateMyOrganization(filteredData);
+            
+            // Reload organization data to get the updated logo URL if logo was uploaded
+            if (selectedLogo) {
+                await loadOrganizationData();
+            }
             
             setSavedMessage("Settings saved successfully!");
             setTimeout(() => setSavedMessage(""), 3000);
@@ -163,37 +177,6 @@ export default function Settings() {
                 setLogoPreview(e.target?.result as string || '');
             };
             reader.readAsDataURL(file);
-        }
-    };
-
-    const handleLogoUpload = async () => {
-        if (!selectedLogo) return;
-        
-        try {
-            setIsUploadingLogo(true);
-            await orgAdminApi.uploadOrganizationLogo(selectedLogo);
-            
-            // Reload organization data to get the new logo URL
-            await loadOrganizationData();
-            
-            // Clear selected file
-            setSelectedLogo(null);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-            
-            toast({
-                title: "Success",
-                description: "Logo uploaded successfully!",
-            });
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to upload logo.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsUploadingLogo(false);
         }
     };
 
@@ -550,18 +533,13 @@ export default function Settings() {
                                                     <Upload className="w-4 h-4" />
                                                     {logoPreview && !selectedLogo ? 'Change Logo' : 'Upload Logo'}
                                                 </label>
-                                                {selectedLogo && (
-                                                    <Button
-                                                        type="button"
-                                                        onClick={handleLogoUpload}
-                                                        disabled={isUploadingLogo}
-                                                        className="bg-blue-600 hover:bg-blue-700"
-                                                    >
-                                                        {isUploadingLogo ? 'Uploading...' : 'Save Logo'}
-                                                    </Button>
-                                                )}
                                             </div>
                                         </div>
+                                        {selectedLogo && (
+                                            <p className="text-sm text-blue-600 mt-2">
+                                                New logo selected. Click "Save Profile" to apply changes.
+                                            </p>
+                                        )}
                                         <p className="text-xs text-gray-500 mt-1">Recommended size: 200x200px, Max file size: 5MB</p>
                                     </div>
                                     <div className="flex justify-end pt-4 border-t border-gray-200">
@@ -571,7 +549,7 @@ export default function Settings() {
                                             className="bg-blue-600 hover:bg-blue-700 text-white"
                                         >
                                             <Save className="w-4 h-4 mr-2" />
-                                            {isSaving ? "Saving..." : "Save Profile"}
+                                            {isSaving ? "Saving..." : selectedLogo ? "Save Profile & Logo" : "Save Profile"}
                                         </Button>
                                     </div>
                                 </CardContent>

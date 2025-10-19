@@ -8,10 +8,13 @@ interface SelectProps {
   onValueChange?: (value: string) => void
   children: React.ReactNode
   className?: string
+  getDisplayValue?: (value: string) => string
 }
 
 interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
+  selectedValue?: string
+  getDisplayValue?: (value: string) => string
 }
 
 interface SelectValueProps {
@@ -36,9 +39,13 @@ interface SelectItemProps {
   disabled?: boolean
 }
 
-const Select: React.FC<SelectProps> = ({ value, onValueChange, children, className, ...props }) => {
+const Select: React.FC<SelectProps> = ({ value, onValueChange, children, className, getDisplayValue, ...props }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [selectedValue, setSelectedValue] = React.useState(value)
+  
+  React.useEffect(() => {
+    setSelectedValue(value)
+  }, [value])
   
   const handleSelect = (itemValue: string) => {
     setSelectedValue(itemValue)
@@ -53,7 +60,9 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children, classNa
           if (child.type === SelectTrigger) {
             return React.cloneElement(child, {
               onClick: () => setIsOpen(!isOpen),
-              'aria-expanded': isOpen
+              'aria-expanded': isOpen,
+              selectedValue: selectedValue,
+              getDisplayValue: getDisplayValue
             } as any)
           }
           if (child.type === SelectContent) {
@@ -71,20 +80,31 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children, classNa
 }
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, children, ...props }, ref) => (
-    <button
-      ref={ref}
-      type="button"
-      className={cn(
-        "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronDown className="h-4 w-4 opacity-50" />
-    </button>
-  )
+  ({ className, children, selectedValue, getDisplayValue, ...props }, ref) => {
+    const displayValue = selectedValue && getDisplayValue ? getDisplayValue(selectedValue) : selectedValue;
+
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={cn(
+          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        {...props}
+      >
+        {React.Children.map(children, child => {
+          if (React.isValidElement(child) && child.type === SelectValue) {
+            return React.cloneElement(child, {
+              value: displayValue
+            } as any)
+          }
+          return child
+        })}
+        <ChevronDown className="h-4 w-4 opacity-50" />
+      </button>
+    )
+  }
 )
 SelectTrigger.displayName = "SelectTrigger"
 
