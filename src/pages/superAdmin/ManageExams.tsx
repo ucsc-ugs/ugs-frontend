@@ -138,6 +138,86 @@ export default function SuperAdminExams() {
 
   // Note: Exam status toggle functionality can be implemented using updateSuperAdminExamStatus from the API service
 
+  // Export functionality
+  const handleExportData = () => {
+    try {
+      // Check if there's data to export
+      if (filteredExams.length === 0) {
+        alert('No exam data available to export');
+        return;
+      }
+
+      // Prepare data for export with comprehensive information
+      const exportData = filteredExams.map(exam => ({
+        'Exam ID': exam.id,
+        'Exam Name': exam.name,
+        'Organization': exam.organization.name,
+        'Description': exam.description || 'N/A',
+        'Price (LKR)': exam.price,
+        'Duration (minutes)': exam.duration,
+        'Students Enrolled': exam.students_count || exam.total_students_enrolled || exam.registered_students_count || 0,
+        'Pass Rate (%)': exam.passing_rate,
+        'Status': exam.is_active ? 'Active' : 'Inactive',
+        'Created Date': new Date(exam.created_at).toLocaleDateString('en-LK'),
+        'Created Time': new Date(exam.created_at).toLocaleTimeString('en-LK'),
+        'Organization ID': exam.organization.id
+      }));
+
+      // Convert to CSV with proper escaping
+      const headers = Object.keys(exportData[0]);
+      const csvContent = [
+        // Add BOM for proper UTF-8 handling in Excel
+        '\uFEFF',
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            // Escape commas, quotes, and newlines in CSV
+            if (typeof value === 'string') {
+              if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                return `"${value.replace(/"/g, '""')}"`;
+              }
+            }
+            return value;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with timestamp and filter info
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const filterSuffix = organizationFilter !== 'all' ? `-${organizationFilter.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const searchSuffix = searchTerm ? `-search` : '';
+      const filename = `super-admin-exams${filterSuffix}${searchSuffix}-${timestamp}.csv`;
+      link.setAttribute('download', filename);
+      
+      // Trigger download
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up object URL
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      console.log(`✅ Successfully exported ${exportData.length} exams to ${filename}`);
+      
+      // Show success message
+      const message = `Successfully exported ${exportData.length} exam${exportData.length === 1 ? '' : 's'} to CSV file`;
+      // You can replace alert with a toast notification if available
+      alert(message);
+      
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      alert('Failed to export data. Please try again.');
+    }
+  };
+
   const filteredExams = exams.filter(exam => {
     const matchesSearch =
       exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -242,7 +322,13 @@ export default function SuperAdminExams() {
                 <RefreshCw className="h-4 w-4" />
                 Refresh Now
               </Button>
-              <Button variant="outline" className="gap-2">
+              <Button 
+                variant="outline" 
+                className="gap-2" 
+                onClick={handleExportData}
+                disabled={loading || filteredExams.length === 0}
+                title={filteredExams.length === 0 ? "No data to export" : `Export ${filteredExams.length} exams to CSV`}
+              >
                 <Plus className="h-4 w-4" />
                 Export Data
               </Button>
