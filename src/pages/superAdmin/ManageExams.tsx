@@ -23,7 +23,7 @@ interface Exam {
   registered_students_count?: number; // Keep for backward compatibility
   students_count?: number; // New field from backend
   total_students_enrolled?: number; // Alternative field from backend
-  passing_rate: number;
+  passing_rate?: number; // Optional - may not be available for all exams
 }
 
 export default function SuperAdminExams() {
@@ -77,7 +77,8 @@ export default function SuperAdminExams() {
             id: examsData[0].id,
             name: examsData[0].name,
             students_count: examsData[0].students_count,
-            total_students_enrolled: examsData[0].total_students_enrolled
+            total_students_enrolled: examsData[0].total_students_enrolled,
+            passing_rate: examsData[0].passing_rate
           } : null
         });
         
@@ -126,7 +127,7 @@ export default function SuperAdminExams() {
         'Price (LKR)': exam.price,
         'Duration (minutes)': exam.duration,
         'Students Enrolled': exam.students_count || exam.total_students_enrolled || exam.registered_students_count || 0,
-        'Pass Rate (%)': exam.passing_rate,
+        'Pass Rate (%)': exam.passing_rate !== undefined && exam.passing_rate !== null ? `${exam.passing_rate.toFixed(1)}%` : 'N/A',
         'Status': exam.is_active ? 'Active' : 'Inactive',
         'Created Date': new Date(exam.created_at).toLocaleDateString('en-LK'),
         'Created Time': new Date(exam.created_at).toLocaleTimeString('en-LK'),
@@ -193,12 +194,19 @@ export default function SuperAdminExams() {
       exam.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-  
-
     const matchesOrganization =
       organizationFilter === "all" || exam.organization.name === organizationFilter;
 
     return matchesSearch && matchesOrganization;
+  });
+
+  // Debug logging for filter functionality
+  console.log("🔍 Filter Debug:", {
+    totalExams: exams.length,
+    filteredExams: filteredExams.length,
+    organizationFilter,
+    searchTerm,
+    availableOrganizations: organizations
   });
 
   if (loading) {
@@ -242,11 +250,9 @@ export default function SuperAdminExams() {
 
           <div className="flex space-x-2">
             <Select value={organizationFilter} onValueChange={setOrganizationFilter}>
-              <SelectTrigger className="w-[180px]">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-400" />
-                  <SelectValue placeholder="Filter by organization" />
-                </div>
+              <SelectTrigger className="w-[220px]">
+                <Filter className="h-4 w-4 text-gray-400 mr-2" />
+                <SelectValue placeholder="All Organizations" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Organizations</SelectItem>
@@ -256,7 +262,19 @@ export default function SuperAdminExams() {
               </SelectContent>
             </Select>
 
-            
+            {(organizationFilter !== "all" || searchTerm) && (
+              <Button 
+                variant="outline" 
+                size="default"
+                onClick={() => {
+                  setOrganizationFilter("all");
+                  setSearchTerm("");
+                }}
+                className="gap-2"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -270,10 +288,20 @@ export default function SuperAdminExams() {
                 <BookOpen className="h-5 w-5 text-gray-600" />
                 Exams ({filteredExams.length})
               </CardTitle>
-              <CardDescription className="text-gray-600">
-                Showing {filteredExams.length} of {exams.length} total exams
+              <CardDescription className="text-gray-600 flex flex-wrap items-center gap-2">
+                <span>Showing {filteredExams.length} of {exams.length} total exams</span>
+                {organizationFilter !== "all" && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-300 font-semibold px-3 py-1 shadow-sm">
+                    🏢 Filtered by: {organizationFilter}
+                  </Badge>
+                )}
+                {searchTerm && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300 font-semibold px-3 py-1 shadow-sm">
+                    🔍 Search: "{searchTerm}"
+                  </Badge>
+                )}
                 {lastUpdated && (
-                  <span className="ml-2 text-xs">
+                  <span className="text-xs text-gray-500">
                     • Last updated: {lastUpdated.toLocaleTimeString()}
                   </span>
                 )}
@@ -353,16 +381,27 @@ export default function SuperAdminExams() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div 
-                            className={`h-2.5 rounded-full ${
-                              exam.passing_rate > 70 ? 'bg-green-600' : 
-                              exam.passing_rate > 50 ? 'bg-yellow-500' : 'bg-red-600'
-                            }`} 
-                            style={{ width: `${exam.passing_rate}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm">{exam.passing_rate}%</span>
+                        {exam.passing_rate !== undefined && exam.passing_rate !== null ? (
+                          <>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className={`h-2.5 rounded-full ${
+                                  exam.passing_rate > 70 ? 'bg-green-600' : 
+                                  exam.passing_rate > 50 ? 'bg-yellow-500' : 'bg-red-600'
+                                }`} 
+                                style={{ width: `${Math.min(100, Math.max(0, exam.passing_rate))}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-medium">{exam.passing_rate.toFixed(1)}%</span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-100 rounded-full h-2.5">
+                              <div className="h-2.5 rounded-full bg-gray-400 w-0"></div>
+                            </div>
+                            <span className="text-sm text-gray-500">N/A</span>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     
