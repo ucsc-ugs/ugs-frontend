@@ -44,7 +44,7 @@ import SuperAdminSettings from "./pages/superAdmin/SuperAdminSettings";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MyRegisteredExams from "./pages/test";
-import ViewPastExams from "./pages/orgAdmin/test";
+import Verify from "./pages/Verify";
 
 function App() {
   return (
@@ -57,6 +57,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/verify" element={<Verify />} />
             <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/universities" element={<UniversitiesPage />} />
             <Route path="/exams/:codeName" element={<ExamDetails />} />
