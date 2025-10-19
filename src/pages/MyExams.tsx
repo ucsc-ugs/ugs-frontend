@@ -17,7 +17,10 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
-  Banknote
+  Banknote,
+  Mail,
+  Phone,
+  Building2
 } from "lucide-react";
 import axios from "axios";
 
@@ -36,6 +39,9 @@ interface ExamWithPivot {
     description: string;
     logo: string | null;
     status: string;
+    contact_email?: string;
+    phone_number?: string;
+    address?: string;
   };
   available_exam_dates?: Array<{
     id: number;
@@ -461,6 +467,45 @@ const MyExams = () => {
                     >
                       <X className="h-5 w-5" />
                     </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Organization Contact Information */}
+              {selectedExam?.organization && (selectedExam.organization.contact_email || selectedExam.organization.phone_number || selectedExam.organization.address) && (
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-gray-600" />
+                    Organization Contact Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {selectedExam.organization.contact_email && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Email</p>
+                        </div>
+                        <p className="text-sm text-gray-900 font-medium">{selectedExam.organization.contact_email}</p>
+                      </div>
+                    )}
+                    {selectedExam.organization.phone_number && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Phone className="h-4 w-4 text-green-500" />
+                          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Phone</p>
+                        </div>
+                        <p className="text-sm text-gray-900 font-medium">{selectedExam.organization.phone_number}</p>
+                      </div>
+                    )}
+                    {selectedExam.organization.address && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200 md:col-span-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MapPin className="h-4 w-4 text-red-500" />
+                          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Address</p>
+                        </div>
+                        <p className="text-sm text-gray-900 font-medium">{selectedExam.organization.address}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
