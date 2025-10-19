@@ -1,597 +1,239 @@
 // src/pages/orgAdmin/ManageStudents.tsx
-import { useState, useMemo, useCallback } from "react";
-import {
-    Search,
-    Download,
-    Eye,
-    CreditCard,
-    User,
-    GraduationCap,
-    Phone,
-    Mail,
-    Clock,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
-    Users,
-    FileText,
-    ChevronLeft,
-    ChevronRight,
-    RefreshCw,
-    MoreVertical
-} from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import axios from "axios";
+import { Search, Eye, Users, ChevronLeft, ChevronRight, BookUser, Globe, Flag } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-interface Student {
+// --- STEP 1: Define TypeScript interfaces to match the API response ---
+// These types describe the structure of the data coming from your Laravel backend.
+interface Organization {
+    id: number;
+    name: string;
+}
+
+interface StudentDetails {
+    id: number;
+    local: boolean;
+    passport_nic: string;
+}
+
+interface StudentUser {
     id: number;
     name: string;
     email: string;
-    phone?: string;
-    nicPassport: string;
-    registrationNumber: string;
-    university: string;
-    address?: string;
-    registeredExams: RegisteredExam[];
-    totalExams: number;
-    registrationDate: string;
-    lastActivity?: string;
-    status: "active" | "inactive" | "suspended";
+    created_at: string;
+    // The backend StudentResource returns a flattened shape. Support both shapes:
+    // - legacy: { student: { local, passport_nic, ... }, exams: [] }
+    // - resource: { nic, registration, local, exams_count, organization: string }
+    organization?: Organization | string; // may be an object or a string (resource returns name)
+    student?: StudentDetails | null;
+    nic?: string;
+    registration?: string;
+    local?: boolean;
+    exams?: any[]; // list when nested
+    exams_count?: number; // when returned from resource
+    last_exam_name?: string;
+    last_registered_at?: string;
+    paid_exam_names?: string[];
+    paid_exam_count?: number;
 }
 
-interface RegisteredExam {
-    examId: number;
-    examName: string;
-    examDate: string;
-    paymentStatus: "paid" | "pending" | "failed" | "refunded";
-    paymentAmount: number;
-    registrationDate: string;
-    examStatus: "upcoming" | "completed" | "missed" | "cancelled";
-    score?: number;
-    grade?: string;
+interface PaginationMeta {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
 }
 
-interface PaymentHistory {
-    id: number;
-    examName: string;
-    amount: number;
-    date: string;
-    status: "paid" | "pending" | "failed" | "refunded";
-    method: string;
-    transactionId?: string;
-}
+// --- Helper to create a configured Axios instance ---
+// FIX: Removed process.env which is not available in the browser and causes a crash.
+// The baseURL should be configured in your build environment (e.g., using Vite's import.meta.env.VITE_API_URL)
+// For now, we'll hardcode it to the common local development URL.
+const apiClient = axios.create({
+    baseURL: 'http://localhost:8000/api',
+    withCredentials: false, // Changed to false to avoid CORS issues
+});
 
-const mockStudents: Student[] = [
-    {
-        id: 1,
-        name: "K.A. Perera",
-        email: "kasun.perera@student.ucsc.cmb.ac.lk",
-        phone: "+94771234567",
-        nicPassport: "200012345678",
-        registrationNumber: "CS/2020/001",
-        university: "University of Colombo School of Computing",
-        address: "123 Galle Road, Colombo 03",
-        registeredExams: [
-            {
-                examId: 1,
-                examName: "Data Structures & Algorithms",
-                examDate: "2025-08-15T09:00:00",
-                paymentStatus: "paid",
-                paymentAmount: 2500,
-                registrationDate: "2025-07-01T10:30:00",
-                examStatus: "upcoming"
-            },
-            {
-                examId: 2,
-                examName: "Database Management Systems",
-                examDate: "2025-07-20T14:00:00",
-                paymentStatus: "paid",
-                paymentAmount: 3000,
-                registrationDate: "2025-06-15T14:20:00",
-                examStatus: "completed",
-                score: 85,
-                grade: "A"
-            }
-        ],
-        totalExams: 2,
-        registrationDate: "2025-06-15T14:20:00",
-        lastActivity: "2025-07-15T16:45:00",
-        status: "active"
-    },
-    {
-        id: 2,
-        name: "S.M. Fernando",
-        email: "sachini.fernando@student.ucsc.cmb.ac.lk",
-        phone: "+94771234568",
-        nicPassport: "199987654321",
-        registrationNumber: "CS/2019/045",
-        university: "University of Colombo School of Computing",
-        address: "456 Kandy Road, Malabe",
-        registeredExams: [
-            {
-                examId: 3,
-                examName: "Software Engineering",
-                examDate: "2025-09-10T10:00:00",
-                paymentStatus: "pending",
-                paymentAmount: 2800,
-                registrationDate: "2025-07-10T11:15:00",
-                examStatus: "upcoming"
-            }
-        ],
-        totalExams: 1,
-        registrationDate: "2025-07-10T11:15:00",
-        lastActivity: "2025-07-14T09:30:00",
-        status: "active"
-    },
-    {
-        id: 3,
-        name: "T.D. Silva",
-        email: "tharaka.silva@student.ucsc.cmb.ac.lk",
-        nicPassport: "200156789012",
-        registrationNumber: "IT/2021/078",
-        university: "University of Colombo School of Computing",
-        registeredExams: [
-            {
-                examId: 1,
-                examName: "Data Structures & Algorithms",
-                examDate: "2025-08-15T09:00:00",
-                paymentStatus: "failed",
-                paymentAmount: 2500,
-                registrationDate: "2025-07-05T15:45:00",
-                examStatus: "upcoming"
-            },
-            {
-                examId: 4,
-                examName: "Computer Networks",
-                examDate: "2025-07-25T09:30:00",
-                paymentStatus: "paid",
-                paymentAmount: 3200,
-                registrationDate: "2025-06-20T12:30:00",
-                examStatus: "completed",
-                score: 78,
-                grade: "B+"
-            }
-        ],
-        totalExams: 2,
-        registrationDate: "2025-06-20T12:30:00",
-        lastActivity: "2025-07-12T14:20:00",
-        status: "active"
-    },
-    {
-        id: 4,
-        name: "N.K. Rajapaksha",
-        email: "nimali.rajapaksha@student.ucsc.cmb.ac.lk",
-        phone: "+94771234569",
-        nicPassport: "200278901234",
-        registrationNumber: "CS/2022/012",
-        university: "University of Colombo School of Computing",
-        address: "789 Nugegoda Road, Nugegoda",
-        registeredExams: [
-            {
-                examId: 5,
-                examName: "Mathematics for Computing",
-                examDate: "2025-08-05T14:00:00",
-                paymentStatus: "paid",
-                paymentAmount: 2200,
-                registrationDate: "2025-07-08T09:20:00",
-                examStatus: "upcoming"
-            }
-        ],
-        totalExams: 1,
-        registrationDate: "2025-07-08T09:20:00",
-        lastActivity: "2025-07-16T11:10:00",
-        status: "active"
-    },
-    {
-        id: 5,
-        name: "P.R. Wijesinghe",
-        email: "priyanka.wijesinghe@student.ucsc.cmb.ac.lk",
-        nicPassport: "200034567890",
-        registrationNumber: "CS/2020/156",
-        university: "University of Colombo School of Computing",
-        registeredExams: [
-            {
-                examId: 2,
-                examName: "Database Management Systems",
-                examDate: "2025-07-20T14:00:00",
-                paymentStatus: "refunded",
-                paymentAmount: 3000,
-                registrationDate: "2025-06-25T16:00:00",
-                examStatus: "cancelled"
-            }
-        ],
-        totalExams: 1,
-        registrationDate: "2025-06-25T16:00:00",
-        lastActivity: "2025-07-01T10:15:00",
-        status: "inactive"
+// Interceptor to add auth token to requests if available
+apiClient.interceptors.request.use(config => {
+    // Use the canonical storage key used across the app: 'auth_token'
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-];
+    return config;
+});
 
-const examOptions = [
-    { value: "all", label: "All Exams" },
-    { value: "Data Structures & Algorithms", label: "Data Structures & Algorithms" },
-    { value: "Database Management Systems", label: "Database Management Systems" },
-    { value: "Software Engineering", label: "Software Engineering" },
-    { value: "Computer Networks", label: "Computer Networks" },
-    { value: "Mathematics for Computing", label: "Mathematics for Computing" }
-];
-
-const paymentStatusOptions = [
-    { value: "all", label: "All Payments" },
-    { value: "paid", label: "Paid" },
-    { value: "pending", label: "Pending" },
-    { value: "failed", label: "Failed" },
-    { value: "refunded", label: "Refunded" }
-];
-
-const statusOptions = [
-    { value: "all", label: "All Status" },
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "suspended", label: "Suspended" }
-];
-
-const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-        case "paid": return "bg-green-100 text-green-800";
-        case "pending": return "bg-yellow-100 text-yellow-800";
-        case "failed": return "bg-red-100 text-red-800";
-        case "refunded": return "bg-blue-100 text-blue-800";
-        default: return "bg-gray-100 text-gray-800";
-    }
-};
-
-const getPaymentStatusIcon = (status: string) => {
-    switch (status) {
-        case "paid": return <CheckCircle className="w-3 h-3" />;
-        case "pending": return <Clock className="w-3 h-3" />;
-        case "failed": return <XCircle className="w-3 h-3" />;
-        case "refunded": return <RefreshCw className="w-3 h-3" />;
-        default: return <AlertCircle className="w-3 h-3" />;
-    }
-};
-
-const getStudentStatusColor = (status: string) => {
-    switch (status) {
-        case "active": return "bg-green-100 text-green-800";
-        case "inactive": return "bg-gray-100 text-gray-800";
-        case "suspended": return "bg-red-100 text-red-800";
-        default: return "bg-gray-100 text-gray-800";
-    }
-};
 
 export default function ManageStudents() {
+    // --- STEP 2: Update state management for students, loading, and API data ---
+    const [students, setStudents] = useState<StudentUser[]>([]);
+    const [meta, setMeta] = useState<PaginationMeta | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedExam, setSelectedExam] = useState("all");
-    const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("all");
-    const [selectedStatus, setSelectedStatus] = useState("all");
-    const [dateRange, setDateRange] = useState({ start: "", end: "" });
-    const [students, setStudents] = useState<Student[]>(mockStudents);
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-    const [showStudentModal, setShowStudentModal] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [openPopoverId, setOpenPopoverId] = useState<number | null>(null);
-    const [isExporting, setIsExporting] = useState(false);
+    const [page, setPage] = useState(1);
 
-    // Live search with debounce effect
-    const filteredStudents = useMemo(() => {
-        return students.filter(student => {
-            const matchesSearch =
-                student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                student.nicPassport.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                student.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    // Detail modal state
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<StudentUser | null>(null);
+    const [detailData, setDetailData] = useState<any | null>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
 
-            const matchesExam = selectedExam === "all" ||
-                student.registeredExams.some(exam => exam.examName === selectedExam);
+    // --- STEP 3: Create a function to fetch data from the API ---
+    // useCallback ensures this function is not recreated on every render, which is good practice.
+    const fetchStudents = useCallback(async (currentPage: number, query: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            // Construct query parameters for pagination and search
+            const params = new URLSearchParams({
+                page: String(currentPage),
+                per_page: '10', // Or make this dynamic
+            });
+            if (query) {
+                params.append('q', query);
+            }
 
-            const matchesPaymentStatus = selectedPaymentStatus === "all" ||
-                student.registeredExams.some(exam => exam.paymentStatus === selectedPaymentStatus);
-
-            const matchesStatus = selectedStatus === "all" || student.status === selectedStatus;
-
-            const matchesDateRange = (!dateRange.start || !dateRange.end) ||
-                (new Date(student.registrationDate) >= new Date(dateRange.start) &&
-                    new Date(student.registrationDate) <= new Date(dateRange.end));
-
-            return matchesSearch && matchesExam && matchesPaymentStatus && matchesStatus && matchesDateRange;
-        });
-    }, [students, searchTerm, selectedExam, selectedPaymentStatus, selectedStatus, dateRange]);
-
-    // Pagination
-    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
-    const paginatedStudents = filteredStudents.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
-
-    // Statistics
-    const stats = useMemo(() => {
-        const total = students.length;
-        const active = students.filter(s => s.status === "active").length;
-        const totalRegistrations = students.reduce((sum, s) => sum + s.totalExams, 0);
-        const paidStudents = students.filter(s =>
-            s.registeredExams.some(exam => exam.paymentStatus === "paid")
-        ).length;
-        const pendingPayments = students.filter(s =>
-            s.registeredExams.some(exam => exam.paymentStatus === "pending")
-        ).length;
-        const totalRevenue = students.reduce((sum, s) =>
-            sum + s.registeredExams
-                .filter(exam => exam.paymentStatus === "paid")
-                .reduce((examSum, exam) => examSum + exam.paymentAmount, 0), 0
-        );
-
-        return { total, active, totalRegistrations, paidStudents, pendingPayments, totalRevenue };
-    }, [students]);
-
-    const handleViewStudent = useCallback((student: Student) => {
-        setSelectedStudent(student);
-        setShowStudentModal(true);
-        setOpenPopoverId(null);
+            const response = await apiClient.get(`/students?${params.toString()}`);
+            
+            setStudents(response.data.data);
+            setMeta(response.data.meta);
+            
+        } catch (err: any) {
+            console.error("Failed to fetch students:", err);
+            console.error("Response data:", err.response?.data);
+            console.error("Response status:", err.response?.status);
+            console.error("Request URL:", err.config?.url);
+            setError(err.response?.data?.message || err.message || "An error occurred while fetching data.");
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    const handleExportData = useCallback(async (format: 'csv' | 'excel') => {
-        setIsExporting(true);
+    // --- useEffect hook to trigger the initial data fetch ---
+    useEffect(() => {
+        fetchStudents(page, searchTerm);
+    }, [page, searchTerm, fetchStudents]);
+
+    // --- Actions: Org Admin is view-only ---
+    const handleViewStudent = async (student: StudentUser) => {
+        setSelectedStudent(student);
+        setDetailOpen(true);
+        setDetailLoading(true);
+        setDetailError(null);
+        setDetailData(null);
         try {
-            // Simulate export process
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            const exportData = filteredStudents.map(student => ({
-                Name: student.name,
-                Email: student.email,
-                Phone: student.phone || 'N/A',
-                'NIC/Passport': student.nicPassport,
-                'Registration No.': student.registrationNumber,
-                University: student.university,
-                'Total Exams': student.totalExams,
-                Status: student.status,
-                'Registration Date': formatDate(student.registrationDate),
-                'Last Activity': student.lastActivity ? formatDate(student.lastActivity) : 'N/A'
-            }));
-
-            // In a real app, you would use a library like xlsx or csv-parser
-            console.log(`Exporting ${exportData.length} records as ${format.toUpperCase()}`);
-
-            // Show success toast (you would implement actual toast notification)
-            alert(`Successfully exported ${exportData.length} student records as ${format.toUpperCase()}`);
-        } catch (error) {
-            alert(`Failed to export data: ${error}`);
+            const res = await apiClient.get(`/students/${student.id}`);
+            // API returns { message, data }
+            const data = res.data?.data ?? student;
+            setDetailData(data);
+        } catch (e: any) {
+            console.error('Failed to fetch student detail', e);
+            setDetailError(e.response?.data?.message || e.message || 'Failed to load student details');
+            // fallback to row data so modal still shows something
+            setDetailData(student);
         } finally {
-            setIsExporting(false);
+            setDetailLoading(false);
         }
-    }, [filteredStudents]);
-
+    };
+    
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
+        return new Date(dateString).toLocaleDateString('en-GB', {
             day: 'numeric',
+            month: 'short',
             year: 'numeric'
         });
     };
 
-    const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    const formatCurrency = (amount: number) => {
-        return `Rs. ${amount.toLocaleString()}`;
-    };
+    // --- useMemo to calculate stats only when students array changes ---
+    const stats = useMemo(() => {
+        // Use top-level `local` when available, otherwise fall back to nested `student.local`.
+        const localStudents = students.filter(s => (s.local ?? s.student?.local) === true).length;
+        const foreignStudents = students.filter(s => {
+            const isLocal = s.local ?? s.student?.local;
+            return isLocal === false;
+        }).length;
+        return { localStudents, foreignStudents };
+    }, [students]);
 
     return (
-        <div className="min-h-screen">
-            <div className="max-w-7xl mx-auto p-4 lg:p-6">
+        <div className="min-h-screen p-4 lg:p-6">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 rounded-xl">
-                            <GraduationCap className="w-6 h-6 text-blue-600" />
+                            <Users className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Student Management</h1>
-                            <p className="text-gray-600 text-sm">View and manage all registered students across all exams</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+                            <p className="text-gray-600 text-sm">View students registered for exams in your organization</p>
                         </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" disabled={isExporting}>
-                                    <Download className="w-4 h-4 mr-2" />
-                                    {isExporting ? "Exporting..." : "Export"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48" align="end">
-                                <div className="flex flex-col space-y-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="justify-start"
-                                        onClick={() => handleExportData('csv')}
-                                        disabled={isExporting}
-                                    >
-                                        <FileText className="w-4 h-4 mr-2" />
-                                        Export as CSV
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="justify-start"
-                                        onClick={() => handleExportData('excel')}
-                                        disabled={isExporting}
-                                    >
-                                        <FileText className="w-4 h-4 mr-2" />
-                                        Export as Excel
-                                    </Button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
                     </div>
                 </div>
 
-                {/* Statistics Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                {/* Stats Cards - Updated for Students */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Students</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                                </div>
-                                <Users className="w-8 h-8 text-blue-600" />
-                            </div>
+                        <CardContent className="p-4 flex items-center justify-between">
+                           <div>
+                                <p className="text-sm text-gray-600">Total Students</p>
+                                <p className="text-2xl font-bold text-gray-900">{meta?.total ?? '...'}</p>
+                           </div>
+                           <Users className="w-8 h-8 text-blue-600" />
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Active Students</p>
-                                    <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                                </div>
-                                <CheckCircle className="w-8 h-8 text-green-600" />
-                            </div>
+                     <Card>
+                        <CardContent className="p-4 flex items-center justify-between">
+                           <div>
+                                <p className="text-sm text-gray-600">Local Students</p>
+                                <p className="text-2xl font-bold text-green-600">{loading ? '...' : stats.localStudents}</p>
+                           </div>
+                           <Flag className="w-8 h-8 text-green-600" />
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Registrations</p>
-                                    <p className="text-2xl font-bold text-blue-600">{stats.totalRegistrations}</p>
-                                </div>
-                                <FileText className="w-8 h-8 text-blue-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Paid Students</p>
-                                    <p className="text-2xl font-bold text-green-600">{stats.paidStudents}</p>
-                                </div>
-                                <CheckCircle className="w-8 h-8 text-green-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Pending Payments</p>
-                                    <p className="text-2xl font-bold text-yellow-600">{stats.pendingPayments}</p>
-                                </div>
-                                <Clock className="w-8 h-8 text-yellow-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Revenue</p>
-                                    <p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.totalRevenue)}</p>
-                                </div>
-                                <CreditCard className="w-8 h-8 text-purple-600" />
-                            </div>
+                     <Card>
+                        <CardContent className="p-4 flex items-center justify-between">
+                           <div>
+                                <p className="text-sm text-gray-600">Foreign Students</p>
+                                <p className="text-2xl font-bold text-purple-600">{loading ? '...' : stats.foreignStudents}</p>
+                           </div>
+                           <Globe className="w-8 h-8 text-purple-600" />
                         </CardContent>
                     </Card>
                 </div>
+
 
                 {/* Filters */}
                 <Card className="mb-6">
                     <CardContent className="p-6">
-                        <div className="flex flex-col lg:flex-row gap-4">
-                            <div className="flex-1 relative">
-                                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name, email, NIC/passport, or registration number..."
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <select
-                                    value={selectedExam}
-                                    onChange={(e) => setSelectedExam(e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    {examOptions.map(exam => (
-                                        <option key={exam.value} value={exam.value}>{exam.label}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    value={selectedPaymentStatus}
-                                    onChange={(e) => setSelectedPaymentStatus(e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    {paymentStatusOptions.map(status => (
-                                        <option key={status.value} value={status.value}>{status.label}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    value={selectedStatus}
-                                    onChange={(e) => setSelectedStatus(e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    {statusOptions.map(status => (
-                                        <option key={status.value} value={status.value}>{status.label}</option>
-                                    ))}
-                                </select>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="date"
-                                        value={dateRange.start}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Start date"
-                                    />
-                                    <input
-                                        type="date"
-                                        value={dateRange.end}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="End date"
-                                    />
-                                </div>
-                            </div>
+                        <div className="flex-1 relative">
+                            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search students by name, email, or Passport/NIC..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setPage(1); // Reset to first page on new search
+                                }}
+                            />
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Students Table */}
+                {/* Students Table - View-only for Org Admin */}
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5" />
-                            Students ({filteredStudents.length})
+                            <BookUser className="w-5 h-5" />
+                            Students ({meta?.total ?? 0})
                         </CardTitle>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">Show:</span>
-                            <select
-                                value={itemsPerPage}
-                                onChange={(e) => {
-                                    setItemsPerPage(Number(e.target.value));
-                                    setCurrentPage(1);
-                                }}
-                                className="px-2 py-1 border border-gray-300 rounded text-sm"
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                            </select>
-                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -599,124 +241,84 @@ export default function ManageStudents() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Student</TableHead>
-                                        <TableHead>Registration</TableHead>
-                                        <TableHead>Exams</TableHead>
-                                        <TableHead>Payment Status</TableHead>
-                                        <TableHead>Registered</TableHead>
+                                        <TableHead>Passport / NIC</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Exam Name</TableHead>
+                                        <TableHead>Date of Registration</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {paginatedStudents.map((student) => {
-                                        const primaryPaymentStatus = student.registeredExams.length > 0
-                                            ? student.registeredExams[0].paymentStatus
-                                            : "pending";
-
-                                        return (
-                                            <TableRow key={student.id}>
+                                    {loading ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-10">Loading...</TableCell></TableRow>
+                                    ) : error ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-10 text-red-500">{error}</TableCell></TableRow>
+                                    ) : students.length === 0 ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-10">No students found.</TableCell></TableRow>
+                                    ) : (
+                                        students.map((user) => (
+                                            <TableRow key={user.id}>
                                                 <TableCell>
-                                                    <div className="space-y-1">
-                                                        <div className="font-medium">{student.name}</div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Mail className="w-3 h-3 text-gray-400" />
-                                                            <span className="text-sm text-gray-500">{student.email}</span>
-                                                        </div>
-                                                        {student.phone && (
-                                                            <div className="flex items-center gap-2">
-                                                                <Phone className="w-3 h-3 text-gray-400" />
-                                                                <span className="text-sm text-gray-500">{student.phone}</span>
-                                                            </div>
+                                                    <div>
+                                                        <div className="font-medium">{user.name}</div>
+                                                        <div className="text-sm text-gray-500">{user.email}</div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm">{user.student?.passport_nic ?? user.nic ?? '—'}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {((user.local ?? user.student?.local) !== undefined) ? (
+                                                        <Badge className={(user.local ?? user.student?.local) ? "bg-green-100 text-green-800" : "bg-purple-100 text-purple-800"}>
+                                                            {(user.local ?? user.student?.local) ? 'Local' : 'Foreign'}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-gray-100 text-gray-700">N/A</Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm flex items-center gap-1 flex-wrap">
+                                                        {Array.isArray(user.paid_exam_names) && user.paid_exam_names.length > 0 ? (
+                                                            <>
+                                                                <span>{user.paid_exam_names.slice(0,2).join(', ')}</span>
+                                                                {(user.paid_exam_count && user.paid_exam_count > 2) && (
+                                                                    <span className="text-xs text-gray-500">+{user.paid_exam_count - 2} more</span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span>—</span>
                                                         )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="text-sm">
-                                                        <div className="font-medium">{student.registrationNumber}</div>
-                                                        <div className="text-gray-500">{student.nicPassport}</div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="text-sm">
-                                                        <div className="font-medium">{student.totalExams} exam(s)</div>
-                                                        <div className="text-gray-500">
-                                                            {student.registeredExams.slice(0, 2).map(exam => exam.examName).join(", ")}
-                                                            {student.registeredExams.length > 2 && "..."}
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge className={`${getPaymentStatusColor(primaryPaymentStatus)} flex items-center gap-1 w-fit`}>
-                                                        {getPaymentStatusIcon(primaryPaymentStatus)}
-                                                        <span className="capitalize">{primaryPaymentStatus}</span>
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="text-sm">
-                                                        {formatDate(student.registrationDate)}
-                                                    </div>
+                                                    <div className="text-sm">{user.last_registered_at ? formatDate(user.last_registered_at) : '—'}</div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Popover open={openPopoverId === student.id} onOpenChange={(open) => setOpenPopoverId(open ? student.id : null)}>
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="ghost" size="sm">
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-48" align="end">
-                                                            <div className="flex flex-col space-y-1">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="justify-start"
-                                                                    onClick={() => handleViewStudent(student)}
-                                                                >
-                                                                    <Eye className="w-4 h-4 mr-2" />
-                                                                    View Profile
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="justify-start text-orange-600"
-                                                                >
-                                                                    <XCircle className="w-4 h-4 mr-2" />
-                                                                    Disable Student
-                                                                </Button>
-                                                            </div>
-                                                        </PopoverContent>
-                                                    </Popover>
+                                                    <Button variant="outline" size="sm" onClick={() => handleViewStudent(user)}>
+                                                        <Eye className="w-4 h-4 mr-2" />
+                                                        View
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
-                                        );
-                                    })}
+                                        ))
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
-
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between mt-4">
-                                <div className="text-sm text-gray-600">
-                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length} students
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
+                        {/* Pagination Controls */}
+                        {meta && meta.last_page > 1 && !loading && (
+                            <div className="flex items-center justify-between pt-4 border-t">
+                                <span className="text-sm text-gray-600">
+                                    Page {meta.current_page} of {meta.last_page} ({meta.total} results)
+                                </span>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Previous
                                     </Button>
-                                    <span className="text-sm">
-                                        Page {currentPage} of {totalPages}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
+                                    <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === meta.last_page}>
+                                        Next
+                                        <ChevronRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>
                             </div>
@@ -724,156 +326,96 @@ export default function ManageStudents() {
                     </CardContent>
                 </Card>
 
-                {/* Empty State */}
-                {filteredStudents.length === 0 && (
-                    <Card className="mt-6">
-                        <CardContent className="text-center py-12">
-                            <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No students found</h3>
-                            <p className="text-gray-500 mb-4">
-                                {searchTerm || selectedExam !== "all" || selectedPaymentStatus !== "all" || selectedStatus !== "all"
-                                    ? "Try adjusting your filters to see more results."
-                                    : "No students have registered yet."}
-                            </p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Student Profile Modal */}
-                {showStudentModal && selectedStudent && (
-                    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
-                        <div className="bg-white rounded-lg w-full max-w-4xl mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
-                            <div className="p-6 border-b border-gray-200">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold">Student Profile</h3>
-                                    <Button variant="ghost" size="sm" onClick={() => setShowStudentModal(false)}>
-                                        ×
-                                    </Button>
-                                </div>
+                {/* Student Detail Modal */}
+                {detailOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden">
+                            <div className="px-6 py-4 border-b">
+                                <h3 className="text-lg font-semibold">Student Details</h3>
                             </div>
-
-                            <div className="p-6">
-                                {/* Basic Info */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <User className="w-5 h-5" />
-                                                Personal Information
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-3">
+                            <div className="p-6 space-y-4">
+                                {detailLoading ? (
+                                    <div className="text-center text-gray-600">Loading details...</div>
+                                ) : detailError ? (
+                                    <div className="text-center text-red-600">{detailError}</div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-sm font-medium text-gray-600">Full Name</label>
-                                                <p className="text-sm">{selectedStudent.name}</p>
+                                                <div className="text-sm text-gray-500">Name</div>
+                                                <div className="font-medium">{detailData?.name}</div>
                                             </div>
                                             <div>
-                                                <label className="text-sm font-medium text-gray-600">Email</label>
-                                                <p className="text-sm">{selectedStudent.email}</p>
+                                                <div className="text-sm text-gray-500">Email</div>
+                                                <div className="font-medium">{detailData?.email}</div>
                                             </div>
                                             <div>
-                                                <label className="text-sm font-medium text-gray-600">Phone</label>
-                                                <p className="text-sm">{selectedStudent.phone || 'N/A'}</p>
+                                                <div className="text-sm text-gray-500">Passport / NIC</div>
+                                                <div className="font-medium">{detailData?.student?.passport_nic ?? detailData?.nic ?? '—'}</div>
                                             </div>
                                             <div>
-                                                <label className="text-sm font-medium text-gray-600">NIC/Passport</label>
-                                                <p className="text-sm">{selectedStudent.nicPassport}</p>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-600">Address</label>
-                                                <p className="text-sm">{selectedStudent.address || 'N/A'}</p>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <GraduationCap className="w-5 h-5" />
-                                                Academic Information
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-3">
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-600">Registration Number</label>
-                                                <p className="text-sm">{selectedStudent.registrationNumber}</p>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-600">University</label>
-                                                <p className="text-sm">{selectedStudent.university}</p>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-600">Registration Date</label>
-                                                <p className="text-sm">{formatDateTime(selectedStudent.registrationDate)}</p>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-600">Last Activity</label>
-                                                <p className="text-sm">{selectedStudent.lastActivity ? formatDateTime(selectedStudent.lastActivity) : 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-600">Status</label>
-                                                <Badge className={`${getStudentStatusColor(selectedStudent.status)} mt-1`}>
-                                                    {selectedStudent.status}
-                                                </Badge>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                {/* Registered Exams */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <FileText className="w-5 h-5" />
-                                            Registered Exams ({selectedStudent.registeredExams.length})
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-4">
-                                            {selectedStudent.registeredExams.map((exam, index) => (
-                                                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <h4 className="font-medium">{exam.examName}</h4>
-                                                        <Badge className={`${getPaymentStatusColor(exam.paymentStatus)} flex items-center gap-1`}>
-                                                            {getPaymentStatusIcon(exam.paymentStatus)}
-                                                            {exam.paymentStatus}
+                                                <div className="text-sm text-gray-500">Type</div>
+                                                <div>
+                                                    {((detailData?.local ?? detailData?.student?.local) !== undefined) ? (
+                                                        <Badge className={(detailData?.local ?? detailData?.student?.local) ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}>
+                                                            {(detailData?.local ?? detailData?.student?.local) ? 'Local' : 'Foreign'}
                                                         </Badge>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                        <div>
-                                                            <label className="font-medium text-gray-600">Exam Date</label>
-                                                            <p>{formatDateTime(exam.examDate)}</p>
-                                                        </div>
-                                                        <div>
-                                                            <label className="font-medium text-gray-600">Amount</label>
-                                                            <p>{formatCurrency(exam.paymentAmount)}</p>
-                                                        </div>
-                                                        <div>
-                                                            <label className="font-medium text-gray-600">Registration</label>
-                                                            <p>{formatDate(exam.registrationDate)}</p>
-                                                        </div>
-                                                        <div>
-                                                            <label className="font-medium text-gray-600">Status</label>
-                                                            <p className="capitalize">{exam.examStatus}</p>
-                                                        </div>
-                                                        {exam.score && (
-                                                            <>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-600">Score</label>
-                                                                    <p>{exam.score}%</p>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="font-medium text-gray-600">Grade</label>
-                                                                    <p>{exam.grade}</p>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
+                                                    ) : (
+                                                        <Badge className="bg-gray-100 text-gray-700">N/A</Badge>
+                                                    )}
                                                 </div>
-                                            ))}
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Joined</div>
+                                                <div className="font-medium">{detailData?.created_at ? formatDate(detailData.created_at) : '—'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm text-gray-500">Exam Registrations</div>
+                                                <div className="font-medium">
+                                                    {detailData?.exams_count
+                                                        ?? (Array.isArray(detailData?.exam_registrations) ? detailData.exam_registrations.length : undefined)
+                                                        ?? (Array.isArray(detailData?.exams) ? detailData.exams.length : 0)}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
+
+                                        {/* Exams list from API with status */}
+                                        {Array.isArray(detailData?.exam_registrations) && detailData.exam_registrations.length > 0 && (
+                                            <div className="pt-2">
+                                                <div className="text-sm text-gray-500 mb-2">Registered Exams</div>
+                                                <div className="border rounded-md overflow-hidden">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Exam</TableHead>
+                                                                <TableHead>Code</TableHead>
+                                                                <TableHead>Exam Date</TableHead>
+                                                                <TableHead>Status</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {detailData.exam_registrations.map((ex: any, idx: number) => (
+                                                                <TableRow key={ex.id ?? idx}>
+                                                                    <TableCell className="whitespace-nowrap">{ex.name ?? ex.title ?? `Exam #${ex.id ?? idx + 1}`}</TableCell>
+                                                                    <TableCell className="whitespace-nowrap text-gray-700">{ex.code ?? '—'}</TableCell>
+                                                                    <TableCell className="whitespace-nowrap text-gray-700">{ex.exam_date ? new Date(ex.exam_date).toLocaleDateString() : '—'}</TableCell>
+                                                                    <TableCell>
+                                                                        <Badge className={ex.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                                                            {ex.completed ? 'Completed' : 'Upcoming'}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <div className="px-6 py-4 border-t flex justify-end">
+                                <Button variant="outline" onClick={() => { setDetailOpen(false); setSelectedStudent(null); setDetailData(null); }}>Close</Button>
                             </div>
                         </div>
                     </div>
@@ -882,3 +424,4 @@ export default function ManageStudents() {
         </div>
     );
 }
+

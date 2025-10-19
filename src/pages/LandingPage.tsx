@@ -118,11 +118,11 @@ export default function LandingPage() {
   // const handleInitiateRegistration = () => navigate("/portal/register");
   const handleContactUs = () => navigate("/contact-us");
   const handleAccessPortal = () => {
-    navigate("/portal"); // Navigate to home page with sidebar
+    navigate("/portal/register"); // Navigate to home page with sidebar
   };
 
   const handleStudentPortal = () => {
-    navigate("/portal"); // Navigate to home page with sidebar
+    navigate("/portal/register"); // Navigate to home page with sidebar
   };
 
   const handleRegister = () => {

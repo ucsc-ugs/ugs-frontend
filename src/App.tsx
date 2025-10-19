@@ -1,12 +1,12 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { Toaster } from "@/components/ui/toaster";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/SuperAdminProtectedRoute";
 import OrgAdminProtectedRoute from "@/components/OrgAdminProtectedRoute";
-import Announcements from "@/pages/Announcements";
 import Home from "@/pages/Home";
-import Register from "@/pages/Register";
 import MyExams from "@/pages/MyExams";
 import MyResults from "@/pages/MyResults";
 import Notifications from "@/pages/Notifications";
@@ -18,10 +18,10 @@ import ExamDetails from "@/pages/ExamDetails";
 import Sidebar from "@/components/ui/sidebar";
 import OrgAdminSidebar from "@/components/ui/OrgAdminSidebar";
 import SignUpPage from "./pages/SignUpPage";
-import ContactUsForm from "./components/ui/ContactUsForm";
+import ContactUs from "./pages/ContactUs";
 import AdminDashboard from "@/pages/orgAdmin/OrgAdminHome";
-import AdminNotifications from "@/pages/orgAdmin/AdminNotifications";
 import ManageExams from "@/pages/orgAdmin/ManageExams";
+import Locations from "@/pages/orgAdmin/Locations";
 import CreateExam from "@/pages/orgAdmin/CreateExam";
 import PublishResults from "@/pages/orgAdmin/PublishResults";
 import FinanceDashboard from "@/pages/orgAdmin/FinanceDashboard";
@@ -40,21 +40,24 @@ import OrgAdminLoginPage from "@/pages/orgAdmin/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import Revenue from "./pages/superAdmin/Revenue";
 import SuperAdminExams from "./pages/superAdmin/ManageExams";
+import SuperAdminSettings from "./pages/superAdmin/SuperAdminSettings";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MyRegisteredExams from "./pages/test";
+import ViewPastExams from "./pages/orgAdmin/test";
 
 function App() {
   return (
-    <AuthProvider>
-      <SuperAdminAuthProvider>
-        <Router>
+    <ToastProvider>
+      <AuthProvider>
+        <SuperAdminAuthProvider>
+          <Router>
           <Routes>
             {/* Landing page */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/contact" element={<ContactUsForm />} />
+            <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/universities" element={<UniversitiesPage />} />
             <Route path="/exams/:codeName" element={<ExamDetails />} />
 
@@ -80,6 +83,7 @@ function App() {
                       <Route path="/logout" element={<SuperAdminLogout />} />
                       <Route path="/revenue" element={<Revenue />} />
                       <Route path="/exams" element={<SuperAdminExams />} />
+                      <Route path="/settings" element={<SuperAdminSettings />} />
                     </Routes>
                   </div>
                 </div>
@@ -94,11 +98,10 @@ function App() {
                   {/* CHANGE: Added ml-20 md:ml-64 to match sidebar width and prevent content hiding */}
                   <div className="ml-20 md:ml-64 p-6">
                     <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/register" element={<Register />} />
+                      <Route path="/" element={<Navigate to="/portal/register" replace />} />
+                      <Route path="/register" element={<Home />} />
                       <Route path="/my-exams" element={<MyExams />} />
                       <Route path="/my-results" element={<MyResults />} />
-                      <Route path="/announcements" element={<Announcements />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/logout" element={<Logout />} />
@@ -117,8 +120,8 @@ function App() {
                   <div className="ml-20 md:ml-64 p-6">
                     <Routes>
                       <Route path="/" element={<AdminDashboard />} />
-                      <Route path="/notifications" element={<AdminNotifications />} />
                       <Route path="/manage-exams" element={<ManageExams />} />
+                      <Route path="/locations" element={<Locations />} />
                       <Route path="/create-exam" element={<CreateExam />} />
                       <Route path="/publish-results" element={<PublishResults />} />
                       <Route path="/finance" element={<FinanceDashboard />} />
@@ -136,8 +139,10 @@ function App() {
 
           </Routes>
         </Router>
+        <Toaster />
       </SuperAdminAuthProvider>
     </AuthProvider>
+    </ToastProvider>
   );
 }
 

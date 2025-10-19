@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnnouncementModal from '@/components/AnnouncementModal';
 import {
@@ -40,6 +40,8 @@ interface Announcement {
     audience: 'all' | 'exam-specific' | 'department-specific';
     examId?: string;
     examTitle?: string;
+    examName?: string;
+    examCode?: string;
     // departmentId and departmentName removed
     // yearLevel removed
     expiryDate: string;
@@ -69,8 +71,16 @@ interface FileAttachment {
 
 
 export default function SetAnnouncements() {
+    // Track which popover is open (by announcement id)
+    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+
+    // Only open modal on explicit click
+    const handleAnnouncementClick = (announcement: Announcement) => {
+        setSelectedAnnouncement(announcement);
+        setModalOpen(true);
+    };
     // Add API_URL at the top of the component
     const API_URL =
         (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
@@ -83,18 +93,30 @@ export default function SetAnnouncements() {
 
     // State management
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterCategory, setFilterCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Reset filters handler
+    const handleResetFilters = () => {
+        setFilterStatus('all');
+        setFilterPriority('all');
+        setFilterCategory('all');
+        setSearchTerm('');
+    };
     const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([]);
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
 
     // Fetch announcements from backend
-    
-    const fetchAnnouncements = async () => {
+    const fetchAnnouncements = useCallback(async () => {
+        // Only show loading if there are no announcements yet (initial load)
+        if (announcements.length === 0) {
+            setIsLoading(true);
+        }
         try {
             const response = await axios.get(`${API_URL}/api/announcements`);
             setAnnouncements(response.data.map((a: any) => ({
@@ -104,6 +126,8 @@ export default function SetAnnouncements() {
                 audience: a.audience,
                 examId: a.exam_id,
                 examTitle: a.examTitle || '',
+                examName: a.exam_name || '',
+                examCode: a.exam_code || '',
                 // departmentId and departmentName removed
                 // yearLevel removed
                 expiryDate: a.expiry_date,
@@ -121,26 +145,38 @@ export default function SetAnnouncements() {
                 clickCount: a.click_count || 0,
                 attachments: a.attachments || [],
             })));
-        } catch (error) {
+            setIsLoading(false);
+        } catch {
             setNotification({ type: 'error', message: 'Failed to load announcements!' });
             setTimeout(() => setNotification(null), 3000);
+            setIsLoading(false);
         }
-    };
+    }, [API_URL, announcements.length]);
 
     useEffect(() => {
-        fetchAnnouncements();
-    }, []);
-
-    useEffect(() => {
-        // Fetch user id from backend
+        // Fetch user id from backend first
         const token = localStorage.getItem('auth_token');
         axios.get(
             `${API_URL}/api/user`,
             token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
         )
-            .then(res => setUserId(String(res.data.id)))
-            .catch(() => setUserId(null));
-    }, [API_URL]);
+            .then(res => {
+                setUserId(String(res.data.id));
+                // Fetch announcements after user ID is set
+                fetchAnnouncements();
+            })
+            .catch(() => {
+                setUserId(null);
+                // Still fetch announcements even if user fetch fails
+                fetchAnnouncements();
+            });
+
+        // Set up polling interval (background refresh)
+        const interval = setInterval(() => {
+            fetchAnnouncements();
+        }, 20000); // 20 seconds
+        return () => clearInterval(interval);
+    }, [API_URL, fetchAnnouncements]);
 
     // Filter announcements
     const filteredAnnouncements = announcements
@@ -158,15 +194,12 @@ export default function SetAnnouncements() {
                 announcement.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
             return matchesStatus && matchesPriority && matchesCategory && matchesSearch;
-        }).sort((a, b) => {
-            // Sort by pinned first, then by priority, then by creation date
+        })
+        .sort((a, b) => {
+            // Pinned first
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
-
-            const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-            const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-            if (priorityDiff !== 0) return priorityDiff;
-
+            // Within pinned/unpinned, latest created first
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
 
@@ -185,10 +218,13 @@ export default function SetAnnouncements() {
                     `${API_URL}/api/announcements/${id}`,
                     token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
                 );
+                // Close modal and clear selection AFTER successful deletion
+                setModalOpen(false);
+                setSelectedAnnouncement(null);
                 setNotification({ type: 'success', message: 'Announcement deleted successfully!' });
                 fetchAnnouncements(); // Refresh table
                 setTimeout(() => setNotification(null), 3000);
-            } catch (error) {
+            } catch {
                 setNotification({ type: 'error', message: 'Failed to delete announcement!' });
                 setTimeout(() => setNotification(null), 3000);
             }
@@ -204,7 +240,7 @@ export default function SetAnnouncements() {
             low: { color: 'bg-gray-100 text-gray-600', icon: Info, label: 'Low' }
         };
         const { color, icon: Icon, label } = config[priority];
-        
+
         return (
             <Badge variant="outline" className={`${color} flex items-center gap-1`}>
                 <Icon className="w-3 h-3" />
@@ -303,16 +339,29 @@ export default function SetAnnouncements() {
                         token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
                     )
                 ));
+                // Clear modal state in case the selected announcement was deleted
+                setModalOpen(false);
+                setSelectedAnnouncement(null);
                 setSelectedAnnouncements([]);
                 setNotification({ type: 'success', message: `${selectedAnnouncements.length} announcements deleted successfully!` });
                 fetchAnnouncements(); // Refresh table
                 setTimeout(() => setNotification(null), 3000);
-            } catch (error) {
+            } catch {
                 setNotification({ type: 'error', message: 'Failed to delete selected announcements!' });
                 setTimeout(() => setNotification(null), 3000);
             }
         }
     };
+    // Auto-close modal if selected announcement no longer exists
+    useEffect(() => {
+        if (modalOpen && selectedAnnouncement) {
+            const stillExists = announcements.some(a => a.id === selectedAnnouncement.id);
+            if (!stillExists) {
+                setModalOpen(false);
+                setSelectedAnnouncement(null);
+            }
+        }
+    }, [announcements, modalOpen, selectedAnnouncement]);
 
 
     const handleSelectAll = () => {
@@ -352,7 +401,7 @@ export default function SetAnnouncements() {
             setNotification({ type: 'success', message: 'Announcement pin status updated!' });
             fetchAnnouncements(); // Refresh table
             setTimeout(() => setNotification(null), 2000);
-        } catch (error) {
+        } catch {
             setNotification({ type: 'error', message: 'Failed to update pin status!' });
             setTimeout(() => setNotification(null), 3000);
         }
@@ -413,7 +462,16 @@ export default function SetAnnouncements() {
                                         <Filter className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <Select value={filterStatus} onValueChange={setFilterStatus}>
                                             <SelectTrigger className="w-36">
-                                                <SelectValue placeholder="Status" />
+                                                {filterStatus === 'all' ? (
+                                                    <span className="text-gray-500">Status</span>
+                                                ) : (
+                                                    <span>{
+                                                        filterStatus === 'active' ? 'Active' :
+                                                            filterStatus === 'expired' ? 'Expired' :
+                                                                filterStatus === 'draft' ? 'Draft' :
+                                                                    filterStatus === 'scheduled' ? 'Scheduled' : filterStatus
+                                                    }</span>
+                                                )}
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Status</SelectItem>
@@ -429,7 +487,11 @@ export default function SetAnnouncements() {
                                         <Star className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <Select value={filterPriority} onValueChange={setFilterPriority}>
                                             <SelectTrigger className="w-36">
-                                                <SelectValue placeholder="Priority" />
+                                                {filterPriority === 'all' ? (
+                                                    <span className="text-gray-500">Priority</span>
+                                                ) : (
+                                                    <span>{filterPriority.charAt(0).toUpperCase() + filterPriority.slice(1)}</span>
+                                                )}
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Priority</SelectItem>
@@ -445,7 +507,11 @@ export default function SetAnnouncements() {
                                         <Tag className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <Select value={filterCategory} onValueChange={setFilterCategory}>
                                             <SelectTrigger className="w-40">
-                                                <SelectValue placeholder="Category" />
+                                                {filterCategory === 'all' ? (
+                                                    <span className="text-gray-500">Category</span>
+                                                ) : (
+                                                    <span>{filterCategory.charAt(0).toUpperCase() + filterCategory.slice(1)}</span>
+                                                )}
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Categories</SelectItem>
@@ -457,6 +523,18 @@ export default function SetAnnouncements() {
                                             </SelectContent>
                                         </Select>
                                     </div>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleResetFilters}
+                                        className="h-8 px-3 text-xs flex items-center gap-1"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Reset Filters
+                                    </Button>
                                 </div>
                             </div>
 
@@ -479,7 +557,6 @@ export default function SetAnnouncements() {
                                         <span className="text-sm font-medium text-blue-900 mr-2">
                                             {selectedAnnouncements.length} selected:
                                         </span>
-
                                         <Button
                                             variant="destructive"
                                             size="sm"
@@ -494,10 +571,10 @@ export default function SetAnnouncements() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={handleSelectAll}
+                                    onClick={selectedAnnouncements.length > 0 ? () => setSelectedAnnouncements([]) : handleSelectAll}
                                 >
                                     <CheckSquare className="w-4 h-4 mr-1" />
-                                    {selectedAnnouncements.length === filteredAnnouncements.length ? 'Deselect All' : 'Select All'}
+                                    {selectedAnnouncements.length > 0 ? 'Deselect' : 'Select All'}
                                 </Button>
                             </div>
                         </div>
@@ -527,11 +604,14 @@ export default function SetAnnouncements() {
                                     {filteredAnnouncements.map((announcement) => (
                                         <TableRow
                                             key={announcement.id}
-                                            className={announcement.isPinned ? 'bg-yellow-50 cursor-pointer' : 'cursor-pointer'}
-                                            onClick={() => {
-                                                setSelectedAnnouncement(announcement);
-                                                setModalOpen(true);
-                                            }}
+                                            className={
+                                                announcement.isPinned
+                                                    ? 'bg-yellow-50 cursor-pointer'
+                                                    : announcement.audience === 'exam-specific'
+                                                        ? 'bg-orange-50/30 cursor-pointer'
+                                                        : 'bg-blue-50/20 cursor-pointer'
+                                            }
+                                            onClick={() => handleAnnouncementClick(announcement)}
                                         >
                                             <TableCell>
                                                 <input
@@ -583,21 +663,32 @@ export default function SetAnnouncements() {
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Users className="w-4 h-4 text-gray-400" />
-                                                    <span className="capitalize">
-                                                        {announcement.audience === 'all' ? 'All Students' :
-                                                            announcement.audience === 'exam-specific' ? (announcement.examTitle ? announcement.examTitle : 'Exam specific') :
-                                                                announcement.audience}
-                                                    </span>
+                                                    <div>
+                                                        <div className="capitalize">
+                                                            {announcement.audience === 'all' ? 'All Students' :
+                                                                announcement.audience === 'exam-specific' ? 'Exam Specific' :
+                                                                    announcement.audience}
+                                                        </div>
+                                                        {announcement.audience === 'exam-specific' && announcement.examName && (
+                                                            <div className="text-xs mt-0.5 bg-orange-100/60 text-orange-800 px-2 py-0.5 rounded inline-block">
+                                                                {announcement.examName}
+                                                                {announcement.examCode && <span className="ml-1 font-medium">({announcement.examCode})</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Popover>
+                                                <Popover open={openPopoverId === announcement.id} onOpenChange={(open) => setOpenPopoverId(open ? announcement.id : null)}>
                                                     <PopoverTrigger asChild>
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-8 w-8 p-0"
-                                                            onClick={e => e.stopPropagation()}
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                setOpenPopoverId(announcement.id);
+                                                            }}
                                                         >
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
@@ -607,7 +698,11 @@ export default function SetAnnouncements() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleTogglePin(announcement.id)}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await handleTogglePin(announcement.id);
+                                                                    setOpenPopoverId(null);
+                                                                }}
                                                                 className="w-full justify-start"
                                                             >
                                                                 <Pin className={`w-4 h-4 mr-2 ${announcement.isPinned ? 'text-orange-500' : 'text-gray-400'}`} />
@@ -616,7 +711,11 @@ export default function SetAnnouncements() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleEdit(announcement)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleEdit(announcement);
+                                                                    setOpenPopoverId(null);
+                                                                }}
                                                                 className="w-full justify-start"
                                                             >
                                                                 <Edit className="w-4 h-4 mr-2" />
@@ -625,7 +724,11 @@ export default function SetAnnouncements() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => handleDelete(announcement.id)}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    await handleDelete(announcement.id);
+                                                                    setOpenPopoverId(null);
+                                                                }}
                                                                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
                                                             >
                                                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -637,19 +740,15 @@ export default function SetAnnouncements() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-
-
-                                    <>
-                                        {/* ...existing JSX... */}
-                                        <AnnouncementModal
-                                            open={modalOpen}
-                                            onClose={() => setModalOpen(false)}
-                                            announcement={selectedAnnouncement}
-                                        />
-                                    </>
                                 </TableBody>
                             </Table>
-                            {filteredAnnouncements.length === 0 && (
+                            {isLoading && (
+                                <div className="text-center py-12">
+                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <p className="mt-4 text-gray-500">Loading announcements...</p>
+                                </div>
+                            )}
+                            {!isLoading && filteredAnnouncements.length === 0 && (
                                 <div className="text-center py-8 text-gray-500">
                                     No announcements found.
                                 </div>
@@ -657,6 +756,17 @@ export default function SetAnnouncements() {
                         </div>
                     </CardContent>
                 </Card>
+                {/* Modal for announcement details, only opens on explicit click */}
+                {modalOpen && selectedAnnouncement && (
+                    <AnnouncementModal
+                        open={modalOpen}
+                        onClose={() => {
+                            setModalOpen(false);
+                            setSelectedAnnouncement(null);
+                        }}
+                        announcement={selectedAnnouncement}
+                    />
+                )}
             </div>
         </div>
     )

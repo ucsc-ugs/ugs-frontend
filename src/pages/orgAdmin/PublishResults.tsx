@@ -1,5 +1,5 @@
 // src/pages/orgAdmin/PublishResults.tsx
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
     Upload,
     FileText,
@@ -15,20 +15,45 @@ import {
     Send,
     X,
     Info,
-    Users
+    Users,
+    Loader2
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
+
+interface ExamDate {
+    id: number;
+    date: string;
+    location?: string;
+    status?: string;
+    student_exams_count?: number;
+}
 
 interface Exam {
     id: number;
     name: string;
+    code_name: string;
+    description: string;
+    price: number;
+    organization_id: number;
+    exam_dates: ExamDate[];
+}
+
+// Flattened structure for display - each exam date becomes a separate card
+interface ExamDateCard {
+    id: number;
+    exam_id: number;
+    exam_name: string;
+    exam_code_name: string;
+    exam_description: string;
+    exam_price: number;
     date: string;
-    university: string;
-    totalStudents: number;
-    status: "completed" | "active" | "draft";
+    location?: string;
+    status?: string;
+    student_count: number;
 }
 
 interface ResultEntry {
@@ -47,40 +72,81 @@ interface ManualEntry {
     grade: string;
 }
 
-const mockExams: Exam[] = [
-    {
-        id: 1,
-        name: "Data Structures & Algorithms",
-        date: "2025-07-10",
-        university: "University of Colombo",
-        totalStudents: 125,
-        status: "completed"
-    },
-    {
-        id: 2,
-        name: "Database Management Systems",
-        date: "2025-07-08",
-        university: "University of Peradeniya",
-        totalStudents: 98,
-        status: "completed"
-    },
-    {
-        id: 3,
-        name: "Software Engineering",
-        date: "2025-07-12",
-        university: "University of Moratuwa",
-        totalStudents: 87,
-        status: "completed"
-    }
-];
+interface Student {
+    id: number;
+    index_number: string;
+    student_id: number;
+    student_name: string;
+    status: string;
+    attended: boolean;
+    result: string | null;
+    selected_exam_date_id: number;
+    assigned_location_id: number | null;
+}
 
-const mockStudents = [
-    { id: "CS/2020/001", name: "John Doe" },
-    { id: "CS/2020/002", name: "Jane Smith" },
-    { id: "CS/2020/003", name: "Michael Brown" },
-    { id: "CS/2020/004", name: "Sarah Wilson" },
-    { id: "CS/2020/005", name: "David Kumar" }
-];
+interface PublishedResult {
+    id: number;
+    index_number: string;
+    student_id: number;
+    student_name: string;
+    result: string;
+    attended: boolean;
+    status: string;
+    updated_at: string;
+}
+
+// Helper function to determine exam date status
+const getExamDateStatus = (date: string): "completed" | "active" | "draft" => {
+    const now = new Date();
+    const examDate = new Date(date);
+    
+    if (examDate < now) return "completed";
+    if (examDate > now) return "active";
+    return "draft";
+};
+
+// Helper function to flatten exams with their exam dates into separate cards
+const flattenExamDates = (exams: Exam[]): ExamDateCard[] => {
+    // Ensure exams is an array
+    if (!Array.isArray(exams)) {
+        console.error("flattenExamDates: exams is not an array:", exams);
+        return [];
+    }
+    
+    const flattened: ExamDateCard[] = [];
+    
+    exams.forEach(exam => {
+        // Ensure exam has exam_dates array
+        if (!exam.exam_dates || !Array.isArray(exam.exam_dates)) {
+            console.warn("Exam has no exam_dates:", exam);
+            return;
+        }
+        
+        exam.exam_dates.forEach(examDate => {
+            flattened.push({
+                id: examDate.id,
+                exam_id: exam.id,
+                exam_name: exam.name,
+                exam_code_name: exam.code_name,
+                exam_description: exam.description,
+                exam_price: exam.price,
+                date: examDate.date,
+                location: examDate.location,
+                status: examDate.status,
+                student_count: examDate.student_exams_count || 0
+            });
+        });
+    });
+    
+    // Sort by exam name, then by date
+    return flattened.sort((a, b) => {
+        if (a.exam_name !== b.exam_name) {
+            return a.exam_name.localeCompare(b.exam_name);
+        }
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+};
+
 
 const getGradeColor = (grade: string) => {
     switch (grade.toUpperCase()) {
@@ -105,13 +171,13 @@ const getGradeColor = (grade: string) => {
     }
 };
 
-const validateStudentId = (studentId: string): boolean => {
-    return mockStudents.some(student => student.id === studentId);
+const validateStudentId = (studentId: string, students: Student[]): boolean => {
+    return students.some(student => student.index_number === studentId);
 };
 
-const getStudentName = (studentId: string): string => {
-    const student = mockStudents.find(s => s.id === studentId);
-    return student ? student.name : "Unknown Student";
+const getStudentName = (studentId: string, students: Student[]): string => {
+    const student = students.find(s => s.index_number === studentId);
+    return student ? student.student_name : "Unknown Student";
 };
 
 const validateScore = (score: number): boolean => {
@@ -123,7 +189,7 @@ const validateGrade = (grade: string): boolean => {
     return validGrades.includes(grade.toUpperCase());
 };
 
-const parseCSVContent = (content: string): ResultEntry[] => {
+const parseCSVContent = (content: string, students: Student[]): ResultEntry[] => {
     const lines = content.trim().split('\n');
     const results: ResultEntry[] = [];
 
@@ -139,7 +205,7 @@ const parseCSVContent = (content: string): ResultEntry[] => {
         const numericScore = parseFloat(score);
 
         if (!studentId) errors.push("Student ID is required");
-        else if (!validateStudentId(studentId)) errors.push("Invalid Student ID");
+        else if (!validateStudentId(studentId, students)) errors.push("Invalid Student ID");
 
         if (!score) errors.push("Score is required");
         else if (isNaN(numericScore)) errors.push("Score must be a number");
@@ -151,7 +217,7 @@ const parseCSVContent = (content: string): ResultEntry[] => {
         results.push({
             id: `row-${index}`,
             studentId: studentId || "",
-            studentName: studentId ? getStudentName(studentId) : "",
+            studentName: studentId ? getStudentName(studentId, students) : "",
             score: numericScore || 0,
             grade: grade || "",
             isValid: errors.length === 0,
@@ -163,7 +229,13 @@ const parseCSVContent = (content: string): ResultEntry[] => {
 };
 
 export default function PublishResults() {
-    const [selectedExam, setSelectedExam] = useState<number | null>(null);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [examDateCards, setExamDateCards] = useState<ExamDateCard[]>([]);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [publishedResults, setPublishedResults] = useState<PublishedResult[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [selectedExamDate, setSelectedExamDate] = useState<number | null>(null);
     const [csvFile, setCsvFile] = useState<File | null>(null);
     const [results, setResults] = useState<ResultEntry[]>([]);
     const [manualEntry, setManualEntry] = useState<ManualEntry>({
@@ -175,10 +247,118 @@ export default function PublishResults() {
     const [isPublishing, setIsPublishing] = useState(false);
     const [isPublished, setIsPublished] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [editingResult, setEditingResult] = useState<PublishedResult | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    const selectedExamData = useMemo(() => {
-        return mockExams.find(exam => exam.id === selectedExam);
-    }, [selectedExam]);
+    // Fetch exams from API
+    useEffect(() => {
+        const fetchExams = async () => {
+            try {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    setError("No authentication token found");
+                    return;
+                }
+
+                const response = await axios.get("http://localhost:8000/api/exam-dates", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                console.log("API Response:", response.data); // Debug log
+
+                // Handle different response structures
+                let fetchedExams: Exam[] = [];
+                
+                if (response.data && response.data.data) {
+                    fetchedExams = Array.isArray(response.data.data) ? response.data.data : [];
+                } else if (Array.isArray(response.data)) {
+                    fetchedExams = response.data;
+                } else {
+                    console.error("Unexpected API response structure:", response.data);
+                    setError("Invalid response format from server");
+                    return;
+                }
+
+                console.log("Fetched exams:", fetchedExams); // Debug log
+                setExams(fetchedExams);
+                
+                // Flatten the exams into separate exam date cards
+                const flattened = flattenExamDates(fetchedExams);
+                setExamDateCards(flattened);
+            } catch (err: any) {
+                console.error(err);
+                setError(err.response?.data?.message || err.message || "Failed to fetch exams");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchExams();
+    }, []);
+
+    const selectedExamDateData = useMemo(() => {
+        return examDateCards.find(card => card.id === selectedExamDate);
+    }, [selectedExamDate, examDateCards]);
+
+    // Fetch students when exam date is selected
+    useEffect(() => {
+        const fetchStudents = async () => {
+            if (!selectedExamDate) {
+                setStudents([]);
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    setError("No authentication token found");
+                    return;
+                }
+
+                const response = await axios.get(`http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/students`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                setStudents(response.data.data.students || []);
+            } catch (err: any) {
+                console.error(err);
+                setError(err.response?.data?.message || err.message || "Failed to fetch students");
+            }
+        };
+
+        fetchStudents();
+    }, [selectedExamDate]);
+
+    // Fetch published results when exam date is selected
+    useEffect(() => {
+        const fetchPublishedResults = async () => {
+            if (!selectedExamDate) {
+                setPublishedResults([]);
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                    setError("No authentication token found");
+                    return;
+                }
+
+                const response = await axios.get(`http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/published-results`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                setPublishedResults(response.data.data.results || []);
+            } catch (err: any) {
+                console.error(err);
+                // Don't set error for published results as it's optional
+                setPublishedResults([]);
+            }
+        };
+
+        fetchPublishedResults();
+    }, [selectedExamDate]);
 
     const validResults = useMemo(() => {
         return results.filter(result => result.isValid);
@@ -201,11 +381,11 @@ export default function PublishResults() {
         const reader = new FileReader();
         reader.onload = (e) => {
             const content = e.target?.result as string;
-            const parsedResults = parseCSVContent(content);
+            const parsedResults = parseCSVContent(content, students);
             setResults(parsedResults);
         };
         reader.readAsText(file);
-    }, []);
+    }, [students]);
 
     const handleAddManualEntry = useCallback(() => {
         const { studentId, score, grade } = manualEntry;
@@ -218,7 +398,7 @@ export default function PublishResults() {
         const numericScore = parseFloat(score);
         const errors: string[] = [];
 
-        if (!validateStudentId(studentId)) errors.push("Invalid Student ID");
+        if (!validateStudentId(studentId, students)) errors.push("Invalid Student ID");
         if (isNaN(numericScore) || !validateScore(numericScore)) errors.push("Invalid score");
         if (!validateGrade(grade)) errors.push("Invalid grade");
 
@@ -230,7 +410,7 @@ export default function PublishResults() {
         const newEntry: ResultEntry = {
             id: `manual-${Date.now()}`,
             studentId,
-            studentName: getStudentName(studentId),
+            studentName: getStudentName(studentId, students),
             score: numericScore,
             grade: grade.toUpperCase(),
             isValid: errors.length === 0,
@@ -239,7 +419,7 @@ export default function PublishResults() {
 
         setResults(prev => [...prev, newEntry]);
         setManualEntry({ studentId: "", score: "", grade: "" });
-    }, [manualEntry, results]);
+    }, [manualEntry, results, students]);
 
     const handleRemoveResult = useCallback((id: string) => {
         setResults(prev => prev.filter(result => result.id !== id));
@@ -251,29 +431,54 @@ export default function PublishResults() {
             return;
         }
 
+        if (!selectedExamDate) {
+            alert('No exam date selected');
+            return;
+        }
+
         setIsPublishing(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                alert('No authentication token found');
+                return;
+            }
+
+            // Transform results to match API format
+            const resultsData = validResults.map(result => ({
+                index_number: result.studentId,
+                result: result.grade,
+                attended: true // Assuming all students with results attended
+            }));
+
+            const response = await axios.post(
+                `http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/publish-results`,
+                { results: resultsData },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
             setIsPublished(true);
             setShowConfirmModal(false);
             setShowSuccessModal(true);
-        } catch {
-            alert('Failed to publish results. Please try again.');
+        } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || 'Failed to publish results. Please try again.');
         } finally {
             setIsPublishing(false);
         }
-    }, [validResults]);
+    }, [validResults, selectedExamDate]);
 
     const downloadSampleCSV = useCallback(() => {
+        if (students.length === 0) {
+            alert('No students available for this exam date');
+            return;
+        }
+
         const sampleData = [
             "Student ID,Score,Grade",
-            "CS/2020/001,85,A",
-            "CS/2020/002,78,B+",
-            "CS/2020/003,92,A+",
-            "CS/2020/004,65,C+",
-            "CS/2020/005,58,C"
+            ...students.slice(0, 5).map(student => 
+                `${student.index_number},${Math.floor(Math.random() * 40) + 60},${['A', 'B+', 'B', 'C+', 'C'][Math.floor(Math.random() * 5)]}`
+            )
         ].join('\n');
 
         const blob = new Blob([sampleData], { type: 'text/csv' });
@@ -285,7 +490,80 @@ export default function PublishResults() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }, [students]);
+
+    const handleEditResult = useCallback((result: PublishedResult) => {
+        setEditingResult(result);
+        setShowEditModal(true);
     }, []);
+
+    const handleUpdateResult = useCallback(async () => {
+        if (!editingResult || !selectedExamDate) return;
+
+        setIsUpdating(true);
+        try {
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                alert('No authentication token found');
+                return;
+            }
+
+            const response = await axios.put(
+                `http://localhost:8000/api/admin/exam-dates/${selectedExamDate}/results/${editingResult.id}`,
+                {
+                    result: editingResult.result,
+                    attended: editingResult.attended
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Update the published results list
+            setPublishedResults(prev => 
+                prev.map(result => 
+                    result.id === editingResult.id 
+                        ? { ...result, ...response.data.data }
+                        : result
+                )
+            );
+
+            setShowEditModal(false);
+            setEditingResult(null);
+            alert('Result updated successfully!');
+        } catch (err: any) {
+            console.error(err);
+            alert(err.response?.data?.message || 'Failed to update result. Please try again.');
+        } finally {
+            setIsUpdating(false);
+        }
+    }, [editingResult, selectedExamDate]);
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen flex justify-center items-center">
+                <div className="flex items-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                    <span className="text-gray-600">Loading exams...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="min-h-screen flex justify-center items-center">
+                <div className="text-center">
+                    <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Exams</h2>
+                    <p className="text-red-600 mb-4">{error}</p>
+                    <Button onClick={() => window.location.reload()}>
+                        Try Again
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen">
@@ -316,7 +594,7 @@ export default function PublishResults() {
                                 <div>
                                     <h3 className="font-semibold text-green-900">Results Published Successfully!</h3>
                                     <p className="text-green-700 text-sm">
-                                        {validResults.length} students have been notified about their results for {selectedExamData?.name}
+                                        {validResults.length} students have been notified about their results for {selectedExamDateData?.exam_name} ({new Date(selectedExamDateData?.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
                                     </p>
                                 </div>
                             </div>
@@ -324,80 +602,103 @@ export default function PublishResults() {
                     </Card>
                 )}
 
-                {/* Exam Selection */}
+                {/* Exam Date Selection */}
                 <div className="mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {mockExams.map(exam => (
-                            <Card
-                                key={exam.id}
-                                className={`transition-all duration-200 hover:shadow-lg cursor-pointer ${selectedExam === exam.id ? 'ring-2 ring-blue-500' : ''
-                                    }`}
-                            >
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-lg leading-tight mb-2">{exam.name}</CardTitle>
-                                            <Badge
-                                                className={`${exam.status === 'completed'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : exam.status === 'active'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-gray-100 text-gray-800'
-                                                    } text-xs`}
-                                            >
-                                                {exam.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-1 gap-2 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <BookOpen className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-600">{exam.university}</span>
+                    {examDateCards.length === 0 ? (
+                        <Card className="text-center py-8">
+                            <CardContent>
+                                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Exam Dates Available</h3>
+                                <p className="text-gray-600">There are no past exam dates available for publishing results.</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {examDateCards.map(examDateCard => {
+                                const status = getExamDateStatus(examDateCard.date);
+                                
+                                return (
+                                    <Card
+                                        key={examDateCard.id}
+                                        className={`transition-all duration-200 hover:shadow-lg cursor-pointer ${selectedExamDate === examDateCard.id ? 'ring-2 ring-blue-500' : ''
+                                            }`}
+                                    >
+                                        <CardHeader className="pb-3">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <CardTitle className="text-lg leading-tight mb-2">{examDateCard.exam_name}</CardTitle>
+                                                    <Badge
+                                                        className={`${status === 'completed'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : status === 'active'
+                                                                ? 'bg-blue-100 text-blue-800'
+                                                                : 'bg-gray-100 text-gray-800'
+                                                            } text-xs`}
+                                                    >
+                                                        {status}
+                                                    </Badge>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Target className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-600">
-                                                    {new Date(exam.date).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Users className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-600">{exam.totalStudents} students</span>
-                                            </div>
-                                        </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <div className="space-y-3">
+                                                <div className="grid grid-cols-1 gap-2 text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <BookOpen className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-gray-600">{examDateCard.exam_code_name}</span>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        <Target className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-gray-600">
+                                                            {new Date(examDateCard.date).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {examDateCard.location && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Users className="w-4 h-4 text-gray-400" />
+                                                            <span className="text-gray-600">{examDateCard.location}</span>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        <Users className="w-4 h-4 text-gray-400" />
+                                                        <span className="text-gray-600">{examDateCard.student_count} students</span>
+                                                    </div>
+                                                </div>
 
-                                        <Button
-                                            onClick={() => setSelectedExam(exam.id)}
-                                            className={`w-full transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 ${selectedExam === exam.id ? 'border-blue-500 bg-blue-50 text-blue-700' : ''}`}
-                                            variant="outline"
-                                            disabled={exam.status !== 'completed'}
-                                        >
-                                            {selectedExam === exam.id ? (
-                                                <>
-                                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                                    Selected - Publish Results
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Send className="w-4 h-4 mr-2" />
-                                                    {exam.status === 'completed' ? 'Publish Results' : 'Not Available'}
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                                <Button
+                                                    onClick={() => setSelectedExamDate(examDateCard.id)}
+                                                    className={`w-full transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 ${selectedExamDate === examDateCard.id ? 'border-blue-500 bg-blue-50 text-blue-700' : ''}`}
+                                                    variant="outline"
+                                                    disabled={status !== 'completed'}
+                                                >
+                                                    {selectedExamDate === examDateCard.id ? (
+                                                        <>
+                                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                                            Selected - Publish Results
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Send className="w-4 h-4 mr-2" />
+                                                            {status === 'completed' ? 'Publish Results' : 'Not Available'}
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                    {selectedExamData && (
+                    {selectedExamDateData && (
                         <Card className="mt-6 border-blue-200">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -405,10 +706,14 @@ export default function PublishResults() {
                                         <CheckCircle className="w-5 h-5 text-blue-600" />
                                         <div>
                                             <h4 className="font-medium text-blue-900">
-                                                Selected: {selectedExamData.name}
+                                                Selected: {selectedExamDateData.exam_name}
                                             </h4>
                                             <p className="text-gray-600 text-sm">
-                                                Ready to upload and publish results for {selectedExamData.totalStudents} students
+                                                {new Date(selectedExamDateData.date).toLocaleDateString('en-US', {
+                                                    month: 'long',
+                                                    day: 'numeric',
+                                                    year: 'numeric'
+                                                })} - Ready to publish results for {selectedExamDateData.student_count} students
                                             </p>
                                         </div>
                                     </div>
@@ -416,7 +721,7 @@ export default function PublishResults() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => {
-                                            setSelectedExam(null);
+                                            setSelectedExamDate(null);
                                             setCsvFile(null);
                                             setResults([]);
                                             setManualEntry({ studentId: "", score: "", grade: "" });
@@ -431,7 +736,7 @@ export default function PublishResults() {
                     )}
                 </div>
 
-                {selectedExam && (
+                {selectedExamDate && (
                     <>
                         {/* File Upload Section */}
                         <Card className="mb-6">
@@ -502,13 +807,18 @@ export default function PublishResults() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Student ID
                                         </label>
-                                        <input
-                                            type="text"
+                                        <select
                                             value={manualEntry.studentId}
                                             onChange={(e) => setManualEntry(prev => ({ ...prev, studentId: e.target.value }))}
-                                            placeholder="e.g., CS/2020/001"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
+                                        >
+                                            <option value="">Select student...</option>
+                                            {students.map(student => (
+                                                <option key={student.index_number} value={student.index_number}>
+                                                    {student.index_number} - {student.student_name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -678,6 +988,72 @@ export default function PublishResults() {
                     </>
                 )}
 
+                {/* Published Results Section */}
+                {publishedResults.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FileText className="w-5 h-5" />
+                                Published Results ({publishedResults.length} students)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Student ID</TableHead>
+                                            <TableHead>Student Name</TableHead>
+                                            <TableHead>Result</TableHead>
+                                            <TableHead>Attended</TableHead>
+                                            <TableHead>Last Updated</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {publishedResults.map((result) => (
+                                            <TableRow key={result.id}>
+                                                <TableCell className="font-medium">{result.index_number}</TableCell>
+                                                <TableCell>{result.student_name}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={getGradeColor(result.result)}>
+                                                        {result.result}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {result.attended ? (
+                                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                                    ) : (
+                                                        <XCircle className="w-4 h-4 text-red-600" />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {new Date(result.updated_at).toLocaleDateString('en-US', {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEditResult(result)}
+                                                    >
+                                                        <FileText className="w-4 h-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Confirmation Modal */}
                 {showConfirmModal && (
                     <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
@@ -688,7 +1064,7 @@ export default function PublishResults() {
                                     <h3 className="text-lg font-semibold">Confirm Publication</h3>
                                 </div>
                                 <p className="text-gray-600 mb-4">
-                                    Are you sure you want to publish results for <strong>{selectedExamData?.name}</strong>?
+                                    Are you sure you want to publish results for <strong>{selectedExamDateData?.exam_name}</strong> on <strong>{selectedExamDateData?.date ? new Date(selectedExamDateData.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</strong>?
                                     This will notify <strong>{validResults.length} students</strong> about their results.
                                 </p>
                                 <p className="text-sm text-gray-500 mb-6">
@@ -727,7 +1103,7 @@ export default function PublishResults() {
                                     </div>
                                     <h3 className="text-lg font-semibold mb-2">Results Published Successfully!</h3>
                                     <p className="text-gray-600 mb-4">
-                                        {validResults.length} students have been notified about their results for {selectedExamData?.name}.
+                                        {validResults.length} students have been notified about their results for {selectedExamDateData?.exam_name} on {selectedExamDateData?.date ? new Date(selectedExamDateData.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}.
                                     </p>
 
                                     <div className="bg-gray-50 p-4 rounded-lg text-left mb-6">
@@ -755,6 +1131,87 @@ export default function PublishResults() {
                                 >
                                     Close
                                 </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Result Modal */}
+                {showEditModal && editingResult && (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm bg-black/30">
+                        <div className="bg-white rounded-lg w-full max-w-md mx-4 shadow-xl">
+                            <div className="p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                    <h3 className="text-lg font-semibold">Edit Result</h3>
+                                </div>
+                                
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Student
+                                        </label>
+                                        <p className="text-gray-900 font-medium">
+                                            {editingResult.index_number} - {editingResult.student_name}
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Grade
+                                        </label>
+                                        <select
+                                            value={editingResult.result}
+                                            onChange={(e) => setEditingResult(prev => prev ? { ...prev, result: e.target.value } : null)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="A+">A+</option>
+                                            <option value="A">A</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B">B</option>
+                                            <option value="B-">B-</option>
+                                            <option value="C+">C+</option>
+                                            <option value="C">C</option>
+                                            <option value="C-">C-</option>
+                                            <option value="D">D</option>
+                                            <option value="F">F</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={editingResult.attended}
+                                                onChange={(e) => setEditingResult(prev => prev ? { ...prev, attended: e.target.checked } : null)}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">Student attended the exam</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowEditModal(false);
+                                            setEditingResult(null);
+                                        }}
+                                        disabled={isUpdating}
+                                        className="flex-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleUpdateResult}
+                                        disabled={isUpdating}
+                                        className="flex-1"
+                                    >
+                                        {isUpdating ? "Updating..." : "Update Result"}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>

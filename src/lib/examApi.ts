@@ -5,13 +5,26 @@ interface ExamDate {
   exam_id?: number;
   date: string;
   location?: string;
+  locations?: Array<{
+    id: number;
+    location_name: string;
+    capacity: number;
+    pivot: {
+      priority: number;
+      current_registrations: number;
+    };
+  }>;
+  status?: 'upcoming' | 'completed' | 'cancelled';
   created_at?: string;
   updated_at?: string;
+  current_registrations?: number;
+  max_participants?: number;
 }
 
 interface ExamData {
   id?: number;
   name: string;
+  code_name?: string;
   description?: string;
   price: number;
   organization_id: number;
@@ -48,18 +61,39 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}): Promise<
     },
     ...options,
   };
-
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  const data = await response.json();
-
+  
   if (!response.ok) {
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { message: `Server returned ${response.status}: ${responseText.substring(0, 100)}` };
+    }
+    
+    const errorMessage = data.message || `Request failed with status ${response.status}`;
+    
     throw {
       status: response.status,
-      message: data.message || 'An error occurred',
+      message: errorMessage,
       errors: data.errors || {},
     };
   }
 
+  const responseText = await response.text();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (e) {
+    throw {
+      status: 500,
+      message: `Server returned invalid JSON. Response: ${responseText.substring(0, 100)}`,
+      errors: {},
+    };
+  }
+  
   return data;
 };
 
@@ -87,7 +121,81 @@ export const updateExam = async (id: number, examData: Partial<ExamData>): Promi
 };
 
 export const deleteExam = async (id: number): Promise<ApiResponse> => {
+  console.log('🗑️ deleteExam called with ID:', id, 'Type:', typeof id);
   return await apiRequest(`/exam/delete/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+// Test function to verify API connectivity
+export const testConnection = async (): Promise<any> => {
+  return await apiRequest('/debug/user-context');
+};
+
+// Exam Date API functions
+export const updateExamDateStatus = async (examDateId: number, status: 'upcoming' | 'completed' | 'cancelled'): Promise<ApiResponse<ExamDate>> => {
+  return await apiRequest(`/exam-date/${examDateId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+};
+
+// Add single exam date to existing exam
+export const addExamDate = async (examId: number, examDateData: {
+  date: string;
+  location?: string;
+  location_id?: number;
+  location_ids?: number[];
+}): Promise<ApiResponse<ExamDate>> => {
+  return await apiRequest(`/exam/${examId}/exam-dates`, {
+    method: 'POST',
+    body: JSON.stringify(examDateData),
+  });
+};
+
+// Add multiple exam dates to existing exam (bulk)
+export const addMultipleExamDates = async (examId: number, examDatesData: {
+  exam_dates: Array<{
+    date: string;
+    location?: string;
+    location_id?: number;
+    location_ids?: number[];
+  }>;
+}): Promise<ApiResponse<ExamDate[]>> => {
+  return await apiRequest(`/exam/${examId}/exam-dates/bulk`, {
+    method: 'POST',
+    body: JSON.stringify(examDatesData),
+  });
+};
+
+// Update exam type details only (name, code, description, price)
+export const updateExamType = async (examId: number, examTypeData: {
+  name: string;
+  code_name: string;
+  description?: string;
+  price: number;
+}): Promise<ApiResponse<ExamData>> => {
+  return await apiRequest(`/exam/${examId}/type`, {
+    method: 'PUT',
+    body: JSON.stringify(examTypeData),
+  });
+};
+
+// Update exam date details only (date, registration_deadline, locations)
+export const updateExamDate = async (examDateId: number, examDateData: {
+  date: string;
+  registration_deadline?: string;
+  location_ids: number[];
+}): Promise<ApiResponse<ExamDate>> => {
+  return await apiRequest(`/exam-date/${examDateId}`, {
+    method: 'PUT',
+    body: JSON.stringify(examDateData),
+  });
+};
+
+// Delete a specific exam date
+export const deleteExamDate = async (examDateId: number): Promise<ApiResponse> => {
+  return await apiRequest(`/exam-date/${examDateId}`, {
     method: 'DELETE',
   });
 };

@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
 import {
     BookOpen,
     Home,
@@ -18,40 +20,74 @@ import { Button } from "@/components/ui/button";
 import { BarChart } from "@/components/ui/charts/bar-chart";
 import { PieChart } from "@/components/ui/charts/pie-chart";
 
+const API_BASE_URL = 'http://localhost:8000/api';
+
 export default function AdminDashboard() {
-    // Mock data - replace with real API calls
-    const stats = {
-        totalExams: 24,
-        activeExams: 8,
-        totalRegistrations: 1243,
-        pendingRegistrations: 42,
-        totalRevenue: 1256000,
-        revenueChange: 12.5,
-        upcomingExams: 5,
-    };
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+    const [stats, setStats] = useState({
+        totalExams: 0,
+        activeExams: 0,
+        totalRegistrations: 0,
+        pendingRegistrations: 0,
+        totalRevenue: 0,
+        revenueChange: 0,
+        upcomingExams: 0,
+    });
+    const [registrationData, setRegistrationData] = useState<any[]>([]);
+    const [examDistribution, setExamDistribution] = useState<any[]>([]);
+    const [recentRegistrations, setRecentRegistrations] = useState<any[]>([]);
 
-    const registrationData = [
-        { name: 'Jan', value: 120 },
-        { name: 'Feb', value: 210 },
-        { name: 'Mar', value: 180 },
-        { name: 'Apr', value: 250 },
-        { name: 'May', value: 195 },
-        { name: 'Jun', value: 288 },
-    ];
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+                setLoading(true);
+                const token = localStorage.getItem('auth_token');
+                const response = await axios.get(`${API_BASE_URL}/org-admin/dashboard`, {
+                    headers: {
+                        Accept: 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                });
 
-    const examDistribution = [
-        { name: 'GCAT', value: 45 },
-        { name: 'GCCT', value: 30 },
-        { name: 'FIT', value: 15 },
-    ];
+                const data = response.data?.data;
+                if (data) {
+                    setStats(data.stats || stats);
+                    setRegistrationData(data.registrationTrends || []);
+                    setExamDistribution(data.examDistribution || []);
+                    setRecentRegistrations(data.recentRegistrations || []);
+                    setLastUpdated(new Date());
+                }
+            } catch (err: any) {
+                console.error('Failed to fetch dashboard:', err);
+                setError(err.response?.data?.message || err.message || 'Failed to load dashboard');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const recentRegistrations = [
-        { id: 1, student: "Havindu Wijayalath", exam: "GCCT", date: "2023-06-15", status: "completed" },
-        { id: 2, student: "Janusha Jayaweera", exam: "GCCT", date: "2023-06-14", status: "pending" },
-        { id: 3, student: "Ranuga Lekamwasam", exam: "FIT", date: "2023-06-14", status: "completed" },
-        { id: 4, student: "Mandinu Maneth", exam: "GCAT", date: "2023-06-13", status: "rejected" },
-        { id: 5, student: "Bhagya Semage", exam: "FIT", date: "2023-06-12", status: "completed" },
-    ];
+        fetchDashboard();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="text-gray-600 text-lg">Loading dashboard...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="text-center">
+                    <div className="text-red-600 text-lg mb-2">Error loading dashboard</div>
+                    <div className="text-gray-600">{error}</div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen">
@@ -69,13 +105,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        <span>Last updated: Today, 10:45 AM</span>
+                        <span>Last updated: {lastUpdated.toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        })}</span>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-y-8">
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 gap-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 gap-y-6">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-sm font-medium">Total Exams</CardTitle>
@@ -128,23 +171,7 @@ export default function AdminDashboard() {
                             </CardFooter>
                         </Card>
 
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium">Upcoming Exams</CardTitle>
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.upcomingExams}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Next exam in 3 days
-                                </p>
-                            </CardContent>
-                            <CardFooter className="p-2 pt-0">
-                                <Button variant="ghost" size="sm" className="text-xs h-6">
-                                    Schedule
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                       
                     </div>
 
                     {/* Charts Section */}

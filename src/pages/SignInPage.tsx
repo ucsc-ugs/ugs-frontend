@@ -69,7 +69,7 @@ export default function SignInPage() {
         // Small delay to ensure state is fully updated
         setTimeout(() => {
           // Redirect to the specified URL or default to portal
-          const destination = redirectUrl || "/portal/";
+          const destination = redirectUrl || "/portal/register";
           navigate(destination, { replace: true });
         }, 100);
       });
