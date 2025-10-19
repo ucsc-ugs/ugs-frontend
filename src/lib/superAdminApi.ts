@@ -300,6 +300,8 @@ export const updateSuperAdminExamStatus = async (examId: number, isActive: boole
     console.error("❌ Failed to update exam status:", error);
     throw error;
   }
+};
+
 // Revenue
 export const getRevenueData = async (timeRange: string = 'all_time'): Promise<SuperAdminApiResponse> => {
   return await adminApiRequest(`/revenue?range=${timeRange}`);
@@ -310,7 +312,7 @@ export const updateSuperAdminPassword = async (passwordData: {
   current_password: string; 
   password: string; 
   password_confirmation: string; 
-}): Promise<any> => {
+}): Promise<SuperAdminApiResponse> => {
   return await adminApiRequest('/profile/password', {
     method: 'PUT',
     body: JSON.stringify(passwordData),

@@ -24,9 +24,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Building2, BookOpen, PieChart } from "lucide-react";
+import { DollarSign, TrendingUp, Building2, BookOpen, PieChart as PieChartIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Button } from "@/components/ui/button";
 import { getRevenueData } from "@/lib/superAdminApi";
 
@@ -79,16 +79,21 @@ export default function RevenueDashboard() {
           monthly_revenues: Array.isArray(payload.monthly_revenues) ? payload.monthly_revenues : [],
         });
         setError("");
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching revenue data:", err);
         
         // Provide more helpful error messages
         let errorMessage = "Failed to fetch revenue data";
-        if (err.status === 404) {
-          errorMessage = "Revenue endpoint not found. Please contact the administrator.";
-        } else if (err.status === 401 || err.status === 403) {
-          errorMessage = "Authentication failed. Please log in again.";
-        } else if (err.message) {
+        if (err && typeof err === 'object' && 'status' in err) {
+          const error = err as { status: number; message?: string };
+          if (error.status === 404) {
+            errorMessage = "Revenue endpoint not found. Please contact the administrator.";
+          } else if (error.status === 401 || error.status === 403) {
+            errorMessage = "Authentication failed. Please log in again.";
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } else if (err instanceof Error) {
           errorMessage = err.message;
         }
         
@@ -255,7 +260,7 @@ export default function RevenueDashboard() {
                     </p>
                   </div>
                   <div className="bg-blue-50 p-3 rounded-lg">
-                    <PieChart className="h-8 w-8 text-blue-600" />
+                    <PieChartIcon className="h-8 w-8 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
@@ -295,7 +300,134 @@ export default function RevenueDashboard() {
 
       {/* Organizations Tab */}
       {activeTab === "organizations" && (
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <div className="space-y-6">
+          {/* Organization Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Distribution Pie Chart */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <PieChartIcon className="h-5 w-5 text-gray-600" />
+                  Revenue Distribution
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Revenue share by organization
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div style={{ width: '100%', height: '400px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={orgs.map((org, index) => ({
+                          name: org.name,
+                          value: org.revenue,
+                          fill: `hsl(${(index * 137.5) % 360}, 70%, 50%)`
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={120}
+                        innerRadius={40}
+                        fill="#8884d8"
+                        dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {orgs.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => formatCurrency(Number(value))} 
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                        }}
+                      />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={60}
+                        wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Revenue vs Commission Bar Chart */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <TrendingUp className="h-5 w-5 text-gray-600" />
+                  Revenue vs Commission
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Revenue and commission comparison by organization
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div style={{ width: '100%', height: '400px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={orgs} margin={{ top: 30, right: 40, left: 40, bottom: 100 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={0}
+                        textAnchor="middle"
+                        height={90}
+                        interval={0}
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        axisLine={{ stroke: '#cbd5e1' }}
+                        tickLine={{ stroke: '#cbd5e1' }}
+                      tickFormatter={(value) => {
+                        // Split long names into multiple lines (max 25 chars per line)
+                        if (value.length <= 25) return value;
+                        
+                        const words = value.split(' ');
+                        const lines = [];
+                        let currentLine = '';
+                        
+                        for (const word of words) {
+                          if ((currentLine + ' ' + word).length <= 25) {
+                            currentLine = currentLine ? currentLine + ' ' + word : word;
+                          } else {
+                            if (currentLine) lines.push(currentLine);
+                            currentLine = word;
+                          }
+                        }
+                        if (currentLine) lines.push(currentLine);
+                        
+                        // Limit to 3 lines max
+                        return lines.slice(0, 3).join('\n');
+                      }}
+                    />
+                    <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
+                    <Tooltip
+                      formatter={(value) => formatCurrency(Number(value))}
+                      labelFormatter={(label) => `Organization: ${label}`}
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff', 
+                        border: '1px solid #e2e8f0', 
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                      }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Bar dataKey="revenue" name="Revenue" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="commission" name="Commission" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Organizations Table */}
+          <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
               <Building2 className="h-5 w-5 text-gray-600" />
@@ -314,7 +446,6 @@ export default function RevenueDashboard() {
                   <TableHead>Revenue</TableHead>
                   <TableHead>Commission</TableHead>
                   <TableHead>Net</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -338,22 +469,170 @@ export default function RevenueDashboard() {
                     <TableCell className="text-blue-600 font-medium">
                       {formatCurrency(org.revenue - org.commission)}
                     </TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* Exams Tab */}
       {activeTab === "exams" && (
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <div className="space-y-6">
+          {/* Exam Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Performing Exams */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <TrendingUp className="h-5 w-5 text-gray-600" />
+                  Top Revenue Generating Exams
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Highest earning exams by revenue
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div style={{ width: '100%', height: '400px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={exams.slice(0, 8).sort((a, b) => b.revenue - a.revenue)} 
+                      margin={{ top: 30, right: 40, left: 40, bottom: 100 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={0}
+                        textAnchor="middle"
+                        height={90}
+                        interval={0}
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        axisLine={{ stroke: '#cbd5e1' }}
+                        tickLine={{ stroke: '#cbd5e1' }}
+                      tickFormatter={(value) => {
+                        // Split long exam names into multiple lines (max 20 chars per line)
+                        if (value.length <= 20) return value;
+                        
+                        const words = value.split(' ');
+                        const lines = [];
+                        let currentLine = '';
+                        
+                        for (const word of words) {
+                          if ((currentLine + ' ' + word).length <= 20) {
+                            currentLine = currentLine ? currentLine + ' ' + word : word;
+                          } else {
+                            if (currentLine) lines.push(currentLine);
+                            currentLine = word;
+                          }
+                        }
+                        if (currentLine) lines.push(currentLine);
+                        
+                        // Limit to 3 lines max
+                        return lines.slice(0, 3).join('\n');
+                      }}
+                    />
+                    <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
+                    <Tooltip
+                      formatter={(value) => formatCurrency(Number(value))}
+                      labelFormatter={(label) => `Exam: ${label}`}
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff', 
+                        border: '1px solid #e2e8f0', 
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                      }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Bar dataKey="revenue" name="Revenue" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Exam Attempts vs Revenue */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <BookOpen className="h-5 w-5 text-gray-600" />
+                  Attempts vs Revenue Correlation
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Revenue generated per exam attempt
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div style={{ width: '100%', height: '400px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={exams.map(exam => ({
+                        ...exam,
+                        revenuePerAttempt: exam.attempt_count > 0 ? exam.revenue / exam.attempt_count : 0
+                      }))} 
+                      margin={{ top: 30, right: 40, left: 40, bottom: 100 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={0}
+                        textAnchor="middle"
+                        height={90}
+                        interval={0}
+                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        axisLine={{ stroke: '#cbd5e1' }}
+                        tickLine={{ stroke: '#cbd5e1' }}
+                      tickFormatter={(value) => {
+                        // Split long exam names into multiple lines (max 20 chars per line)
+                        if (value.length <= 20) return value;
+                        
+                        const words = value.split(' ');
+                        const lines = [];
+                        let currentLine = '';
+                        
+                        for (const word of words) {
+                          if ((currentLine + ' ' + word).length <= 20) {
+                            currentLine = currentLine ? currentLine + ' ' + word : word;
+                          } else {
+                            if (currentLine) lines.push(currentLine);
+                            currentLine = word;
+                          }
+                        }
+                        if (currentLine) lines.push(currentLine);
+                        
+                        // Limit to 3 lines max
+                        return lines.slice(0, 3).join('\n');
+                      }}
+                    />
+                    <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (name === 'revenuePerAttempt') {
+                          return [formatCurrency(Number(value)), 'Revenue per Attempt'];
+                        }
+                        return [value, name];
+                      }}
+                      labelFormatter={(label) => `Exam: ${label}`}
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff', 
+                        border: '1px solid #e2e8f0', 
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                      }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Bar dataKey="attempt_count" name="Attempts" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="revenuePerAttempt" name="Revenue per Attempt" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Exams Table */}
+          <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-gray-900">
               <BookOpen className="h-5 w-5 text-gray-600" />
@@ -373,7 +652,6 @@ export default function RevenueDashboard() {
                   <TableHead>Revenue</TableHead>
                   <TableHead>Commission</TableHead>
                   <TableHead>Net</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -398,17 +676,13 @@ export default function RevenueDashboard() {
                     <TableCell className="text-blue-600 font-medium">
                       {formatCurrency(exam.revenue - exam.commission)}
                     </TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm">
-                        Adjust Commission
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
+        </div>
       )}
     </div>
   );
