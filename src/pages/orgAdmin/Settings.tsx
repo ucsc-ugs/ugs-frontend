@@ -486,6 +486,18 @@ export default function Settings() {
                                         </div>
                                     </div>
                                     <div>
+                                        <Label htmlFor="address" className="text-sm font-medium text-gray-700">
+                                            Address
+                                        </Label>
+                                        <textarea
+                                            id="address"
+                                            value={settings.address || ''}
+                                            onChange={(e) => handleInputChange("address", e.target.value)}
+                                            rows={3}
+                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
                                         <Label htmlFor="description" className="text-sm font-medium text-gray-700">
                                             Organization Description
                                         </Label>
@@ -498,18 +510,7 @@ export default function Settings() {
                                             placeholder="Enter a description of your organization..."
                                         />
                                     </div>
-                                    <div>
-                                        <Label htmlFor="address" className="text-sm font-medium text-gray-700">
-                                            Address
-                                        </Label>
-                                        <textarea
-                                            id="address"
-                                            value={settings.address || ''}
-                                            onChange={(e) => handleInputChange("address", e.target.value)}
-                                            rows={3}
-                                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
+                                    
                                     <div>
                                         <Label className="text-sm font-medium text-gray-700">
                                             Organization Logo
