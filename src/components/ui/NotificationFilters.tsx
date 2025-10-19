@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useEffect } from 'react';
 import { Calendar, Search } from 'lucide-react';
 
 interface FilterProps {
@@ -14,7 +14,7 @@ export interface FilterState {
     searchQuery: string;
 }
 
-export const NotificationFilters = ({
+export const NotificationFilters = memo(({
     onFilterChange,
     totalCount = 0,
     readCount = 0,
@@ -25,6 +25,20 @@ export const NotificationFilters = ({
         dateRange: 'all',
         searchQuery: '',
     });
+    const [searchInput, setSearchInput] = useState('');
+
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchInput !== filters.searchQuery) {
+                const newFilters = { ...filters, searchQuery: searchInput };
+                setFilters(newFilters);
+                onFilterChange(newFilters);
+            }
+        }, 300); // 300ms delay
+
+        return () => clearTimeout(timer);
+    }, [searchInput, filters, onFilterChange]);
 
     const handleFilterChange = (key: keyof FilterState, value: FilterState[keyof FilterState]) => {
         const newFilters = { ...filters, [key]: value };
@@ -41,8 +55,8 @@ export const NotificationFilters = ({
                     <input
                         type="text"
                         placeholder="Search tags or topics..."
-                        value={filters.searchQuery}
-                        onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
                         className="w-64 pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     />
                 </div>
@@ -111,4 +125,4 @@ export const NotificationFilters = ({
             </div>
         </div>
     );
-};
+});

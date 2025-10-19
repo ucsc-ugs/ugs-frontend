@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { NotificationCard } from "@/components/ui/NotificationCard";
 import { NotificationBadgeCard } from "@/components/ui/NotificationBadgeCard";
 import { CompactCalendar } from "@/components/ui/CompactCalendar";
@@ -109,6 +109,11 @@ function NotificationsPage() {
   const [isNotificationsExpanded, setIsNotificationsExpanded] = useState(true);
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(true);
   const [isExamExpanded, setIsExamExpanded] = useState(true);
+
+  // Memoize filter change handler to prevent unnecessary re-renders
+  const handleFilterChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -308,7 +313,7 @@ function NotificationsPage() {
         </div>
 
         <NotificationFilters
-          onFilterChange={setFilters}
+          onFilterChange={handleFilterChange}
           totalCount={generalAnnouncements.length + examAnnouncements.length}
           readCount={generalAnnouncements.filter(a => a.is_read).length + examAnnouncements.filter(a => a.is_read).length}
           unreadCount={generalAnnouncements.filter(a => !a.is_read).length + examAnnouncements.filter(a => !a.is_read).length}
