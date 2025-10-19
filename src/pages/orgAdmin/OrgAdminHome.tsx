@@ -19,6 +19,7 @@ import { BarChart } from "@/components/ui/charts/bar-chart";
 import { PieChart } from "@/components/ui/charts/pie-chart";
 import { useEffect, useState } from 'react';
 import { orgAdminApi } from '@/lib/orgAdminApi';
+import { getExams } from '@/lib/examApi';
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState<any | null>(null);
@@ -26,6 +27,8 @@ export default function AdminDashboard() {
     const [examDistribution, setExamDistribution] = useState<any[]>([]);
     const [recentRegistrations, setRecentRegistrations] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    // dev payload viewer removed
+    const [nextExamDate, setNextExamDate] = useState<string | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -33,6 +36,7 @@ export default function AdminDashboard() {
             try {
                 const resp = await orgAdminApi.getDashboard();
                 const payload = resp.data || resp;
+                console.log('orgAdmin dashboard payload:', payload);
 
                 // Map server payload fields to UI state with safe fallbacks
                 setStats({
@@ -45,12 +49,181 @@ export default function AdminDashboard() {
                     upcomingExams: Number(payload.upcoming_exams ?? payload.upcomingExams ?? 0),
                 });
 
-                setRegistrationData(Array.isArray(payload.monthly_registrations) ? payload.monthly_registrations : (payload.registrationData || []));
-                setExamDistribution(Array.isArray(payload.exam_distribution) ? payload.exam_distribution : (payload.examDistribution || examDistribution));
+                // Normalize registration trends into { name, value }[] for BarChart
+                const rawMonthly = payload.monthly_registrations ?? payload.registrationData ?? payload.monthly ?? [];
+                const normalizeBar = (input: any): { name: string; value: number }[] => {
+                    if (!input) return [];
+                    if (Array.isArray(input)) {
+                        return input.map((item: any) => {
+                            if (item == null) return { name: '', value: 0 };
+                            // Already in correct shape
+                            if (typeof item.name === 'string' && typeof item.value === 'number') return { name: item.name, value: item.value };
+                            // Common shape: { month: 'Jan', count: 120 } or { month: 'Jan', value: 120 }
+                            if (typeof item.month === 'string' && (typeof item.count === 'number' || typeof item.value === 'number')) {
+                                return { name: item.month, value: Number(item.count ?? item.value ?? 0) };
+                            }
+                            // { label: 'Jan', total: 120 }
+                            if (typeof item.label === 'string' && typeof item.total === 'number') {
+                                return { name: item.label, value: item.total };
+                            }
+                            // Fallback: pick first string and first numeric property
+                            const nameKey = Object.keys(item).find(k => typeof item[k] === 'string') || 'name';
+                            const valueKey = Object.keys(item).find(k => typeof item[k] === 'number') || 'value';
+                            return { name: String(item[nameKey] ?? ''), value: Number(item[valueKey] ?? 0) };
+                        });
+                    }
+                    // If object map { Jan: 120, Feb: 210 }
+                    if (typeof input === 'object') {
+                        return Object.keys(input).map(k => ({ name: k, value: Number(input[k] ?? 0) }));
+                    }
+                    return [];
+                };
+
+                const normalizedMonthly = normalizeBar(rawMonthly);
+                setRegistrationData(normalizedMonthly);
+
+                // Normalize exam distribution into { name, value }[] for PieChart
+                const rawDistribution = payload.exam_distribution ?? payload.examDistribution ?? payload.distribution ?? [];
+                const normalizePie = (input: any): { name: string; value: number }[] => {
+                    if (!input) return [];
+                    if (Array.isArray(input)) {
+                        return input.map((item: any) => {
+                            if (item == null) return { name: '', value: 0 };
+                            if (typeof item.name === 'string' && typeof item.value === 'number') return { name: item.name, value: item.value };
+                            // shape: { exam_type: 'GCAT', count: 50 }
+                            const name = item.exam_type ?? item.type ?? item.label ?? item.name;
+                            const value = item.count ?? item.value ?? item.total ?? Object.values(item).find((v: any) => typeof v === 'number');
+                            return { name: String(name ?? ''), value: Number(value ?? 0) };
+                        });
+                    }
+                    if (typeof input === 'object') {
+                        return Object.keys(input).map(k => ({ name: k, value: Number(input[k] ?? 0) }));
+                    }
+                    return [];
+                };
+
+                const normalizedDistribution = normalizePie(rawDistribution);
+                setExamDistribution(normalizedDistribution);
+
+                // If dashboard payload didn't include chart data, try client-side aggregation
+                if ((normalizedMonthly.length === 0) || (normalizedDistribution.length === 0)) {
+                    try {
+                        const examsResp = await getExams();
+                        const exams = examsResp.data || examsResp;
+                        // run same aggregation as fallback
+                        const monthly_map: Record<string, number> = {};
+                        const distribution_map: Record<string, number> = {};
+
+                        if (Array.isArray(exams)) {
+                            exams.forEach((exam: any) => {
+                                const examName = exam.name || exam.title || exam.testName || `Exam ${exam.id}`;
+                                const dates = exam.exam_dates || exam.examDates || [];
+                                dates.forEach((ed: any) => {
+                                    const current = Number((ed.current_registrations ?? ed.currentRegistrations ?? ed.pivot?.current_registrations) || 0);
+                                    const d = new Date(ed.date || ed.exam_date || ed.date_time || null);
+                                    const monthLabel = isNaN(d.getTime()) ? (ed.month || '') : d.toLocaleString('en-US', { month: 'short' });
+                                    if (monthLabel) monthly_map[monthLabel] = (monthly_map[monthLabel] || 0) + current;
+                                    distribution_map[examName] = (distribution_map[examName] || 0) + current;
+                                });
+                            });
+                        }
+
+                        const monthly_registrations = Object.keys(monthly_map).map(k => ({ name: k, value: monthly_map[k] }));
+                        const exam_distribution = Object.keys(distribution_map).map(k => ({ name: k, value: distribution_map[k] }));
+
+                        if (normalizedMonthly.length === 0) setRegistrationData(monthly_registrations);
+                        if (normalizedDistribution.length === 0) setExamDistribution(exam_distribution);
+                        // derive next exam date from exams if available
+                        const nextFromExams = (() => {
+                try {
+                    let soonest: Date | null = null;
+                                if (Array.isArray(exams)) {
+                                    exams.forEach((exam: any) => {
+                                        const dates = exam.exam_dates || exam.examDates || [];
+                                        dates.forEach((ed: any) => {
+                                            const d = new Date(ed.date || ed.exam_date || ed.date_time || null);
+                                            if (!isNaN(d.getTime()) && d > new Date()) {
+                                                if (!soonest || d < soonest) soonest = d;
+                                            }
+                                        });
+                                    });
+                                }
+                                return soonest ? (soonest as Date).toISOString() : null;
+                            } catch { return null; }
+                        })();
+                        if (nextFromExams) setNextExamDate(nextFromExams);
+                    } catch (aggErr) {
+                        console.warn('aggregation attempt failed:', aggErr);
+                    }
+                }
+
                 setRecentRegistrations(Array.isArray(payload.recent_registrations) ? payload.recent_registrations : (payload.recentRegistrations || []));
+                // derive next exam date from payload if provided
+                const candidateNext = payload.next_exam_date ?? payload.nextExamDate ?? payload.next_exam?.date ?? payload.upcoming_dates?.[0] ?? null;
+                if (candidateNext) {
+                    try {
+                        const d = new Date(candidateNext);
+                        if (!isNaN(d.getTime())) setNextExamDate(d.toISOString());
+                    } catch {}
+                }
             } catch (err) {
                 console.error('Failed to load org admin dashboard:', err);
-                // keep mock/default values if API fails
+                // Attempt client-side aggregation from exams endpoint as a fallback
+                try {
+                    const examsResp = await getExams();
+                    const exams = examsResp.data || examsResp;
+                    // Aggregate
+                    const monthly_map: Record<string, number> = {};
+                    const distribution_map: Record<string, number> = {};
+                    const recent: any[] = [];
+                    let totalRegs = 0;
+
+                    if (Array.isArray(exams)) {
+                        exams.forEach((exam: any) => {
+                            const examName = exam.name || exam.title || exam.testName || `Exam ${exam.id}`;
+                            const dates = exam.exam_dates || exam.examDates || [];
+                            dates.forEach((ed: any) => {
+                                const current = Number((ed.current_registrations ?? ed.currentRegistrations ?? ed.pivot?.current_registrations) || 0);
+                                totalRegs += current;
+
+                                const d = new Date(ed.date || ed.exam_date || ed.date_time || null);
+                                const monthLabel = isNaN(d.getTime()) ? (ed.month || '') : d.toLocaleString('en-US', { month: 'short' });
+                                if (monthLabel) monthly_map[monthLabel] = (monthly_map[monthLabel] || 0) + current;
+
+                                distribution_map[examName] = (distribution_map[examName] || 0) + current;
+
+                                recent.push({ id: ed.id || `${exam.id}-${ed.date}`, student: ed.student_name || '', exam: examName, date: ed.date, status: ed.status || 'registered' });
+                            });
+                        });
+                    }
+
+                    const monthly_registrations = Object.keys(monthly_map).map(k => ({ name: k, value: monthly_map[k] }));
+                    const exam_distribution = Object.keys(distribution_map).map(k => ({ name: k, value: distribution_map[k] }));
+
+                    setRegistrationData(monthly_registrations);
+                    setExamDistribution(exam_distribution);
+                    setRecentRegistrations(recent);
+                    setStats({ totalExams: Array.isArray(exams) ? exams.length : 0, totalRegistrations: totalRegs, totalRevenue: 0, upcomingExams: 0 });
+                    // derive next exam date from aggregated exams
+                    const soonest = (() => {
+                        let s: Date | null = null;
+                        if (Array.isArray(exams)) {
+                            exams.forEach((exam: any) => {
+                                const dates = exam.exam_dates || exam.examDates || [];
+                                dates.forEach((ed: any) => {
+                                    const d = new Date(ed.date || ed.exam_date || ed.date_time || null);
+                                    if (!isNaN(d.getTime()) && d > new Date()) {
+                                        if (!s || d < s) s = d;
+                                    }
+                                });
+                            });
+                        }
+                        return s as Date | null;
+                    })();
+                    if (soonest) setNextExamDate(soonest.toISOString());
+                } catch (fallbackErr) {
+                    console.error('fallback aggregation failed:', fallbackErr);
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -61,9 +234,28 @@ export default function AdminDashboard() {
 
     // registrationData, examDistribution and recentRegistrations are provided from API during load
     // fallbacks used when API data isn't available
-    const defaultRegistrationData = [{ name: 'Jan', value: 120 }, { name: 'Feb', value: 210 }, { name: 'Mar', value: 180 }];
-    const defaultExamDistribution = [{ name: 'GCAT', value: 45 }, { name: 'GCCT', value: 30 }, { name: 'FIT', value: 15 }];
+    const defaultRegistrationData: { name: string; value: number }[] = [];
+    const defaultExamDistribution: { name: string; value: number }[] = [];
     const defaultRecent: any[] = [];
+
+    // compute human friendly duration until next exam (from ISO string in state)
+    const getNextExamRelative = (): string => {
+        if (!nextExamDate) return 'No exams scheduled';
+        try {
+            const d = new Date(nextExamDate);
+            if (isNaN(d.getTime())) return 'No exams scheduled';
+            const diffMs = d.getTime() - Date.now();
+            if (diffMs <= 0) return 'Happening now';
+            const mins = Math.round(diffMs / 60000);
+            if (mins < 60) return `Next exam in ${mins} minute${mins !== 1 ? 's' : ''}`;
+            const hrs = Math.round(mins / 60);
+            if (hrs < 24) return `Next exam in ${hrs} hour${hrs !== 1 ? 's' : ''}`;
+            const days = Math.round(hrs / 24);
+            return `Next exam in ${days} day${days !== 1 ? 's' : ''}`;
+        } catch {
+            return 'No exams scheduled';
+        }
+    };
 
     return (
         <div className="min-h-screen">
@@ -148,7 +340,7 @@ export default function AdminDashboard() {
                             <CardContent>
                                 <div className="text-2xl font-bold">{stats?.upcomingExams ?? 0}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    Next exam in 3 days
+                                    {getNextExamRelative()}
                                 </p>
                             </CardContent>
                             <CardFooter className="p-2 pt-0">
