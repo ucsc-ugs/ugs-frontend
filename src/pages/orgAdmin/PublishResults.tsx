@@ -122,20 +122,22 @@ const flattenExamDates = (exams: Exam[]): ExamDateCard[] => {
             return;
         }
         
-        exam.exam_dates.forEach(examDate => {
-            flattened.push({
-                id: examDate.id,
-                exam_id: exam.id,
-                exam_name: exam.name,
-                exam_code_name: exam.code_name,
-                exam_description: exam.description,
-                exam_price: exam.price,
-                date: examDate.date,
-                location: examDate.location,
-                status: examDate.status,
-                student_count: examDate.student_exams_count || 0
+        exam.exam_dates
+            .filter(examDate => new Date(examDate.date) < new Date())
+            .forEach(examDate => {
+                flattened.push({
+                    id: examDate.id,
+                    exam_id: exam.id,
+                    exam_name: exam.name,
+                    exam_code_name: exam.code_name,
+                    exam_description: exam.description,
+                    exam_price: exam.price,
+                    date: examDate.date,
+                    location: examDate.location,
+                    status: examDate.status,
+                    student_count: examDate.student_exams_count || 0
+                });
             });
-        });
     });
     
     // Sort by exam name, then by date
