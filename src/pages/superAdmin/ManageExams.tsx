@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, Trash2, Plus, BookOpen, Calendar, Filter, RefreshCw } from "lucide-react";
+import { Search, Plus, BookOpen, Calendar, Filter, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getSuperAdminExams, deleteSuperAdminExam } from "@/lib/superAdminApi";
+import { getSuperAdminExams } from "@/lib/superAdminApi";
 
 interface Exam {
   id: number;
@@ -29,8 +29,6 @@ interface Exam {
 export default function SuperAdminExams() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [deleteExamId, setDeleteExamId] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [organizationFilter, setOrganizationFilter] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
@@ -107,34 +105,6 @@ export default function SuperAdminExams() {
 
   // Unique organizations for filter dropdown
   const organizations = Array.from(new Set(exams.map(exam => exam.organization?.name).filter(Boolean)));
-
-  const handleDelete = async () => {
-    if (!deleteExamId) return;
-    setIsSubmitting(true);
-    try {
-      // Use the centralized API service
-      await deleteSuperAdminExam(deleteExamId);
-      
-      setExams(prev => prev.filter(e => e.id !== deleteExamId));
-      setDeleteExamId(null);
-      
-      console.log("✅ Successfully deleted exam:", deleteExamId);
-      
-    } catch (err: unknown) {
-      console.error("❌ Delete failed:", err);
-      
-      // Handle API errors from centralized service
-      if (err && typeof err === 'object' && 'message' in err) {
-        setError((err as { message: string }).message);
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred while deleting exam");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Note: Exam status toggle functionality can be implemented using updateSuperAdminExamStatus from the API service
 
@@ -351,7 +321,6 @@ export default function SuperAdminExams() {
                   <TableHead>Students</TableHead>
                   <TableHead>Pass Rate</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -403,26 +372,6 @@ export default function SuperAdminExams() {
                         {new Date(exam.created_at).toLocaleDateString('en-LK')}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => console.log("Edit exam:", exam.id)}
-                          title="Edit exam (feature coming soon)"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDeleteExamId(exam.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -430,38 +379,6 @@ export default function SuperAdminExams() {
           )}
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation */}
-      {deleteExamId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md bg-white">
-            <CardHeader>
-              <CardTitle className="text-gray-900">Delete Exam</CardTitle>
-              <CardDescription className="text-gray-600">
-                Are you sure you want to delete this exam? This will remove all associated data.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleDelete}
-                  className="flex-1 bg-red-600 hover:bg-red-700"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Deleting…" : "Delete Exam"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteExamId(null)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
