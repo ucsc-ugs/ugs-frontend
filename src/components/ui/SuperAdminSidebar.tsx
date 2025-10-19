@@ -136,15 +136,20 @@ export default function SuperAdminSidebar() {
         {/* Settings and Logout */}
         <div className="p-4 border-t border-slate-700">
           <div className="space-y-2">
-            {!isCollapsed && (
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
-              >
-                <Settings className="h-5 w-5 mr-3" />
-                Settings
-              </Button>
-            )}
+            <NavLink
+              to="/super-admin/settings"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                } ${isCollapsed ? 'justify-center' : 'justify-start'}`
+              }
+              title={isCollapsed ? "Settings" : undefined}
+            >
+              <Settings className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && <span className="ml-3">Settings</span>}
+            </NavLink>
             
             <Button
               variant="ghost"

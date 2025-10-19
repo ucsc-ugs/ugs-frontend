@@ -41,6 +41,7 @@ import OrgAdminLoginPage from "@/pages/orgAdmin/OrgAdminLoginPage";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import Revenue from "./pages/superAdmin/Revenue";
 import SuperAdminExams from "./pages/superAdmin/ManageExams";
+import SuperAdminSettings from "./pages/superAdmin/SuperAdminSettings";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import MyRegisteredExams from "./pages/test";
@@ -83,6 +84,7 @@ function App() {
                       <Route path="/logout" element={<SuperAdminLogout />} />
                       <Route path="/revenue" element={<Revenue />} />
                       <Route path="/exams" element={<SuperAdminExams />} />
+                      <Route path="/settings" element={<SuperAdminSettings />} />
                     </Routes>
                   </div>
                 </div>
