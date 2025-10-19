@@ -18,6 +18,8 @@ import { PieChart } from "@/components/ui/charts/pie-chart";
 import { BarChart } from "@/components/ui/charts/bar-chart";
 import { getAuthToken } from "@/lib/api";
 import axios from "axios";
+import { jsPDF } from "jspdf";
+import autoTable from 'jspdf-autotable';
 
 interface FinanceData {
     id: number;
@@ -84,6 +86,39 @@ const useExamOptions = (data: FinanceData[]) => {
     }, [data]);
 };
 
+// const exportToPDF = () => {
+//     const doc = new jsPDF();
+    
+//     // Add title
+//     doc.setFontSize(16);
+//     doc.text('Detailed Finance Report', 14, 15);
+//     doc.setFontSize(10);
+//     doc.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 25);
+
+//     // Create table data
+//     const tableData = filteredData.map(exam => [
+//         exam.examName,
+//         exam.totalRegistrations.toString(),
+//         exam.paidRegistrations.toString(),
+//         exam.unpaidRegistrations.toString(),
+//         formatCurrency(exam.examFee),
+//         formatCurrency(exam.paidRevenue),
+//         `${((exam.paidRegistrations / exam.totalRegistrations) * 100).toFixed(0)}%`
+//     ]);
+
+//     // Generate table
+//     doc.autoTable({
+//         head: [['Exam Name', 'Total Reg.', 'Paid', 'Unpaid', 'Fee', 'Revenue', 'Status']],
+//         body: tableData,
+//         startY: 30,
+//         styles: { fontSize: 8 },
+//         headStyles: { fillColor: [41, 128, 185] },
+//     });
+
+//     // Save the PDF
+//     doc.save(`finance-report-${new Date().toISOString().split('T')[0]}.pdf`);
+// };
+
 export default function FinanceDashboard() {
     const [selectedExam, setSelectedExam] = useState("all");
     const [selectedMonth, setSelectedMonth] = useState("");
@@ -147,6 +182,63 @@ export default function FinanceDashboard() {
         }).format(amount);
     };
 
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Detailed Finance Report', 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 25);
+
+        // Create table data
+        const tableData = filteredData.map(exam => [
+            exam.examName,
+            exam.totalRegistrations.toString(),
+            exam.paidRegistrations.toString(),
+            exam.unpaidRegistrations.toString(),
+            formatCurrency(exam.examFee),
+            formatCurrency(exam.paidRevenue),
+            `${((exam.paidRegistrations / exam.totalRegistrations) * 100).toFixed(0)}%`
+        ]);
+
+        // Add total row to table data
+        if (filteredData.length > 0) {
+            const totalRow = [
+                'TOTAL',
+                filteredData.reduce((sum, exam) => sum + exam.totalRegistrations, 0).toString(),
+                filteredData.reduce((sum, exam) => sum + exam.paidRegistrations, 0).toString(),
+                filteredData.reduce((sum, exam) => sum + exam.unpaidRegistrations, 0).toString(),
+                formatCurrency(filteredData.reduce((sum, exam) => sum + exam.examFee, 0)),
+                formatCurrency(filteredData.reduce((sum, exam) => sum + exam.paidRevenue, 0)),
+                `${summary.paymentRate}%`
+            ];
+            tableData.push(totalRow);
+        }
+
+        // Generate table using autoTable
+        autoTable(doc, {
+            head: [['Exam Name', 'Total Reg.', 'Paid', 'Unpaid', 'Fee', 'Revenue', 'Status']],
+            body: tableData,
+            startY: 30,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [41, 128, 185] },
+            // Style the last row (total row) differently
+            didDrawCell: (data: any) => {
+                if (data.row.index === tableData.length - 1 && tableData.length > 0) {
+                    // This is the total row
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont('helvetica', 'bold');
+                }
+            }
+        });
+
+        // Save the PDF
+        doc.save(`finance-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     // Date formatting no longer needed in table; keep utility here if needed elsewhere.
 
     const exportToCSV = () => {
@@ -188,10 +280,10 @@ export default function FinanceDashboard() {
         URL.revokeObjectURL(url);
     };
 
-    const exportToPDF = () => {
-        // This would integrate with a PDF library like jsPDF
-        alert("PDF export functionality would be implemented with a library like jsPDF");
-    };
+    // const exportToPDF = () => {
+    //     // This would integrate with a PDF library like jsPDF
+    //     alert("PDF export functionality would be implemented with a library like jsPDF");
+    // };
 
     return (
         <div className="min-h-screen">
@@ -425,10 +517,21 @@ export default function FinanceDashboard() {
                 {/* Finance Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileText className="w-5 h-5" />
-                            Detailed Finance Report ({filteredData.length} exams)
-                        </CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <FileText className="w-5 h-5" />
+                                Detailed Finance Report ({filteredData.length} exams)
+                            </CardTitle>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={exportToPDF}
+                                className="flex items-center gap-2"
+                            >
+                                <FileText className="w-4 h-4" />
+                                Extract to PDF
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -495,6 +598,34 @@ export default function FinanceDashboard() {
                                             </TableRow>
                                         );
                                     })}
+                                    {/* Total Revenue Row */}
+                                    {filteredData.length > 0 && (
+                                        <TableRow className="bg-gray-50 font-semibold">
+                                            <TableCell>
+                                                <div className="font-bold">Total</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold">{filteredData.reduce((sum, exam) => sum + exam.totalRegistrations, 0)}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold text-green-600">{filteredData.reduce((sum, exam) => sum + exam.paidRegistrations, 0)}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold text-red-600">{filteredData.reduce((sum, exam) => sum + exam.unpaidRegistrations, 0)}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold">{formatCurrency(filteredData.reduce((sum, exam) => sum + exam.examFee, 0))}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold text-green-600">{formatCurrency(filteredData.reduce((sum, exam) => sum + exam.paidRevenue, 0))}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-bold">
+                                                    {summary.paymentRate}% paid
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
