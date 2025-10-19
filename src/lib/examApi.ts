@@ -17,6 +17,8 @@ interface ExamDate {
   status?: 'upcoming' | 'completed' | 'cancelled';
   created_at?: string;
   updated_at?: string;
+  current_registrations?: number;
+  max_participants?: number;
 }
 
 interface ExamData {
@@ -55,37 +57,11 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}): Promise<
     },
     ...options,
   };
-
-  console.log('API Request:', `${API_BASE_URL}${endpoint}`, config);
-  
-  // For debugging: if this is an exam request and we have a token, check current user
-  if (endpoint.includes('/exam') && token) {
-    try {
-      const userCheckResponse = await fetch(`${API_BASE_URL}/user`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (userCheckResponse.ok) {
-        const currentUser = await userCheckResponse.json();
-        console.log('👤 Current authenticated user:', currentUser);
-      }
-    } catch (error) {
-      console.log('⚠️ User verification failed:', error);
-    }
-  }
   
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
   
-  console.log('Response status:', response.status);
-  console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-  
-  const responseText = await response.text();
-  console.log('Response text:', responseText.substring(0, 200) + '...');
-  
   if (!response.ok) {
+    const responseText = await response.text();
     let data;
     try {
       data = JSON.parse(responseText);
@@ -102,12 +78,11 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}): Promise<
     };
   }
 
+  const responseText = await response.text();
   let data;
   try {
     data = JSON.parse(responseText);
   } catch (e) {
-    console.error('JSON Parse Error:', e);
-    console.error('Response was:', responseText);
     throw {
       status: 500,
       message: `Server returned invalid JSON. Response: ${responseText.substring(0, 100)}`,
@@ -186,13 +161,6 @@ export const addMultipleExamDates = async (examId: number, examDatesData: {
   return await apiRequest(`/exam/${examId}/exam-dates/bulk`, {
     method: 'POST',
     body: JSON.stringify(examDatesData),
-  });
-};
-
-// Automatically update expired exam dates
-export const updateExpiredExamStatuses = async (): Promise<ApiResponse<{ updated_count: number }>> => {
-  return await apiRequest('/exam-dates/update-expired-statuses', {
-    method: 'POST',
   });
 };
 
