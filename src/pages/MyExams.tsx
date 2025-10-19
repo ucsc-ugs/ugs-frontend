@@ -157,6 +157,10 @@ const MyExams = () => {
         return 'bg-blue-100 text-blue-800';
     }
   };
+  const formatResultDisplay = (result: string | null): string => {
+    if (!result) return 'Result - Unavailable';
+    return `${result.toUpperCase()}`;
+  };
 
   const handleViewDetails = (exam: ExamWithPivot) => {
     setSelectedExam(exam);
@@ -383,8 +387,10 @@ const MyExams = () => {
                           LKR {exam.price.toLocaleString()}
                         </div>
                         <div className="flex gap-2">
-                          {/* Reschedule Button - Show only if there are multiple exam dates available */}
-                          {exam.available_exam_dates && exam.available_exam_dates.length > 1 && (
+                          {/* Reschedule Button - Show only if there are multiple exam dates available and no result */}
+                          {exam.available_exam_dates && 
+                          exam.available_exam_dates.length > 1 && 
+                          !exam.pivot.result && (
                             <button
                               onClick={() => handleReschedule(exam)}
                               className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1"
@@ -607,8 +613,8 @@ const MyExams = () => {
                         <Trophy className="h-5 w-5 text-gray-600" />
                         Result
                       </h3>
-                      <span className={`px-3 py-2 text-sm font-medium rounded-lg ${getResultColor(selectedExam.pivot.result)}`}>
-                        {selectedExam.pivot.result || 'Pending'}
+                      <span className={`px-2 py-1 rounded-md font-medium text-sm ${getResultColor(selectedExam.pivot.result)}`}>
+                        {formatResultDisplay(selectedExam.pivot.result)}
                       </span>
                     </div>
 
