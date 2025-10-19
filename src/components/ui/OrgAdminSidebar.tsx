@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ChevronRight,
   MapPin,
-  Bell,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -117,7 +116,6 @@ export function OrgAdminSidebar() {
   const mainLinks = [
     { name: "Dashboard", path: "/admin", icon: Home, permissions: [] },
     { name: "Finance Dashboard", path: "/admin/finance", icon: DollarSign, permissions: ["payments.view", "payments.create", "payments.update"] },
-    { name: "Notifications", path: "/admin/notifications", icon: Bell, hasBell: true, permissions: [] },
     { name: "Set Announcements", path: "/admin/set-announcements", icon: Megaphone, permissions: ["announcement.create", "announcement.view", "announcement.update", "announcement.publish"] },
     { name: "Settings", path: "/admin/settings", icon: Settings, permissions: ["organization.view", "organization.update"] },
   ];
@@ -159,7 +157,7 @@ export function OrgAdminSidebar() {
         {/* Navigation Links */}
         <div className="flex flex-col space-y-2">
           {/* Dashboard - Always first if visible */}
-          {filteredMainLinks.slice(0, 1).map(({ name, path, icon: Icon, hasBell }) => (
+          {filteredMainLinks.slice(0, 1).map(({ name, path, icon: Icon }) => (
             <NavLink
               key={name}
               to={path}
@@ -274,8 +272,8 @@ export function OrgAdminSidebar() {
             </div>
           )}
 
-          {/* Remaining Links in new order: Finance Dashboard, Notifications, Set Announcements, Settings */}
-          {[filteredMainLinks[1], ...filteredMainLinks.slice(2)].filter(Boolean).map(({ name, path, icon: Icon, hasBell }) => (
+          {/* Remaining Links in new order: Finance Dashboard, Set Announcements, Settings */}
+          {[filteredMainLinks[1], ...filteredMainLinks.slice(2)].filter(Boolean).map(({ name, path, icon: Icon }) => (
             <NavLink
               key={name}
               to={path}

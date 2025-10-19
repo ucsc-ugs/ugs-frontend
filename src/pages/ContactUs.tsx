@@ -18,6 +18,9 @@ import {
 export default function ContactUs() {
   const navigate = useNavigate();
 
+  const handleSignIn = () => navigate("/signin");
+  const handleRegister = () => navigate("/signup");
+
   const contactDetails = [
     {
       icon: Phone,
@@ -65,6 +68,82 @@ export default function ContactUs() {
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Header - Same as Landing Page */}
+      <motion.header
+        className="sticky top-0 z-50 backdrop-blur-xl bg-[#FFFFFF]/95 border-b border-[#89C2D9]/20 shadow-lg shadow-[#89C2D9]/10"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container mx-auto px-6 py-5 flex items-center justify-between">
+          <motion.div
+            className="flex items-center gap-4"
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <motion.div
+              className="relative"
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="absolute inset-0 bg-[#89C2D9]/20 rounded-full blur-md"></div>
+              <img
+                src="../src/assets/ucsc_logo.png"
+                alt="UCSC Logo"
+                width={65}
+                height={45}
+                className="object-contain relative z-10"
+              />
+            </motion.div>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold text-[#012A4A] tracking-tight">
+                University Gateway Solutions
+              </h1>
+              <p className="text-sm text-[#343A40]/80 font-medium">
+                University of Colombo School of Computing
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="flex items-center gap-3"
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="relative group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#89C2D9]/20 to-[#01497C]/20 rounded-xl blur-sm group-hover:blur-md transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
+              <Button
+                variant="outline"
+                className="relative border-2 border-[#89C2D9]/50 text-[#01497C] hover:bg-[#89C2D9] hover:text-[#FFFFFF] hover:border-[#89C2D9] hover:shadow-lg hover:shadow-[#89C2D9]/30 px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 backdrop-blur-sm"
+                onClick={handleRegister}
+              >
+                Register
+              </Button>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="relative group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#01497C] to-[#012A4A] rounded-xl blur-sm group-hover:blur-md transition-all duration-300 opacity-30 group-hover:opacity-50"></div>
+              <Button
+                className="relative bg-gradient-to-r from-[#01497C] to-[#013A63] hover:from-[#012A4A] hover:to-[#01497C] text-[#FFFFFF] px-8 py-2.5 rounded-xl font-semibold transition-all duration-300 shadow-md shadow-[#01497C]/20 hover:shadow-lg hover:shadow-[#012A4A]/25 border-0 hover:brightness-110"
+                onClick={handleSignIn}
+              >
+                Sign In
+              </Button>
+            </motion.div>
+          </motion.div>
+        </div>
+      </motion.header>
+
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-[#89C2D9]/20 to-[#01497C]/20 rounded-full blur-3xl"></div>
@@ -91,32 +170,13 @@ export default function ContactUs() {
               Back to Home
             </Button>
           </motion.div>
+
           <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="flex justify-center mb-8">
-              <motion.div
-                className="relative"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5, type: "spring" }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-[#89C2D9]/30 to-[#01497C]/30 rounded-full blur-2xl"></div>
-                <div className="relative bg-white rounded-full p-6 shadow-2xl">
-                  <img
-                    src="../src/assets/ucsc_logo.png"
-                    alt="UCSC Logo"
-                    width={120}
-                    height={120}
-                    className="object-contain"
-                  />
-                </div>
-              </motion.div>
-            </div>
-
             <motion.h1
               className="text-5xl md:text-6xl font-bold mb-4"
               initial={{ opacity: 0, y: 20 }}
@@ -146,16 +206,6 @@ export default function ContactUs() {
               We're here to help and answer any questions you might have. We look forward to hearing from you!
             </motion.p>
 
-            <motion.div
-              className="flex justify-center gap-3 mt-6"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-            >
-              <div className="h-1 w-20 bg-gradient-to-r from-transparent via-[#01497C] to-transparent rounded-full"></div>
-              <div className="h-1 w-1 bg-[#89C2D9] rounded-full"></div>
-              <div className="h-1 w-20 bg-gradient-to-r from-transparent via-[#01497C] to-transparent rounded-full"></div>
-            </motion.div>
           </motion.div>
 
           {/* Main Content Grid */}
