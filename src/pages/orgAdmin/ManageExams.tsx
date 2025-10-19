@@ -1,5 +1,5 @@
 // src/pages/admin/ManageExams.tsx
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import {
     Search,
     Plus,
@@ -33,7 +33,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExamDateDetailsModal } from "@/components/ExamDateDetailsModal";
 import CreateExam from "./CreateExam";
 import { orgAdminApi, type Location } from "@/lib/orgAdminApi";
-import { getExams, createExam, updateExam, deleteExam, deleteExamDate, updateExamDateStatus, updateExpiredExamStatuses, testConnection, addExamDate, updateExamType, updateExamDate, type ExamData } from "@/lib/examApi";
+import { getExams, createExam, updateExam, deleteExam, deleteExamDate, updateExamDateStatus, testConnection, addExamDate, updateExamType, updateExamDate, type ExamData } from "@/lib/examApi";
 
 interface ExamDateRow {
     examId: number;
@@ -110,6 +110,13 @@ export default function ManageExams() {
     const [locationsLoading, setLocationsLoading] = useState(false);
     const [locationsError, setLocationsError] = useState<string>("");
     
+    // Simple cache to avoid repeated API calls during rapid operations
+    const [lastDataFetch, setLastDataFetch] = useState<number>(0);
+    const CACHE_DURATION = 60000; // 60 seconds cache (increased for better performance)
+    const [isDataLoading, setIsDataLoading] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [orgDataCached, setOrgDataCached] = useState(false);
+    
     // Exam date details modal state
     const [selectedExamDateId, setSelectedExamDateId] = useState<number | null>(null);
     const [selectedExamName, setSelectedExamName] = useState<string>("");
@@ -159,14 +166,14 @@ export default function ManageExams() {
     });
 
     // Helper function to format datetime-local value for backend (Y-m-d\TH:i format)
-    const formatDateTimeForBackend = (datetimeLocal: string): string => {
+    const formatDateTimeForBackend = useCallback((datetimeLocal: string): string => {
         // Remove seconds if present (datetime-local might include them)
         // Format: YYYY-MM-DDTHH:mm:ss -> YYYY-MM-DDTHH:mm
         return datetimeLocal.substring(0, 16);
-    };
+    }, []);
 
     // Helper function to convert backend datetime to datetime-local format
-    const formatDateTimeForInput = (backendDateTime: string): string => {
+    const formatDateTimeForInput = useCallback((backendDateTime: string): string => {
         if (!backendDateTime) return "";
         
         // Convert ISO string or backend format to datetime-local format
@@ -180,7 +187,7 @@ export default function ManageExams() {
         const minutes = String(date.getMinutes()).padStart(2, '0');
         
         return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
+    }, []);
 
     // Helper function to get current datetime in local format for min attribute
     const getCurrentDateTimeLocal = (): string => {
@@ -194,122 +201,41 @@ export default function ManageExams() {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
-    // Function to automatically update expired exam statuses
-    const updateExpiredStatuses = async () => {
-        try {
-            console.log('Checking for expired exam dates...');
-            const result = await updateExpiredExamStatuses();
-            console.log('Auto-update result:', result);
-            
-            if (result.data?.updated_count > 0) {
-                console.log(`Updated ${result.data.updated_count} expired exam dates to completed status`);
-                // Reload exams to reflect the updated statuses
-                loadExams();
-            }
-        } catch (error) {
-            console.error('Failed to update expired exam statuses:', error);
-            // Don't show error to user as this is automatic background process
+    const loadExams = useCallback(async (forceRefresh = false) => {
+        // Check cache to avoid repeated calls
+        const now = Date.now();
+        if (!forceRefresh && (now - lastDataFetch) < CACHE_DURATION && examDates.length > 0) {
+            console.log('Using cached exam data - skipping API call');
+            return;
         }
-    };
 
-    // Load exams on component mount
-    useEffect(() => {
-        loadExams();
-        // Automatically update expired exam statuses
-        updateExpiredStatuses();
-        (async () => {
-            try {
-                console.log('Fetching organization for current user...');
-                const org = await orgAdminApi.getMyOrganization();
-                console.log('Organization response:', org);
-                
-                const orgIdValue = org?.id ?? org?.organization_id ?? null;
-                console.log('Extracted org ID:', orgIdValue);
-                
-                setOrgId(orgIdValue);
-                setOrgError("");
-                
-                if (!orgIdValue) {
-                    setOrgError("Your account is not linked to any organization. Please contact your administrator.");
-                }
-            } catch (e: any) {
-                console.error('Failed to fetch organization', e);
-                console.error('Error details:', {
-                    status: e.status,
-                    message: e.message,
-                    response: e
-                });
-                setOrgError(e?.message || 'Failed to load your organization');
-            }
-        })();
-    }, []);
+        // Prevent duplicate simultaneous calls
+        if (isDataLoading && !forceRefresh) {
+            console.log('Data loading in progress - skipping duplicate call');
+            return;
+        }
 
-    // Fetch locations when organization ID is available
-    useEffect(() => {
-        if (!orgId) return;
-
-        (async () => {
-            setLocationsLoading(true);
-            setLocationsError("");
-            try {
-                const locationsData = await orgAdminApi.getLocations();
-                setLocations(locationsData);
-            } catch (e: any) {
-                console.error("Failed to fetch locations:", e);
-                setLocationsError(e?.message || "Failed to load locations");
-            } finally {
-                setLocationsLoading(false);
-            }
-        })();
-    }, [orgId]);
-
-    const loadExams = async () => {
         try {
+            setIsDataLoading(true);
             setIsLoading(true);
             
-            // Test connection first
-            console.log('Testing API connection...');
-            try {
-                const testResult = await testConnection();
-                console.log('Connection test successful:', testResult);
-                console.log('User context:', {
-                    user_id: testResult.user_id,
-                    user_name: testResult.user_name,
-                    roles: testResult.roles,
-                    org_admin: testResult.org_admin,
-                    is_org_admin: testResult.is_org_admin
-                });
-                
-                if (!testResult.org_admin) {
-                    setOrgError("Your user account is missing the organization admin relationship. Please contact your system administrator.");
-                    return;
-                }
-            } catch (testError) {
-                console.error('Connection test failed:', testError);
-            }
-            
             const response = await getExams();
-            console.log('getExams response:', response);
-            console.log('response.data:', response.data);
-            if (response.data?.length > 0) {
-                console.log('First exam structure:', response.data[0]);
-            }
+            setLastDataFetch(now);
             
-            // Convert API response to exam date rows
+            // Convert API response to exam date rows - optimized processing
             const examDateRows: ExamDateRow[] = [];
             
             response.data.forEach((exam: ExamData) => {
-                console.log('Processing exam:', exam);
                 const codeNameValue = exam.code_name ?? (exam as any).codeName ?? null;
-                console.log('Code name for exam', exam.name, ':', codeNameValue);
                 
                 // If exam has dates, create a row for each date
                 if (exam.exam_dates && exam.exam_dates.length > 0) {
                     exam.exam_dates.forEach((examDate) => {
-                        // Generate location display string from multiple locations
+                        // Optimized location display generation
                         let locationDisplay = "TBD";
                         
-                        if (examDate.locations && Array.isArray(examDate.locations) && examDate.locations.length > 0) {
+                        if (examDate.locations && examDate.locations.length > 0) {
+                            // Pre-sort and map in one operation
                             locationDisplay = examDate.locations
                                 .sort((a, b) => (a.pivot?.priority || 0) - (b.pivot?.priority || 0))
                                 .map(loc => loc.location_name)
@@ -398,8 +324,77 @@ export default function ManageExams() {
             }
         } finally {
             setIsLoading(false);
+            setIsDataLoading(false);
         }
-    };
+    }, [lastDataFetch, examDates.length, isDataLoading]);
+
+    // Load all initial data on component mount - optimized single effect
+    useEffect(() => {
+        const initializeData = async () => {
+            if (isInitialized) {
+                console.log('Component already initialized - skipping duplicate initialization');
+                return;
+            }
+            
+            setIsLoading(true);
+            setLocationsLoading(true);
+            
+            try {
+                console.log('Fetching organization for current user...');
+                
+                // Step 1: Get organization first (skip if already cached)
+                if (!orgDataCached || !orgId) {
+                    const org = await orgAdminApi.getMyOrganization();
+                    console.log('Organization response:', org);
+                    
+                    const orgIdValue = org?.id ?? org?.organization_id ?? null;
+                    console.log('Extracted org ID:', orgIdValue);
+                    
+                    setOrgId(orgIdValue);
+                    setOrgError("");
+
+                    if (!orgIdValue) {
+                        setOrgError("Your account is not linked to any organization. Please contact your administrator.");
+                        return;
+                    }
+                    setOrgDataCached(true);
+                }
+
+                // Step 2: Load locations (skip if already loaded)
+                if (locations.length === 0) {
+                    const locationsData = await orgAdminApi.getLocations().catch(err => {
+                        console.error("Failed to fetch locations:", err);
+                        setLocationsError(err?.message || "Failed to load locations");
+                        return [];
+                    });
+                    setLocations(locationsData);
+                }
+
+                // Step 3: Load exams using our cached loadExams function
+                await loadExams(false); // Use cache if available
+
+                // Step 3: Load exams using our cached loadExams function
+                await loadExams(false); // Use cache if available
+
+                // Mark as initialized
+                setIsInitialized(true);
+                
+            } catch (err: any) {
+                console.error('Initialization error:', err);
+                if (err.message?.includes('No organization found for this user')) {
+                    setError('Database Setup Required: Your user account is missing the organization admin relationship.');
+                } else {
+                    setError(err.message || 'Failed to initialize data');
+                }
+                setOrgError(err?.message || 'Failed to load your organization');
+            } finally {
+                setIsLoading(false);
+                setLocationsLoading(false);
+            }
+        };
+
+        initializeData();
+    }, [loadExams]);
 
     const handleCreateExam = async () => {
         if (!formData.name.trim()) {
@@ -486,7 +481,7 @@ export default function ManageExams() {
             });
             
             // Reload exams after creating
-            await loadExams();
+            await loadExams(true); // Force refresh after creating new exam
             setShowCreateExam(false);
             setShowCreateExamModal(false);
             setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
@@ -579,7 +574,7 @@ export default function ManageExams() {
             });
             
             // Reload exams after updating
-            await loadExams();
+            await loadExams(true);
             setEditingExam(null);
             setFormData({ name: "", code_name: "", description: "", price: 0, organization_id: 1, registration_deadline: "", exam_dates: [{ date: "", location: "", location_id: "", location_ids: [] }] });
             setError("");
@@ -607,7 +602,7 @@ export default function ManageExams() {
             console.log('Delete result:', result);
             
             // Reload exams after deleting
-            await loadExams();
+            await loadExams(true);
             setDeleteExamId(null);
             setError("");
         } catch (err: any) {
@@ -657,7 +652,7 @@ export default function ManageExams() {
             console.log('Delete exam date result:', result);
             
             // Reload exams after deleting
-            await loadExams();
+            await loadExams(true);
             setDeleteExamDateId(null);
             setDeleteError("");
         } catch (err: any) {
@@ -733,7 +728,7 @@ export default function ManageExams() {
             });
             
             // Reload exams after updating
-            await loadExams();
+            await loadExams(true);
             setShowEditExamType(false);
             setEditingExamType(null);
             setExamTypeFormData({ name: "", code_name: "", description: "", price: 0 });
@@ -819,7 +814,7 @@ export default function ManageExams() {
             });
             
             // Reload exams after updating
-            await loadExams();
+            await loadExams(true);
             setShowEditExamDate(false);
             setEditingExamDate(null);
             setExamDateFormData({ date: "", registration_deadline: "", location_ids: [] });
@@ -865,7 +860,7 @@ export default function ManageExams() {
     }, [examDates, searchTerm, selectedStatus]);
 
     // Helper function for description truncation (compact inline display)
-    const truncateDescription = (description: string, maxWords: number = 6) => {
+    const truncateDescription = useCallback((description: string, maxWords: number = 6) => {
         if (!description) return '';
         
         const words = description.split(' ');
@@ -874,7 +869,7 @@ export default function ManageExams() {
         }
         
         return words.slice(0, maxWords).join(' ') + '...';
-    };
+    }, []);
 
     const stats = useMemo(() => {
         const total = examDates.length;
@@ -885,29 +880,26 @@ export default function ManageExams() {
         return { total, upcoming, completed, totalRegistrations };
     }, [examDates]);
 
-    const handlePublishResults = (examDateId: number) => {
+    const handlePublishResults = useCallback((examDateId: number) => {
         setExamDates(prev => prev.map(examDate =>
             examDate.examDateId === examDateId ? { ...examDate, resultsPublished: true } : examDate
         ));
-    };
+    }, []);
 
-    const handleStatusChange = async (examDateId: number, newStatus: 'upcoming' | 'completed' | 'cancelled') => {
+    const handleStatusChange = useCallback(async (examDateId: number, newStatus: 'upcoming' | 'completed' | 'cancelled') => {
         try {
             setIsSubmitting(true);
             await updateExamDateStatus(examDateId, newStatus);
             
             // Refresh the exams list to get updated data
-            await loadExams();
-            
-            // Show success message (you can add toast notification here)
-            console.log(`Exam date status updated to: ${newStatus}`);
+            await loadExams(true); // Force refresh after status change
         } catch (error) {
             console.error('Failed to update exam date status:', error);
             setError('Failed to update exam date status');
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }, [loadExams]);
 
     const openAddExamDateModal = (examId: number, examName: string) => {
         setAddDateExamId(examId);
@@ -949,7 +941,7 @@ export default function ManageExams() {
             });
 
             // Reload exams to show the new date
-            await loadExams();
+            await loadExams(true);
             
             // Close modal and reset form
             setShowAddExamDate(false);
@@ -968,13 +960,13 @@ export default function ManageExams() {
         }
     };
 
-    const formatDate = (dateString: string) => {
+    const formatDate = useCallback((dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric'
         });
-    };
+    }, []);
 
     const getRegistrationStatus = (current: number, max: number) => {
         const percentage = (current / max) * 100;
@@ -1031,15 +1023,6 @@ export default function ManageExams() {
                         >
                             <Plus className="w-4 h-4 mr-2" />
                             Create New Exam
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={updateExpiredStatuses}
-                            disabled={isLoading}
-                            title="Manually update expired exam dates to completed status"
-                        >
-                            <Clock className="w-4 h-4 mr-2" />
-                            Update Expired Status
                         </Button>
                     </div>
                 </div>
