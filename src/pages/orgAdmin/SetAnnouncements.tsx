@@ -119,32 +119,39 @@ export default function SetAnnouncements() {
         }
         try {
             const response = await axios.get(`${API_URL}/api/announcements`);
-            setAnnouncements(response.data.map((a: any) => ({
-                id: a.id,
-                title: a.title,
-                message: a.message,
-                audience: a.audience,
-                examId: a.exam_id,
-                examTitle: a.examTitle || '',
-                examName: a.exam_name || '',
-                examCode: a.exam_code || '',
-                // departmentId and departmentName removed
-                // yearLevel removed
-                expiryDate: a.expiry_date,
-                publishDate: a.publish_date,
-                status: a.status,
-                priority: a.priority,
-                category: a.category,
-                tags: Array.isArray(a.tags) ? a.tags : [],
-                isPinned: a.is_pinned,
-                createdAt: a.created_at,
-                updatedAt: a.updated_at,
-                createdBy: a.created_by ? String(a.created_by) : '',
-                // Notification settings removed for announcements
-                viewCount: a.view_count || 0,
-                clickCount: a.click_count || 0,
-                attachments: a.attachments || [],
-            })));
+            const now = new Date();
+            setAnnouncements(response.data.map((a: any) => {
+                // Check if announcement is expired
+                const expiryDate = new Date(a.expiry_date);
+                const isExpired = a.status === 'published' && expiryDate <= now;
+
+                return {
+                    id: a.id,
+                    title: a.title,
+                    message: a.message,
+                    audience: a.audience,
+                    examId: a.exam_id,
+                    examTitle: a.examTitle || '',
+                    examName: a.exam_name || '',
+                    examCode: a.exam_code || '',
+                    // departmentId and departmentName removed
+                    // yearLevel removed
+                    expiryDate: a.expiry_date,
+                    publishDate: a.publish_date,
+                    status: isExpired ? 'expired' : a.status, // Auto-update to expired
+                    priority: a.priority,
+                    category: a.category,
+                    tags: Array.isArray(a.tags) ? a.tags : [],
+                    isPinned: a.is_pinned,
+                    createdAt: a.created_at,
+                    updatedAt: a.updated_at,
+                    createdBy: a.created_by ? String(a.created_by) : '',
+                    // Notification settings removed for announcements
+                    viewCount: a.view_count || 0,
+                    clickCount: a.click_count || 0,
+                    attachments: a.attachments || [],
+                };
+            }));
             setIsLoading(false);
         } catch {
             setNotification({ type: 'error', message: 'Failed to load announcements!' });
@@ -178,14 +185,41 @@ export default function SetAnnouncements() {
         return () => clearInterval(interval);
     }, [API_URL, fetchAnnouncements]);
 
+    // Check for expired announcements every 10 seconds and update status immediately
+    useEffect(() => {
+        const checkExpiredAnnouncements = () => {
+            const now = new Date();
+            setAnnouncements(prevAnnouncements =>
+                prevAnnouncements.map(announcement => {
+                    const expiryDate = new Date(announcement.expiryDate);
+                    const isExpired = announcement.status === 'published' && expiryDate <= now;
+
+                    if (isExpired && announcement.status !== 'expired') {
+                        return { ...announcement, status: 'expired' };
+                    }
+                    return announcement;
+                })
+            );
+        };
+
+        // Check immediately on mount
+        checkExpiredAnnouncements();
+
+        // Then check every 10 seconds for near-instant updates
+        const expiryCheckInterval = setInterval(checkExpiredAnnouncements, 10000); // 10 seconds
+
+        return () => clearInterval(expiryCheckInterval);
+    }, []);
+
     // Filter announcements
     const filteredAnnouncements = announcements
         .filter(a => !userId || a.createdBy === userId) // Only show announcements created by logged-in user
         .filter(announcement => {
             const matchesStatus = filterStatus === 'all' ||
                 (filterStatus === 'active' && announcement.status === 'published' && new Date(announcement.expiryDate) > new Date()) ||
-                (filterStatus === 'expired' && (announcement.status === 'published' && new Date(announcement.expiryDate) <= new Date())) ||
-                (filterStatus === 'scheduled' && announcement.status === 'scheduled');
+                (filterStatus === 'expired' && announcement.status === 'expired') ||
+                (filterStatus === 'scheduled' && announcement.status === 'scheduled') ||
+                (filterStatus === 'draft' && announcement.status === 'draft');
             const matchesPriority = filterPriority === 'all' || announcement.priority === filterPriority;
             const matchesCategory = filterCategory === 'all' || announcement.category === filterCategory;
 
@@ -276,7 +310,7 @@ export default function SetAnnouncements() {
             );
         }
 
-        if (announcement.status === 'published' && expiryDate <= now) {
+        if (announcement.status === 'expired' || (announcement.status === 'published' && expiryDate <= now)) {
             return (
                 <div className="space-y-1">
                     <Badge variant="destructive">Expired</Badge>
@@ -708,19 +742,21 @@ export default function SetAnnouncements() {
                                                                 <Pin className={`w-4 h-4 mr-2 ${announcement.isPinned ? 'text-orange-500' : 'text-gray-400'}`} />
                                                                 {announcement.isPinned ? 'Unpin' : 'Pin'}
                                                             </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(announcement);
-                                                                    setOpenPopoverId(null);
-                                                                }}
-                                                                className="w-full justify-start"
-                                                            >
-                                                                <Edit className="w-4 h-4 mr-2" />
-                                                                Edit
-                                                            </Button>
+                                                            {announcement.status !== 'expired' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEdit(announcement);
+                                                                        setOpenPopoverId(null);
+                                                                    }}
+                                                                    className="w-full justify-start"
+                                                                >
+                                                                    <Edit className="w-4 h-4 mr-2" />
+                                                                    Edit
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
