@@ -105,6 +105,7 @@ export default function CreateAnnouncement() {
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false); // Add this state
     const [userId, setUserId] = useState<string | null>(null);
+    const [tagsInput, setTagsInput] = useState(''); // Store raw tags input
 
     // Form state
     const [formData, setFormData] = useState({
@@ -145,6 +146,8 @@ export default function CreateAnnouncement() {
                 // Notification settings removed for announcements
                 selectedTemplate: ''
             });
+            // Set the tags input string for editing
+            setTagsInput((editingAnnouncement.tags || []).join(', '));
         }
     }, [editingAnnouncement]);
 
@@ -184,6 +187,17 @@ export default function CreateAnnouncement() {
 
         // year-specific audience removed
 
+        // Get current local date/time in the format YYYY-MM-DDTHH:MM
+        const getCurrentLocalDateTime = () => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
         // Prepare payload for backend
         const payload = {
             title: formData.title,
@@ -193,7 +207,7 @@ export default function CreateAnnouncement() {
             // department_id removed
             // year_level removed
             expiry_date: formData.expiryDate,
-            publish_date: formData.publishDate || null,
+            publish_date: formData.publishDate || getCurrentLocalDateTime(), // Use current local time if not provided
             status: formData.status,
             priority: formData.priority,
             category: formData.category,
@@ -262,6 +276,7 @@ export default function CreateAnnouncement() {
             // Notification settings removed for announcements
             selectedTemplate: ''
         });
+        setTagsInput(''); // Clear tags input
     };
 
     // Handle template selection
@@ -307,15 +322,6 @@ export default function CreateAnnouncement() {
                     </div>
                 </div>
 
-                {/* Notification Toast */}
-                {notification && (
-                    <Toast
-                        type={notification.type}
-                        message={notification.message}
-                        onClose={() => setNotification(null)}
-                    />
-                )}
-
                 {/* Form Card */}
                 <Card>
                     <CardHeader>
@@ -336,7 +342,11 @@ export default function CreateAnnouncement() {
                                     onValueChange={handleTemplateSelect}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Choose a template" />
+                                        {formData.selectedTemplate ? (
+                                            <span>{templates.find(t => t.id === formData.selectedTemplate)?.name}</span>
+                                        ) : (
+                                            <span className="text-gray-500">Choose a template</span>
+                                        )}
                                     </SelectTrigger>
                                     <SelectContent>
                                         {templates.map(template => (
@@ -495,11 +505,15 @@ export default function CreateAnnouncement() {
                                     Tags (comma-separated)
                                 </label>
                                 <Input
-                                    value={formData.tags.join(', ')}
-                                    onChange={(e) => setFormData(prev => ({
-                                        ...prev,
-                                        tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-                                    }))}
+                                    value={tagsInput}
+                                    onChange={(e) => {
+                                        setTagsInput(e.target.value);
+                                        // Update formData tags array (parse on change)
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+                                        }));
+                                    }}
                                     placeholder="e.g., exam, important, deadline"
                                 />
                             </div>
@@ -587,6 +601,17 @@ export default function CreateAnnouncement() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Fixed Notification Toast - Top Right */}
+            {notification && (
+                <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-4">
+                    <Toast
+                        type={notification.type}
+                        message={notification.message}
+                        onClose={() => setNotification(null)}
+                    />
+                </div>
+            )}
         </div >
     );
 }

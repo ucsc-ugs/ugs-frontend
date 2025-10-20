@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, Calendar, Clock, Tag, Users, AlertCircle } from "lucide-react";
+import { Bell, Calendar, Clock, Tag, Users, AlertCircle, X } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
@@ -87,6 +87,15 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ open = true, noti
             >
                 {/* Header Section */}
                 <div className="bg-blue-600/10 px-8 py-6 relative border-b border-blue-100">
+                    {/* Close Button */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-2 hover:bg-blue-200/50 rounded-lg transition-colors group"
+                        aria-label="Close notification"
+                    >
+                        <X className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+                    </button>
+
                     <div className="flex items-start gap-4">
                         <div className="p-3 bg-blue-100 rounded-xl">
                             <Bell className="w-8 h-8 text-blue-600" />

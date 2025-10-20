@@ -9,6 +9,7 @@ export interface Notification {
     type: "info" | "success" | "alert";
     read: boolean;
     date: string;
+    priority?: "low" | "medium" | "high" | "urgent";
 }
 
 interface NotificationCardProps {
@@ -19,6 +20,107 @@ interface NotificationCardProps {
 }
 
 export const NotificationCard = ({ notification, onToggleRead, onDelete, isExamSpecific = false }: NotificationCardProps) => {
+
+    // Priority-based colors matching announcements creation
+    const getPriorityColors = () => {
+        if (!notification.read) {
+            switch (notification.priority) {
+                case "urgent":
+                    return {
+                        bg: "bg-red-50",
+                        border: "border-red-500",
+                        borderLight: "border-red-200",
+                        iconBg: "bg-red-100",
+                        iconColor: "text-red-600",
+                        dot: "bg-red-500",
+                        buttonBorder: "border-red-300",
+                        buttonHover: "hover:bg-red-100 hover:text-red-800",
+                        buttonText: "text-red-600",
+                        buttonFocus: "focus:ring-red-200"
+                    };
+                case "high":
+                    return {
+                        bg: "bg-orange-50",
+                        border: "border-orange-500",
+                        borderLight: "border-orange-200",
+                        iconBg: "bg-orange-100",
+                        iconColor: "text-orange-600",
+                        dot: "bg-orange-500",
+                        buttonBorder: "border-orange-300",
+                        buttonHover: "hover:bg-orange-100 hover:text-orange-800",
+                        buttonText: "text-orange-600",
+                        buttonFocus: "focus:ring-orange-200"
+                    };
+                case "medium":
+                    return {
+                        bg: "bg-yellow-50",
+                        border: "border-yellow-500",
+                        borderLight: "border-yellow-200",
+                        iconBg: "bg-yellow-100",
+                        iconColor: "text-yellow-600",
+                        dot: "bg-yellow-500",
+                        buttonBorder: "border-yellow-300",
+                        buttonHover: "hover:bg-yellow-100 hover:text-yellow-800",
+                        buttonText: "text-yellow-600",
+                        buttonFocus: "focus:ring-yellow-200"
+                    };
+                case "low":
+                    return {
+                        bg: "bg-green-50",
+                        border: "border-green-500",
+                        borderLight: "border-green-200",
+                        iconBg: "bg-green-100",
+                        iconColor: "text-green-600",
+                        dot: "bg-green-500",
+                        buttonBorder: "border-green-300",
+                        buttonHover: "hover:bg-green-100 hover:text-green-800",
+                        buttonText: "text-green-600",
+                        buttonFocus: "focus:ring-green-200"
+                    };
+                default:
+                    // Default blue for no priority or exam-specific
+                    return isExamSpecific ? {
+                        bg: "bg-orange-50",
+                        border: "border-orange-500",
+                        borderLight: "border-orange-200",
+                        iconBg: "bg-orange-100",
+                        iconColor: "text-orange-600",
+                        dot: "bg-orange-500",
+                        buttonBorder: "border-orange-300",
+                        buttonHover: "hover:bg-orange-100 hover:text-orange-800",
+                        buttonText: "text-orange-600",
+                        buttonFocus: "focus:ring-orange-200"
+                    } : {
+                        bg: "bg-blue-50",
+                        border: "border-blue-500",
+                        borderLight: "border-blue-200",
+                        iconBg: "bg-blue-100",
+                        iconColor: "text-blue-600",
+                        dot: "bg-blue-500",
+                        buttonBorder: "border-blue-300",
+                        buttonHover: "hover:bg-blue-100 hover:text-blue-800",
+                        buttonText: "text-blue-600",
+                        buttonFocus: "focus:ring-blue-200"
+                    };
+            }
+        }
+
+        // Read state - gray
+        return {
+            bg: "bg-white",
+            border: "border-gray-300",
+            borderLight: "border-gray-200",
+            iconBg: "bg-gray-100",
+            iconColor: "text-gray-500",
+            dot: "bg-gray-400",
+            buttonBorder: "border-gray-300",
+            buttonHover: "hover:bg-gray-100 hover:text-gray-800",
+            buttonText: "text-gray-600",
+            buttonFocus: "focus:ring-gray-200"
+        };
+    };
+
+    const colors = getPriorityColors();
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -34,29 +136,25 @@ export const NotificationCard = ({ notification, onToggleRead, onDelete, isExamS
     return (
         <div className={cn(
             "relative p-4 border-l-4 transition-all duration-200 hover:shadow-md group rounded-lg",
-            !notification.read
-                ? isExamSpecific
-                    ? "bg-orange-50 border-l-orange-500 border border-orange-200"
-                    : "bg-blue-50 border-l-blue-500 border border-blue-200"
-                : "bg-white border-l-gray-300 border border-gray-200",
+            colors.bg,
+            `border-l-${colors.border.split('-')[1]}-${colors.border.split('-')[2]}`,
+            `border ${colors.borderLight}`
         )}>
 
             {/* Top right actions: unread dot and Mark Read button */}
             <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
                 {!notification.read && (
-                    <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        isExamSpecific ? "bg-orange-500" : "bg-blue-500"
-                    )}></div>
+                    <div className={cn("w-2 h-2 rounded-full", colors.dot)}></div>
                 )}
                 {onToggleRead && !notification.read && (
                     <button
                         onClick={e => { e.stopPropagation(); onToggleRead(notification.id); }}
                         className={cn(
-                            "text-xs px-2 py-1 rounded border transition-colors ml-2",
-                            isExamSpecific
-                                ? "text-orange-600 border-orange-300 hover:bg-orange-100 hover:text-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                                : "text-blue-600 border-blue-300 hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            "text-xs px-2 py-1 rounded border transition-colors ml-2 focus:outline-none focus:ring-2",
+                            colors.buttonText,
+                            colors.buttonBorder,
+                            colors.buttonHover,
+                            colors.buttonFocus
                         )}
                     >
                         Mark read
@@ -66,22 +164,8 @@ export const NotificationCard = ({ notification, onToggleRead, onDelete, isExamS
 
             <div className="flex items-start gap-3">
                 {/* Icon */}
-                <div className={cn(
-                    "flex-shrink-0 p-2 rounded-full",
-                    notification.read
-                        ? "bg-gray-100"
-                        : isExamSpecific
-                            ? "bg-orange-100"
-                            : "bg-blue-100"
-                )}>
-                    <Bell className={cn(
-                        "w-4 h-4",
-                        notification.read
-                            ? "text-gray-500"
-                            : isExamSpecific
-                                ? "text-orange-600"
-                                : "text-blue-600"
-                    )} />
+                <div className={cn("flex-shrink-0 p-2 rounded-full", colors.iconBg)}>
+                    <Bell className={cn("w-4 h-4", colors.iconColor)} />
                 </div>
 
                 {/* Content */}

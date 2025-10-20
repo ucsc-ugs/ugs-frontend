@@ -153,12 +153,12 @@ export const CompactCalendar = () => {
     const selectedImportantDate = popoverDate ? getImportantDate(popoverDate) : null;
 
     return (
-        <div className="w-full max-w-md bg-card rounded-lg border shadow-sm overflow-hidden">
+        <div className="w-full max-w-md bg-card rounded-lg border border-blue-500/20 shadow-sm overflow-hidden">
             {/* Calendar Header */}
-            <div className="bg-[rgba(30,41,82,0.5)] px-4 py-3 text-primary-foreground">
+            <div className="bg-blue-100 px-4 py-3 border-b-2 border-blue-500/30">
                 <div className="flex items-center justify-center gap-2">
-                    <CalendarIcon className="w-4 h-4" />
-                    <h2 className="text-sm font-semibold">Important Dates</h2>
+                    <CalendarIcon className="w-4 h-4 text-blue-600" />
+                    <h2 className="text-sm font-semibold text-blue-900">Exam Dates</h2>
                 </div>
             </div>
 

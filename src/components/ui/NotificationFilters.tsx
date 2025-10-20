@@ -1,5 +1,5 @@
 import { useState, memo, useEffect } from 'react';
-import { Calendar, Search } from 'lucide-react';
+import { Calendar, Search, RotateCcw } from 'lucide-react';
 
 interface FilterProps {
     onFilterChange: (filters: FilterState) => void;
@@ -46,9 +46,20 @@ export const NotificationFilters = memo(({
         onFilterChange(newFilters);
     };
 
+    const handleReset = () => {
+        const defaultFilters: FilterState = {
+            readStatus: 'all',
+            dateRange: 'all',
+            searchQuery: '',
+        };
+        setFilters(defaultFilters);
+        setSearchInput('');
+        onFilterChange(defaultFilters);
+    };
+
     return (
-        <div className="w-full flex justify-center mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-4 flex flex-row items-center gap-3">
+        <div className="w-full mb-6">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-4 flex flex-row items-center justify-center gap-3">
                 {/* Search Bar */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -121,6 +132,19 @@ export const NotificationFilters = memo(({
                         }`}
                 >
                     Today
+                </button>
+
+                {/* Vertical separator */}
+                <div className="h-8 w-px bg-gray-300"></div>
+
+                {/* Reset Button */}
+                <button
+                    onClick={handleReset}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors font-medium"
+                    title="Reset all filters"
+                >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset
                 </button>
             </div>
         </div>
