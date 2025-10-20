@@ -32,6 +32,13 @@ const ExamDetailsPage = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedDateId, setSelectedDateId] = useState<number | null>(null);
 
+  // Filter exam dates to only show upcoming dates
+  const upcomingExamDates = exam?.exam_dates?.filter(examDate => {
+    const examDateTime = new Date(examDate.date);
+    const now = new Date();
+    return examDateTime > now;
+  }) || [];
+
   // Load exam data
   useEffect(() => {
     const loadExam = async () => {
@@ -355,10 +362,10 @@ const ExamDetailsPage = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Exam Dates</h3>
-                  {exam.exam_dates && exam.exam_dates.length > 0 ? (
+                  {upcomingExamDates && upcomingExamDates.length > 0 ? (
                     <RadioGroup value={selectedDateId?.toString()} onValueChange={(value) => setSelectedDateId(parseInt(value))}>
                       <div className="space-y-3">
-                        {exam.exam_dates.map((examDate, index) => {
+                        {upcomingExamDates.map((examDate, index) => {
                           const date = new Date(examDate.date);
                           const formattedDate = date.toLocaleDateString('en-US', {
                             weekday: 'short',
@@ -402,7 +409,7 @@ const ExamDetailsPage = () => {
                     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="h-5 w-5 text-yellow-600" />
-                        <p className="text-yellow-800 text-sm">No exam dates available at the moment.</p>
+                        <p className="text-yellow-800 text-sm">No upcoming exam dates available. All scheduled dates have passed.</p>
                       </div>
                     </div>
                   )}
@@ -430,7 +437,7 @@ const ExamDetailsPage = () => {
 
                   <Button 
                     onClick={handleRegister}
-                    disabled={isRegistering || (!selectedDateId && isAuthenticated)}
+                    disabled={isRegistering || (!selectedDateId && isAuthenticated) || upcomingExamDates.length === 0}
                     className="w-full h-12 text-base font-semibold"
                     size="lg"
                   >
@@ -444,23 +451,30 @@ const ExamDetailsPage = () => {
                     <span className="truncate">
                       {isRegistering 
                         ? 'Processing...' 
-                        : !isAuthenticated 
-                          ? 'Sign In to Register' 
-                          : !selectedDateId
-                            ? 'Select Date First'
-                            : 'Register Now'
+                        : upcomingExamDates.length === 0
+                          ? 'No Dates Available'
+                          : !isAuthenticated 
+                            ? 'Sign In to Register' 
+                            : !selectedDateId
+                              ? 'Select Date First'
+                              : 'Register Now'
                       }
                     </span>
                   </Button>
 
-                  {!isAuthenticated && (
+                  {!isAuthenticated && upcomingExamDates.length > 0 && (
                     <p className="text-xs text-gray-600 text-center mt-3 leading-relaxed">
                       You need to sign in to register for this exam
                     </p>
                   )}
-                  {isAuthenticated && !selectedDateId && (
+                  {isAuthenticated && !selectedDateId && upcomingExamDates.length > 0 && (
                     <p className="text-xs text-gray-600 text-center mt-3 leading-relaxed">
                       Please select an exam date above to continue with registration
+                    </p>
+                  )}
+                  {upcomingExamDates.length === 0 && (
+                    <p className="text-xs text-gray-600 text-center mt-3 leading-relaxed">
+                      Registration is not available as there are no upcoming exam dates
                     </p>
                   )}
                 </CardContent>
