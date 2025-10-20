@@ -109,7 +109,6 @@ function NotificationsPage() {
   const [isNotificationsExpanded, setIsNotificationsExpanded] = useState(false);
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(true);
   const [isExamExpanded, setIsExamExpanded] = useState(true);
-  const [newItemsCount, setNewItemsCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Ref for the notifications dropdown
@@ -160,22 +159,6 @@ function NotificationsPage() {
       const general = data.filter(a => a.audience === "all");
       const examSpecific = data.filter(a => a.audience === "exam-specific");
 
-      // Check for new items if polling
-      if (isPolling) {
-        const newGeneralCount = general.filter(a =>
-          !generalAnnouncements.some(existing => existing.id === a.id)
-        ).length;
-        const newExamCount = examSpecific.filter(a =>
-          !examAnnouncements.some(existing => existing.id === a.id)
-        ).length;
-
-        if (newGeneralCount > 0 || newExamCount > 0) {
-          setNewItemsCount(newGeneralCount + newExamCount);
-          // Auto-clear the badge after 5 seconds
-          setTimeout(() => setNewItemsCount(0), 5000);
-        }
-      }
-
       setGeneralAnnouncements(general);
       setExamAnnouncements(examSpecific);
 
@@ -183,17 +166,6 @@ function NotificationsPage() {
       const notifRes = await fetch("http://localhost:8000/api/general-notifications", { headers });
       if (notifRes.ok) {
         const notifData: Notification[] = await notifRes.json();
-
-        // Check for new notifications if polling
-        if (isPolling) {
-          const newNotifCount = notifData.filter(n =>
-            !generalNotifications.some(existing => existing.id === n.id)
-          ).length;
-          if (newNotifCount > 0) {
-            setNewItemsCount(prev => prev + newNotifCount);
-          }
-        }
-
         setGeneralNotifications(notifData);
       } else {
         console.error("Failed to fetch general notifications");
@@ -206,7 +178,7 @@ function NotificationsPage() {
       if (!isPolling) setLoading(false);
       else setIsRefreshing(false);
     }
-  }, [studentId, generalAnnouncements, examAnnouncements, generalNotifications]);
+  }, [studentId]);
 
   // Initial fetch
   useEffect(() => {
@@ -386,12 +358,6 @@ function NotificationsPage() {
 
             {/* Real-time status indicator */}
             <div className="flex items-center gap-3">
-              {newItemsCount > 0 && (
-                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-2 rounded-lg border border-green-200 animate-pulse">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span className="text-sm font-medium">{newItemsCount} new item{newItemsCount > 1 ? 's' : ''}</span>
-                </div>
-              )}
               <button
                 onClick={() => fetchData(true)}
                 disabled={isRefreshing}
