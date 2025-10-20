@@ -30,6 +30,7 @@ interface ExamWithPivot {
   name: string;
   description: string;
   price: number;
+  code_name: string;
   organization_id: number;
   created_at: string;
   updated_at: string;
@@ -387,10 +388,22 @@ const MyExams = () => {
                           LKR {exam.price.toLocaleString()}
                         </div>
                         <div className="flex gap-2">
+                          {/* Re-register Button - Show only if payment is pending or rejected */}
+                          {(exam.pivot.status === 'pending' || exam.pivot.status === 'rejected') && (
+                            <button
+                              onClick={() => window.location.href = `/exams/${exam.code_name}`}
+                              className="px-3 py-1.5 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-1"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Re-register
+                            </button>
+                          )}
                           {/* Reschedule Button - Show only if there are multiple exam dates available and no result */}
                           {exam.available_exam_dates && 
                           exam.available_exam_dates.length > 1 && 
-                          !exam.pivot.result && (
+                          !exam.pivot.result && 
+                          exam.pivot.status !== 'pending' && 
+                          exam.pivot.status !== 'rejected' && (
                             <button
                               onClick={() => handleReschedule(exam)}
                               className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1"

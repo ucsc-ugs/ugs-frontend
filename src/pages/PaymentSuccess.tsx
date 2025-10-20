@@ -430,7 +430,7 @@ const PaymentSuccess = () => {
           {/* Back to Dashboard */}
           <div className="text-center">
             <Button
-              onClick={() => navigate('/portal/register')}
+              onClick={() => navigate('/portal')}
               variant="ghost"
               className="text-gray-600 hover:text-gray-800"
             >
