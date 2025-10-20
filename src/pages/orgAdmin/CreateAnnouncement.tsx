@@ -400,13 +400,11 @@ export default function CreateAnnouncement() {
                                         onValueChange={(value) => setFormData(prev => ({ ...prev, examId: value }))}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue
-                                                placeholder={
-                                                    exams.find(e => e.id === formData.examId)
-                                                        ? exams.find(e => e.id === formData.examId)!.title
-                                                        : 'Choose an exam'
-                                                }
-                                            />
+                                            {formData.examId ? (
+                                                <span>{exams.find(e => e.id === formData.examId)?.title}</span>
+                                            ) : (
+                                                <span className="text-gray-500">Choose an exam</span>
+                                            )}
                                         </SelectTrigger>
                                         <SelectContent>
                                             {exams.length === 0 ? (
