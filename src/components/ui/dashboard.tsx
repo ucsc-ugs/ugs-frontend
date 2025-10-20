@@ -13,6 +13,7 @@ import {
   XCircle
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,8 +80,8 @@ export default function AdminDashboard() {
             </p>
           </CardContent>
           <CardFooter className="p-2 pt-0">
-            <Button variant="ghost" size="sm" className="text-xs h-6">
-              View all
+            <Button asChild variant="ghost" size="sm" className="text-xs h-6">
+              <Link to="/admin/manage-exams">View all</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -96,11 +97,8 @@ export default function AdminDashboard() {
               {stats.pendingRegistrations} pending approval
             </p>
           </CardContent>
-          <CardFooter className="p-2 pt-0">
-            <Button variant="ghost" size="sm" className="text-xs h-6">
-              Manage
-            </Button>
-          </CardFooter>
+          {/* Removed 'Manage' button as requested */}
+          <CardFooter className="p-2 pt-0"></CardFooter>
         </Card>
 
         <Card>
@@ -116,8 +114,8 @@ export default function AdminDashboard() {
             </p>
           </CardContent>
           <CardFooter className="p-2 pt-0">
-            <Button variant="ghost" size="sm" className="text-xs h-6">
-              View report
+            <Button asChild variant="ghost" size="sm" className="text-xs h-6">
+              <Link to="/admin/finance">View report</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -150,9 +148,7 @@ export default function AdminDashboard() {
                 <BarChart2 className="h-5 w-5" />
                 Registration Trends
               </CardTitle>
-              <Button variant="ghost" size="sm" className="text-sm h-8">
-                View details <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
+              {/* 'View details' removed from Registration Trends as requested */}
             </div>
           </CardHeader>
           <CardContent>
@@ -167,8 +163,8 @@ export default function AdminDashboard() {
                 <FileText className="h-5 w-5" />
                 Exam Distribution
               </CardTitle>
-              <Button variant="ghost" size="sm" className="text-sm h-8">
-                View all <ChevronRight className="ml-1 h-4 w-4" />
+              <Button asChild variant="ghost" size="sm" className="text-sm h-8">
+                <Link to="/admin/manage-exams">View all <ChevronRight className="ml-1 h-4 w-4" /></Link>
               </Button>
             </div>
           </CardHeader>
@@ -186,8 +182,8 @@ export default function AdminDashboard() {
               <Clock className="h-5 w-5" />
               Recent Registrations
             </CardTitle>
-            <Button variant="ghost" size="sm" className="text-sm h-8">
-              View all <ChevronRight className="ml-1 h-4 w-4" />
+            <Button asChild variant="ghost" size="sm" className="text-sm h-8">
+              <Link to="/admin/manage-exams">View all <ChevronRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </div>
         </CardHeader>

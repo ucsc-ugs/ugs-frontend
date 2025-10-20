@@ -32,7 +32,6 @@ interface ExamData {
   exam_dates?: ExamDate[];
   created_at?: string;
   updated_at?: string;
-  code_name?: string;
   students_count?: number;
   total_students_enrolled?: number;
   registered_students_count?: number;
