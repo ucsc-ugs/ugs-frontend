@@ -39,8 +39,9 @@ export default function SuperAdminDashboard() {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const response = await getSuperAdminDashboard();
-      setStats(response.data);
+  const response = await getSuperAdminDashboard();
+  // response.data can be unknown; cast to DashboardStats when present
+  setStats((response.data as unknown) as DashboardStats);
     } catch (err: any) {
       console.error('Dashboard load error:', err);
       setError(err.message || 'Failed to load dashboard data');
