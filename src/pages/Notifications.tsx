@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { NotificationCard } from "@/components/ui/NotificationCard";
 import { NotificationBadgeCard } from "@/components/ui/NotificationBadgeCard";
 import { CompactCalendar } from "@/components/ui/CompactCalendar";
-import { Bell, AlertTriangle, ChevronDown, ChevronUp, FileText, CalendarDays } from "lucide-react";
+import { Bell, AlertTriangle, ChevronDown, ChevronUp, FileText, CalendarDays, RefreshCw } from "lucide-react";
 import NotificationModal from "@/components/NotificationModal";
 import { NotificationFilters } from "@/components/ui/NotificationFilters";
 import type { FilterState } from "@/components/ui/NotificationFilters";
@@ -106,67 +106,139 @@ function NotificationsPage() {
     dateRange: 'all',
     searchQuery: '',
   });
-  const [isNotificationsExpanded, setIsNotificationsExpanded] = useState(true);
+  const [isNotificationsExpanded, setIsNotificationsExpanded] = useState(false);
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(true);
   const [isExamExpanded, setIsExamExpanded] = useState(true);
+  const [newItemsCount, setNewItemsCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Ref for the notifications dropdown
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Memoize filter change handler to prevent unnecessary re-renders
   const handleFilterChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-        if (!token) {
-          throw new Error("Please log in to view all notifications");
-        }
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        };
+  // Fetch data function (reusable for initial load and polling)
+  const fetchData = useCallback(async (isPolling = false) => {
+    if (!isPolling) setLoading(true);
+    else setIsRefreshing(true);
+
+    setError(null);
+    try {
+      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Please log in to view all notifications");
+      }
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      // Get user ID if not already set
+      let sid = studentId;
+      if (!sid) {
         const userRes = await fetch("http://localhost:8000/api/user", { headers });
         if (!userRes.ok) throw new Error("Failed to authenticate user");
         const userData = await userRes.json();
-        const sid = userData.id;
+        sid = userData.id;
         setStudentId(sid);
         if (!sid) throw new Error("Could not determine student ID");
+      }
 
-        // Fetch announcements
-        const url = `http://localhost:8000/api/student/notifications?student_id=${sid}`;
-        const res = await fetch(url, { headers });
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.message || errorData.error || "Failed to fetch notifications");
-        }
-        const data: (Announcement & { is_read?: boolean })[] = await res.json();
-        // Separate general and exam-specific announcements
-        const general = data.filter(a => a.audience === "all");
-        const examSpecific = data.filter(a => a.audience === "exam-specific");
-        setGeneralAnnouncements(general);
-        setExamAnnouncements(examSpecific);
+      // Fetch announcements
+      const url = `http://localhost:8000/api/student/notifications?student_id=${sid}`;
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || "Failed to fetch notifications");
+      }
+      const data: (Announcement & { is_read?: boolean })[] = await res.json();
 
-        // Fetch notifications from notifications table using new API
-        const notifRes = await fetch("http://localhost:8000/api/general-notifications", { headers });
-        if (notifRes.ok) {
-          const notifData: Notification[] = await notifRes.json();
-          setGeneralNotifications(notifData);
-        } else {
-          console.error("Failed to fetch general notifications");
+      // Separate general and exam-specific announcements
+      const general = data.filter(a => a.audience === "all");
+      const examSpecific = data.filter(a => a.audience === "exam-specific");
+
+      // Check for new items if polling
+      if (isPolling) {
+        const newGeneralCount = general.filter(a =>
+          !generalAnnouncements.some(existing => existing.id === a.id)
+        ).length;
+        const newExamCount = examSpecific.filter(a =>
+          !examAnnouncements.some(existing => existing.id === a.id)
+        ).length;
+
+        if (newGeneralCount > 0 || newExamCount > 0) {
+          setNewItemsCount(newGeneralCount + newExamCount);
+          // Auto-clear the badge after 5 seconds
+          setTimeout(() => setNewItemsCount(0), 5000);
         }
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : "Could not load notifications.";
-        setError(message);
-        console.error("Error fetching notifications:", e);
-      } finally {
-        setLoading(false);
+      }
+
+      setGeneralAnnouncements(general);
+      setExamAnnouncements(examSpecific);
+
+      // Fetch notifications from notifications table using new API
+      const notifRes = await fetch("http://localhost:8000/api/general-notifications", { headers });
+      if (notifRes.ok) {
+        const notifData: Notification[] = await notifRes.json();
+
+        // Check for new notifications if polling
+        if (isPolling) {
+          const newNotifCount = notifData.filter(n =>
+            !generalNotifications.some(existing => existing.id === n.id)
+          ).length;
+          if (newNotifCount > 0) {
+            setNewItemsCount(prev => prev + newNotifCount);
+          }
+        }
+
+        setGeneralNotifications(notifData);
+      } else {
+        console.error("Failed to fetch general notifications");
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Could not load notifications.";
+      setError(message);
+      console.error("Error fetching notifications:", e);
+    } finally {
+      if (!isPolling) setLoading(false);
+      else setIsRefreshing(false);
+    }
+  }, [studentId, generalAnnouncements, examAnnouncements, generalNotifications]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Polling effect - fetch every 30 seconds
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      fetchData(true);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [fetchData]);
+
+  // Handle click outside to close notifications dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsExpanded(false);
       }
     };
-    fetchData();
-  }, []);
+
+    if (isNotificationsExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isNotificationsExpanded]);
 
   // Mark announcement as read handler
   const handleMarkAsRead = async (id: number) => {
@@ -301,25 +373,49 @@ function NotificationsPage() {
     <div className="min-h-screen">
       <div className="max-w-8xl mx-auto p-4 lg:p-6">
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-100 rounded-xl">
-              <Bell className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <Bell className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+                <p className="text-gray-600 text-sm">Stay updated with your latest activities</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-              <p className="text-gray-600 text-sm">Stay updated with your latest activities</p>
+
+            {/* Real-time status indicator */}
+            <div className="flex items-center gap-3">
+              {newItemsCount > 0 && (
+                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-2 rounded-lg border border-green-200 animate-pulse">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span className="text-sm font-medium">{newItemsCount} new item{newItemsCount > 1 ? 's' : ''}</span>
+                </div>
+              )}
+              <button
+                onClick={() => fetchData(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 disabled:bg-blue-600/5 text-blue-700 border-2 border-blue-600 hover:border-blue-700 disabled:border-blue-400 rounded-lg transition-colors text-sm font-medium"
+                title="Refresh notifications"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
             </div>
           </div>
         </div>
 
-        <NotificationFilters
-          onFilterChange={handleFilterChange}
-          totalCount={generalAnnouncements.length + examAnnouncements.length}
-          readCount={generalAnnouncements.filter(a => a.is_read).length + examAnnouncements.filter(a => a.is_read).length}
-          unreadCount={generalAnnouncements.filter(a => !a.is_read).length + examAnnouncements.filter(a => !a.is_read).length}
-        />
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+          {/* Filters - Full Width */}
+          <div className="lg:col-span-3">
+            <NotificationFilters
+              onFilterChange={handleFilterChange}
+              totalCount={generalAnnouncements.length + examAnnouncements.length}
+              readCount={generalAnnouncements.filter(a => a.is_read).length + examAnnouncements.filter(a => a.is_read).length}
+              unreadCount={generalAnnouncements.filter(a => !a.is_read).length + examAnnouncements.filter(a => !a.is_read).length}
+            />
+          </div>
+
           {/* Left Column - Announcements (2/3 width on large screens) */}
           <div className="lg:col-span-2 space-y-6">
 
@@ -408,6 +504,7 @@ function NotificationsPage() {
                               type: getType(a),
                               read: !!a.is_read,
                               date: a.publish_date || a.created_at || "",
+                              priority: a.priority as "low" | "medium" | "high" | "urgent" | undefined,
                             }}
                             onToggleRead={!a.is_read ? handleMarkAsRead : undefined}
                           />
@@ -504,6 +601,7 @@ function NotificationsPage() {
                               type: getType(a),
                               read: !!a.is_read,
                               date: a.publish_date || a.created_at || "",
+                              priority: a.priority as "low" | "medium" | "high" | "urgent" | undefined,
                             }}
                             onToggleRead={!a.is_read ? handleMarkAsRead : undefined}
                             isExamSpecific={true}
@@ -521,7 +619,7 @@ function NotificationsPage() {
           <div className="lg:col-span-1 space-y-6">
 
             {/* Notifications */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+            <div ref={notificationsRef} className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
               <div className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors border-b border-gray-100">
                 <div
                   className="flex items-center gap-3 flex-1 cursor-pointer"
@@ -553,7 +651,7 @@ function NotificationsPage() {
                       >
                         Mark All
                       </button>
-                      <span className="bg-blue-600/20 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                      <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
                         {generalNotifications.filter(n => !n.is_read).length}
                       </span>
                     </>
