@@ -3,35 +3,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Badge } from "@/components/ui/badge"
 import { GraduationCap, Users, FileText, BarChart3, ArrowRight, UserPlus, Search, TrendingUp, HelpCircle, ChevronDown } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { motion, useInView } from "framer-motion"
-import { useRef, useState, useEffect } from "react"
-
-// Counter component for animated numbers
-const AnimatedCounter = ({ end, duration = 2 }: { end: number; duration?: number }) => {
-  const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (!isInView) return;
-
-    let startTime: number;
-    const animateCount = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
-
-      setCount(Math.floor(progress * end));
-
-      if (progress < 1) {
-        requestAnimationFrame(animateCount);
-      }
-    };
-
-    requestAnimationFrame(animateCount);
-  }, [isInView, end, duration]);
-
-  return <span ref={ref}>{count.toLocaleString()}</span>;
-};
+import { motion } from "framer-motion"
+import { useState, useEffect } from "react"
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -273,8 +246,7 @@ export default function LandingPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            A comprehensive academic platform facilitating standardized aptitude assessment and institutional
-            collaboration within the higher education sector.
+            A comprehensive eExam Management platform for handling registration, payments, and results management for aptitude exams like GCAT and GCCT at UCSC.
           </motion.p>
 
           <motion.div
@@ -293,7 +265,7 @@ export default function LandingPage() {
                 onClick={handleUniDetails}
               >
                 <GraduationCap className="mr-3 h-6 w-6" />
-                Discover 
+                Discover
               </Button>
             </motion.div>
             <motion.div
@@ -351,10 +323,10 @@ export default function LandingPage() {
               <FileText className="h-8 w-8 text-[#FFFFFF]" />
             </motion.div>
             <h2 className="text-5xl font-bold text-[#012A4A] mb-6">
-              Core Academic Functions
+              Core Platform Functions
             </h2>
             <p className="text-xl text-[#343A40] max-w-3xl mx-auto leading-relaxed">
-              Streamlined processes for institutional assessment management and student academic progression.
+              Streamlined exam management processes from registration to results delivery.
             </p>
           </motion.div>
 
@@ -391,9 +363,9 @@ export default function LandingPage() {
                   >
                     <FileText className="h-10 w-10 text-[#FFFFFF]" />
                   </motion.div>
-                  <CardTitle className="text-2xl font-bold text-[#012A4A] mb-4">Assessment Administration</CardTitle>
+                  <CardTitle className="text-2xl font-bold text-[#012A4A] mb-4">Exam Management</CardTitle>
                   <CardDescription className="text-lg text-[#343A40] leading-relaxed">
-                    Institutional framework for standardized aptitude test creation and management protocols.
+                    Create and manage aptitude tests like GCAT and GCCT with comprehensive administration tools and scheduling capabilities.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -418,9 +390,9 @@ export default function LandingPage() {
                   >
                     <Users className="h-10 w-10 text-[#012A4A]" />
                   </motion.div>
-                  <CardTitle className="text-2xl font-bold text-[#012A4A] mb-4">Candidate Registration</CardTitle>
+                  <CardTitle className="text-2xl font-bold text-[#012A4A] mb-4">Registration & Payment</CardTitle>
                   <CardDescription className="text-lg text-[#343A40] leading-relaxed">
-                    Systematic enrollment procedures for qualified candidates seeking academic assessment opportunities.
+                    Secure online registration for multiple examinations with integrated payment processing and instant confirmation.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -445,9 +417,9 @@ export default function LandingPage() {
                   >
                     <BarChart3 className="h-10 w-10 text-[#FFFFFF]" />
                   </motion.div>
-                  <CardTitle className="text-2xl font-bold text-[#012A4A] mb-4">Performance Analytics</CardTitle>
+                  <CardTitle className="text-2xl font-bold text-[#012A4A] mb-4">Results & Transcripts</CardTitle>
                   <CardDescription className="text-lg text-[#343A40] leading-relaxed">
-                    Comprehensive evaluation metrics and academic performance tracking systems.
+                    Access exam results, download official transcripts, and track your performance with real-time notifications.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -499,7 +471,7 @@ export default function LandingPage() {
               <h2 className="text-5xl font-bold text-[#FFFFFF]">How It Works</h2>
             </div>
             <p className="text-xl text-[#E9ECEF] max-w-3xl mx-auto leading-relaxed">
-              Simple 3 steps to get started with your academic journey
+              Simple 3 steps to register for your aptitude exam
             </p>
           </motion.div>
 
@@ -546,7 +518,7 @@ export default function LandingPage() {
               <div className="bg-[#FFFFFF]/10 backdrop-blur-sm rounded-2xl p-6 border border-[#E9ECEF]/20 hover:bg-[#FFFFFF]/15 transition-colors duration-300">
                 <h3 className="text-2xl font-bold text-[#FFFFFF] mb-4">Create Your Account</h3>
                 <p className="text-[#E9ECEF] text-lg leading-relaxed">
-                  Quick and easy registration process to get you started on your academic journey.
+                  Quick and easy registration process. Sign up with your details to access the exam portal.
                 </p>
               </div>
             </motion.div>
@@ -580,7 +552,7 @@ export default function LandingPage() {
               <div className="bg-[#FFFFFF]/10 backdrop-blur-sm rounded-2xl p-6 border border-[#E9ECEF]/20 hover:bg-[#FFFFFF]/15 transition-colors duration-300">
                 <h3 className="text-2xl font-bold text-[#FFFFFF] mb-4">Browse and Register for Exams</h3>
                 <p className="text-[#E9ECEF] text-lg leading-relaxed">
-                  Find and register for standardized tests that match your academic goals.
+                  Select from available aptitude tests like GCAT and GCCT, and complete your registration with secure online payment.
                 </p>
               </div>
             </motion.div>
@@ -614,130 +586,12 @@ export default function LandingPage() {
               <div className="bg-[#FFFFFF]/10 backdrop-blur-sm rounded-2xl p-6 border border-[#E9ECEF]/20 hover:bg-[#FFFFFF]/15 transition-colors duration-300">
                 <h3 className="text-2xl font-bold text-[#FFFFFF] mb-4">Track Your Results Online</h3>
                 <p className="text-[#E9ECEF] text-lg leading-relaxed">
-                  Monitor your progress and access your results through our secure online portal.
+                  Receive instant notifications and access your results and transcripts through our secure student portal.
                 </p>
               </div>
             </motion.div>
           </motion.div>
         </div>
-      </motion.section>
-
-      {/* Institutional Statistics */}
-      <motion.section
-        className="py-24 bg-gradient-to-br from-[#FFFFFF] via-[#E9ECEF] to-[#89C2D9]/20 relative"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ amount: 0.3 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Decorative Elements */}
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#89C2D9] to-transparent"></div>
-        <motion.div
-          className="absolute top-20 left-20 w-32 h-32 bg-[#89C2D9]/30 rounded-full blur-2xl"
-          animate={{ scale: [1, 1.2, 1], rotate: 360 }}
-          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-20 w-40 h-40 bg-[#01497C]/20 rounded-full blur-2xl"
-          animate={{ scale: [1, 0.8, 1], rotate: -360 }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-        />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ y: 50, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ amount: 0.2 }}
-            transition={{ duration: 0.5 }}
-          >
-            <motion.div
-              className="inline-flex items-center justify-center w-16 h-16 bg-[#01497C] rounded-full mb-6"
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              transition={{ duration: 0.3 }}
-            >
-              <BarChart3 className="h-8 w-8 text-[#FFFFFF]" />
-            </motion.div>
-            <h2 className="text-5xl font-bold text-[#012A4A] mb-6">
-              Institutional Participation
-            </h2>
-            <p className="text-xl text-[#343A40] max-w-3xl mx-auto leading-relaxed">
-              Current academic network statistics and engagement metrics.
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="grid md:grid-cols-2 gap-12 text-center max-w-5xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ amount: 0.3 }}
-            variants={{
-              hidden: {},
-              visible: {
-                transition: {
-                  staggerChildren: 0.2
-                }
-              }
-            }}
-          >
-            <motion.div
-              className="group"
-              variants={{
-                hidden: { scale: 0.8, opacity: 0, y: 50 },
-                visible: { scale: 1, opacity: 1, y: 0 }
-              }}
-              transition={{ duration: 0.6 }}
-              whileHover={{ scale: 1.05, y: -5 }}
-            >
-              <div className="bg-[#FFFFFF] p-8 rounded-3xl shadow-xl shadow-[#89C2D9]/25 hover:shadow-2xl hover:shadow-[#01497C]/30 transition-all duration-500 border border-[#89C2D9]/30 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[#E9ECEF]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10">
-                  <motion.div
-                    className="w-16 h-16 bg-[#89C2D9] rounded-2xl flex items-center justify-center mx-auto mb-6"
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <GraduationCap className="h-8 w-8 text-[#012A4A]" />
-                  </motion.div>
-                  <div className="text-5xl font-bold text-[#012A4A] mb-4">
-                    <AnimatedCounter end={10000} />+
-                  </div>
-                  <div className="text-lg font-semibold text-[#343A40]">Registered Candidates</div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="group"
-              variants={{
-                hidden: { scale: 0.8, opacity: 0, y: 50 },
-                visible: { scale: 1, opacity: 1, y: 0 }
-              }}
-              transition={{ duration: 0.6 }}
-              whileHover={{ scale: 1.05, y: -5 }}
-            >
-              <div className="bg-[#FFFFFF] p-8 rounded-3xl shadow-xl shadow-[#89C2D9]/25 hover:shadow-2xl hover:shadow-[#01497C]/30 transition-all duration-500 border border-[#89C2D9]/30 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[#E9ECEF]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10">
-                  <motion.div
-                    className="w-16 h-16 bg-[#012A4A] rounded-2xl flex items-center justify-center mx-auto mb-6"
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <FileText className="h-8 w-8 text-[#FFFFFF]" />
-                  </motion.div>
-                  <div className="text-5xl font-bold text-[#012A4A] mb-4">
-                    <AnimatedCounter end={500} />+
-                  </div>
-                  <div className="text-lg font-semibold text-[#343A40]">Assessments Conducted</div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Bottom Section Divider */}
-        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#89C2D9] to-transparent"></div>
       </motion.section>
 
       {/* Registration Section */}
@@ -795,8 +649,8 @@ export default function LandingPage() {
             viewport={{ amount: 0.2 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Ready to Start Your
-            <span className="text-[#89C2D9] block">Academic Journey?</span>
+            Ready to Register for
+            <span className="text-[#89C2D9] block">Your Aptitude Exam?</span>
           </motion.h2>
 
           <motion.p
@@ -806,7 +660,7 @@ export default function LandingPage() {
             viewport={{ amount: 0.2 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            Join thousands of students who have transformed their academic future through our comprehensive platform.
+            Join thousands of candidates who have successfully registered and taken aptitude exams through our comprehensive platform.
           </motion.p>
 
           <motion.div
@@ -915,7 +769,7 @@ export default function LandingPage() {
               </h2>
             </div>
             <p className="text-xl text-[#343A40] max-w-3xl mx-auto leading-relaxed">
-              Find answers to common questions about our platform and get the information you need
+              Find answers to common questions about exam registration, payments, and results
             </p>
           </motion.div>
 
@@ -973,9 +827,9 @@ export default function LandingPage() {
                   <div className="px-6 pb-6">
                     <div className="p-4 bg-[#E9ECEF]/50 rounded-2xl border border-[#89C2D9]/30">
                       <p className="text-[#012A4A] text-base leading-relaxed">
-                        Simply create an account, browse available exams, select your desired exam,
-                        and complete the registration process with secure online payment. You'll receive
-                        instant confirmation and all necessary details via email.
+                        Create an account on the platform, browse available aptitude exams (GCAT, GCCT, etc.),
+                        select your desired exam, complete the registration form, and make secure online payment.
+                        You'll receive instant confirmation via email with exam details.
                       </p>
                     </div>
                   </div>
@@ -1023,9 +877,9 @@ export default function LandingPage() {
                   <div className="px-6 pb-6">
                     <div className="p-4 bg-[#E9ECEF]/50 rounded-2xl border border-[#89C2D9]/30">
                       <p className="text-[#012A4A] text-base leading-relaxed">
-                        Results are published directly to your student portal once they're available.
-                        You'll receive an email notification, and you can download your official
-                        result sheet with verification codes from your dashboard.
+                        Exam results are published directly to your student portal once they're processed and released.
+                        You'll receive an email notification when results are available. Log in to your portal to view
+                        your results and download official transcripts with verification codes.
                       </p>
                     </div>
                   </div>
@@ -1073,9 +927,10 @@ export default function LandingPage() {
                   <div className="px-6 pb-6">
                     <div className="p-4 bg-[#E9ECEF]/50 rounded-2xl border border-[#89C2D9]/30">
                       <p className="text-[#012A4A] text-base leading-relaxed">
-                        Yes! International students are welcome to use our platform. We support
-                        international payment methods and provide all necessary documentation
-                        for visa and admission processes. Contact support for specific requirements.
+                        Yes! The platform is designed to be accessible to any qualified candidate.
+                        International students can register for available exams using our secure international
+                        payment gateway. Contact our support team for specific requirements or assistance with
+                        the registration process.
                       </p>
                     </div>
                   </div>
@@ -1124,8 +979,9 @@ export default function LandingPage() {
                     <div className="p-4 bg-[#E9ECEF]/50 rounded-2xl border border-[#89C2D9]/30">
                       <p className="text-[#012A4A] text-base leading-relaxed">
                         Absolutely! We use industry-standard SSL encryption and secure payment
-                        gateways. Your financial information is never stored on our servers and
-                        all transactions are processed through certified payment providers.
+                        gateways for all transactions. Your financial information is never stored on our servers
+                        and all payments are processed through certified, PCI-compliant payment providers ensuring
+                        maximum security.
                       </p>
                     </div>
                   </div>
@@ -1173,9 +1029,10 @@ export default function LandingPage() {
                   <div className="px-6 pb-6">
                     <div className="p-4 bg-[#E9ECEF]/50 rounded-2xl border border-[#89C2D9]/30">
                       <p className="text-[#012A4A] text-base leading-relaxed">
-                        Our support team is available to help! You can reach us through the
-                        contact form, email support, or live chat during business hours.
-                        We're committed to making your experience as smooth as possible.
+                        Our dedicated support team is here to assist you! You can reach us through the
+                        contact form on our website, send an email to our support address, or use the live
+                        chat feature during business hours. We're committed to ensuring a smooth registration
+                        experience for all candidates.
                       </p>
                     </div>
                   </div>
@@ -1221,7 +1078,7 @@ export default function LandingPage() {
                 href="#"
                 className="hover:text-[#89C2D9] transition-colors"
               >
-                Academic Support
+                Exam Support
               </a>
             </div>
           </div>
