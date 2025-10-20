@@ -696,12 +696,23 @@ const MyExams = () => {
                   )}
 
                   <h4 className="font-medium text-gray-900 mb-3">Select New Date:</h4>
-                  {rescheduleExam.available_exam_dates && rescheduleExam.available_exam_dates.length > 0 ? (
+                  {(() => {
+                    // Filter available dates to only show upcoming dates (excluding current selection)
+                    const upcomingDates = rescheduleExam.available_exam_dates?.filter(date => {
+                      // Filter out the currently selected date
+                      if (date.id === rescheduleExam.pivot.selected_exam_date_id) {
+                        return false;
+                      }
+                      // Filter out past dates - only show upcoming dates
+                      const examDateTime = new Date(date.date);
+                      const now = new Date();
+                      return examDateTime > now;
+                    }) || [];
+                    
+                    return upcomingDates.length > 0 ? (
                     <RadioGroup value={selectedNewDateId} onValueChange={setSelectedNewDateId}>
                       <div className="space-y-3">
-                        {rescheduleExam.available_exam_dates
-                          .filter(date => date.id !== rescheduleExam.pivot.selected_exam_date_id)
-                          .map((examDate) => {
+                        {upcomingDates.map((examDate) => {
                             const date = new Date(examDate.date);
                             const formattedDate = date.toLocaleDateString('en-US', {
                               weekday: 'long',
@@ -741,14 +752,15 @@ const MyExams = () => {
                           })}
                       </div>
                     </RadioGroup>
-                  ) : (
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5 text-yellow-600" />
-                        <p className="text-yellow-800">No alternative dates available for rescheduling.</p>
+                    ) : (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-5 w-5 text-yellow-600" />
+                          <p className="text-yellow-800">No upcoming dates available for rescheduling. All alternative dates have passed.</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div className="flex gap-3">
