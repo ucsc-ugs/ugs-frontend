@@ -16,13 +16,16 @@ import {
     X,
     Info,
     Users,
-    Loader2
+    Loader2,
+    FileDown
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface ExamDate {
     id: number;
@@ -539,6 +542,101 @@ export default function PublishResults() {
         }
     }, [editingResult, selectedExamDate]);
 
+    const exportToPDF = useCallback(() => {
+        if (!publishedResults.length || !selectedExamDateData) {
+            alert('No published results to export');
+            return;
+        }
+
+        try {
+            const doc = new jsPDF();
+        
+            // Add title
+            doc.setFontSize(20);
+            doc.setFont("helvetica", "bold");
+            doc.text("Exam Results Report", 20, 30);
+            
+            // Add exam details
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Exam: ${selectedExamDateData.exam_name}`, 20, 45);
+            doc.text(`Code: ${selectedExamDateData.exam_code_name}`, 20, 55);
+            doc.text(`Date: ${new Date(selectedExamDateData.date).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+            })}`, 20, 65);
+            
+            if (selectedExamDateData.location) {
+                doc.text(`Location: ${selectedExamDateData.location}`, 20, 75);
+            }
+            
+            // Prepare table data
+            const tableData = publishedResults.map((result, index) => [
+                index + 1,
+                result.index_number,
+                result.student_name,
+                result.result,
+                result.attended ? 'Yes' : 'No',
+                new Date(result.updated_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                })
+            ]);
+
+            // Add table
+            autoTable(doc, {
+                head: [['#', 'Student ID', 'Student Name', 'Grade', 'Attended', 'Updated']],
+                body: tableData,
+                startY: 90,
+                styles: {
+                    fontSize: 10,
+                    cellPadding: 5,
+                },
+                headStyles: {
+                    fillColor: [59, 130, 246], // Blue color
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 250, 252] // Light gray
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 15 },
+                    1: { cellWidth: 30 },
+                    2: { cellWidth: 50 },
+                    3: { halign: 'center', cellWidth: 20 },
+                    4: { halign: 'center', cellWidth: 25 },
+                    5: { halign: 'center', cellWidth: 30 }
+                }
+            });
+
+            // Add summary
+            const finalY = (doc as any).lastAutoTable.finalY + 20;
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text("Summary:", 20, finalY);
+            
+            doc.setFont("helvetica", "normal");
+            doc.text(`Total Students: ${publishedResults.length}`, 20, finalY + 10);
+            doc.text(`Attended: ${publishedResults.filter(r => r.attended).length}`, 20, finalY + 20);
+            doc.text(`Not Attended: ${publishedResults.filter(r => !r.attended).length}`, 20, finalY + 30);
+
+            // Add footer
+            doc.setFontSize(8);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, doc.internal.pageSize.height - 20);
+            doc.text("University of Colombo School of Computing", 20, doc.internal.pageSize.height - 10);
+
+            // Save the PDF
+            const fileName = `${selectedExamDateData.exam_code_name}_Results_${new Date(selectedExamDateData.date).toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        }
+    }, [publishedResults, selectedExamDateData]);
+
     // Show loading state
     if (loading) {
         return (
@@ -994,10 +1092,21 @@ export default function PublishResults() {
                 {publishedResults.length > 0 && (
                     <Card className="mb-6">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <FileText className="w-5 h-5" />
-                                Published Results ({publishedResults.length} students)
-                            </CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileText className="w-5 h-5" />
+                                    Published Results ({publishedResults.length} students)
+                                </CardTitle>
+                                <Button
+                                    onClick={exportToPDF}
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center gap-2"
+                                >
+                                    <FileDown className="w-4 h-4" />
+                                    Export to PDF
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
