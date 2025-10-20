@@ -90,13 +90,6 @@ export default function LandingPage() {
   // const handleStudentPortal = () => navigate("/portal");
   // const handleInitiateRegistration = () => navigate("/portal/register");
   const handleContactUs = () => navigate("/contact-us");
-  const handleAccessPortal = () => {
-    navigate("/portal/register"); // Navigate to home page with sidebar
-  };
-
-  const handleStudentPortal = () => {
-    navigate("/portal/register"); // Navigate to home page with sidebar
-  };
 
   const handleRegister = () => {
     navigate("/signup"); // Navigate to register page with sidebar
@@ -105,10 +98,6 @@ export default function LandingPage() {
   const handleInitiateRegistration = () => {
     navigate("/signup"); // Navigate to register page with sidebar
   };
-
-  const handleUniDetails = () => {
-    navigate("/universities"); // Navigate to universities page
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -250,7 +239,7 @@ export default function LandingPage() {
           </motion.p>
 
           <motion.div
-            className="flex flex-col sm:flex-row gap-6 justify-center"
+            className="flex justify-center"
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.7 }}
@@ -261,25 +250,11 @@ export default function LandingPage() {
             >
               <Button
                 size="lg"
-                className="bg-[#01497C] hover:bg-[#012A4A] text-[#FFFFFF] text-xl px-12 py-4 border-0 shadow-xl"
-                onClick={handleUniDetails}
+                className="bg-[#89C2D9] hover:bg-[#89C2D9]/90 text-[#012A4A] text-xl px-16 py-6 border-0 shadow-2xl shadow-[#89C2D9]/25 rounded-2xl font-semibold"
+                onClick={handleRegister}
               >
-                <GraduationCap className="mr-3 h-6 w-6" />
-                Discover
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-[#89C2D9] text-[#89C2D9] hover:bg-[#89C2D9] hover:text-[#012A4A] text-xl px-12 py-4 bg-transparent backdrop-blur-sm"
-                onClick={handleStudentPortal}
-              >
-                <Users className="mr-3 h-6 w-6" />
-                Student Portal
+                <UserPlus className="mr-3 h-6 w-6" />
+                Register Now
               </Button>
             </motion.div>
           </motion.div>
@@ -687,20 +662,6 @@ export default function LandingPage() {
                 >
                   <ArrowRight className="h-6 w-6" />
                 </motion.div>
-              </Button>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.05, y: -3 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-[#E9ECEF]/30 text-[#E9ECEF] hover:bg-[#E9ECEF] hover:text-[#012A4A] text-xl px-12 py-6 bg-transparent backdrop-blur-sm rounded-2xl font-semibold"
-                onClick={handleAccessPortal}
-              >
-                Learn More
               </Button>
             </motion.div>
           </motion.div>
