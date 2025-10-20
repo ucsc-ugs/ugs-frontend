@@ -354,6 +354,7 @@ export default function PublishResults() {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
+                console.log('Published results API response:', response.data);
                 setPublishedResults(response.data.data.results || []);
             } catch (err: any) {
                 console.error(err);
