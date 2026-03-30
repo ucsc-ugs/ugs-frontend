@@ -97,36 +97,10 @@ const ExamDetailsPage = () => {
       if (!response.ok) {
         throw new Error('Failed to register for the exam');
       } else {
-        const payhereData = await response.json();
-        
-        // Create a form and submit to PayHere sandbox
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'https://sandbox.payhere.lk/pay/checkout';
-
-        Object.entries(payhereData).forEach(([key, value]) => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = key;
-          input.value = String(value);
-          form.appendChild(input);
-        });
-
-        // Add return_url manually
-        const returnUrlInput = document.createElement('input');
-        returnUrlInput.type = 'hidden';
-        returnUrlInput.name = 'return_url';
-        returnUrlInput.value = 'http://localhost:5173/portal/payment-success';
-        form.appendChild(returnUrlInput);
-
-        const cancelUrlInput = document.createElement('input');
-        cancelUrlInput.type = 'hidden';
-        cancelUrlInput.name = 'cancel_url';
-        cancelUrlInput.value = `http://localhost:5173/exams/${codeName}`;
-        form.appendChild(cancelUrlInput);
-
-        document.body.appendChild(form);
-        form.submit();
+        const registrationResponse = await response.json();
+        const successMessage = registrationResponse?.message || 'Registration completed successfully';
+        window.alert(successMessage);
+        navigate('/portal/register');
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
